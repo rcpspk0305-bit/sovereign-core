@@ -13,13 +13,19 @@ export default function ToolsView() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.listTools().then((res) => {
-      setTools(res);
-      if (res.length > 0) {
-        setSelectedTool(res[0]);
-        setArgInput(getDefaultArgs(res[0]));
-      }
-    });
+    api
+      .listTools()
+      .then((res) => {
+        setTools(res);
+        if (res.length > 0) {
+          setSelectedTool(res[0]);
+          setArgInput(getDefaultArgs(res[0]));
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to load tools:', err);
+        setTools([]);
+      });
   }, []);
 
   const getDefaultArgs = (tool: ToolDefinition) => {
