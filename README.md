@@ -18,6 +18,11 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
   - **ChromaDB Vector Store**: Local persistent vector index using HNSW cosine distance space (`hnsw:space: cosine`) with auto-recovering dimensionality migration.
   - **Neural Embeddings**: Seamless vector generation via Ollama's `nomic-embed-text:latest` with zero-downtime deterministic fallback.
   - **Source Citation Retention**: Every indexed and retrieved chunk retains `document_name`, `page_number`, `chunk_index`, and `source` metadata so responses can cite exact origins.
+- **Controlled Inspection-Analysis Agent**:
+  - Single controlled reasoning agent bounded exclusively to authorized tools: `document_retrieval`, `calculator`, and `document_generation`.
+  - Strict security guardrails: Zero unrestricted shell access and zero autonomous internet access with deterministic policy enforcement.
+  - Step budget bounds: Configurable step count ceiling (1 to 10 steps) preventing infinite loops.
+  - End-to-end audit logging: Captures structured tool calls, parameter validations, observations, and latencies.
 - **Explicit Core Interfaces**:
   - `BaseLLMClient`: Abstract interface for language model providers.
   - `BaseRetriever`: Abstract interface for document indexing and vector search.

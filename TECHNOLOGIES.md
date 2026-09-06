@@ -49,7 +49,21 @@ graph TD
 
 ---
 
-## 4. Frontend Technologies
+## 4. Controlled Agent & Tool Safety Boundaries
+
+| Tool / Component | Type | Constraints & Guarantees |
+| :--- | :--- | :--- |
+| **InspectionAnalysisAgent** | Controlled ReAct Agent | Bounded by a strict step budget (1 to 10 steps). Evaluates goals using only registered inspection tools. |
+| **ControlledToolRegistry** | Security Sandbox | Whitelists only permitted tools. Rejects unwhitelisted registration or execution attempts with security policy violations. |
+| `document_retrieval` | Authorized Tool | Semantic nearest-neighbor retrieval from local ChromaDB vector store. Retains document names and page numbers. |
+| `calculator` | Authorized Tool | Deterministic, safe mathematical operations (add, subtract, multiply, divide). |
+| `document_generation` | Authorized Tool | Structured inspection report and Markdown generator with citations and recommendations. |
+| **Shell Access** | Prohibited | Strictly disabled. No bash, terminal, subprocess, or shell execution capability. |
+| **Autonomous Internet** | Prohibited | Strictly disabled. No outbound HTTP crawling, external API requests, or autonomous web access. |
+
+---
+
+## 5. Frontend Technologies
 
 | Technology | Version / Spec | Purpose & Role |
 | :--- | :--- | :--- |

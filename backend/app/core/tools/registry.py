@@ -188,3 +188,84 @@ class ToolRegistry(BaseToolRegistry):
                 output=None,
                 error=f"Tool execution exception: {str(exc)}",
             )
+
+
+class ControlledToolRegistry(BaseToolRegistry):
+    """Strictly bounded tool registry that only permits explicitly whitelisted tools.
+
+    Explicitly blocks shell commands, arbitrary code execution, autonomous internet access,
+    and any unregistered tools.
+    """
+
+    DEFAULT_ALLOWED_TOOLS = {
+        "document_retrieval",
+        "calculator",
+        "document_generation",
+    }
+
+    def __init__(self, allowed_tools: Optional[List[str]] = None) -> None:
+        self._allowed_names = (
+            set(allowed_tools) if allowed_tools is not None else set(self.DEFAULT_ALLOWED_TOOLS)
+        )
+        self._tools: Dict[str, BaseTool] = {}
+
+    def register(self, tool: BaseTool) -> None:
+        """Register a tool only if it is explicitly allowed."""
+        if tool.name not in self._allowed_names:
+            raise ValueError(
+                f"Security policy violation: Tool '{tool.name}' is not authorized for controlled execution. "
+                f"Permitted tools: {sorted(list(self._allowed_names))}"
+            )
+        self._tools[tool.name] = tool
+
+    def get(self, name: str) -> Optional[BaseTool]:
+        """Retrieve tool only if whitelisted and registered."""
+        if name not in self._allowed_names:
+            return None
+        return self._tools.get(name)
+
+    def list_tools(self) -> List[ToolDefinition]:
+        """Return schema definitions of registered controlled tools."""
+        return [tool.get_definition() for tool in self._tools.values()]
+
+    async def execute_tool(self, name: str, arguments: Dict[str, Any]) -> ToolResult:
+        """Validate permissions and arguments before executing tool."""
+        if name not in self._allowed_names:
+            return ToolResult(
+                success=False,
+                output=None,
+                error=(
+                    f"Security policy violation: Tool '{name}' is not permitted. "
+                    "Unrestricted shell access, autonomous internet access, and unregistered tools are strictly prohibited. "
+                    f"Authorized tools: {sorted(list(self._allowed_names))}"
+                ),
+            )
+
+        tool = self._tools.get(name)
+        if not tool:
+            return ToolResult(
+                success=False,
+                output=None,
+                error=f"Authorized tool '{name}' is not active in this registry.",
+            )
+
+        # Validate required arguments against tool schema
+        schema = tool.get_definition().parameters
+        required_keys = schema.get("required", [])
+        missing_keys = [k for k in required_keys if k not in arguments]
+        if missing_keys:
+            return ToolResult(
+                success=False,
+                output=None,
+                error=f"Validation failed for tool '{name}'. Missing required parameters: {', '.join(missing_keys)}",
+            )
+
+        try:
+            return await tool.execute(**arguments)
+        except Exception as exc:
+            return ToolResult(
+                success=False,
+                output=None,
+                error=f"Tool '{name}' execution failure: {str(exc)}",
+            )
+
