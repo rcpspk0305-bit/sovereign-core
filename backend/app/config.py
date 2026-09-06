@@ -6,6 +6,9 @@ from typing import List, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Absolute path to the backend/ directory — works regardless of CWD.
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
+
 
 class Settings(BaseSettings):
     """Central configuration parameters for Sovereign-Core backend."""
@@ -29,14 +32,18 @@ class Settings(BaseSettings):
 
     # Audit settings
     AUDIT_LOG_ENABLED: bool = True
-    AUDIT_LOG_DIR: Path = Path("./data/audit")
+    AUDIT_LOG_DIR: Path = _BACKEND_DIR / "data" / "audit"
     AUDIT_LOG_FILE: str = "audit.jsonl"
 
     # RAG & Chroma settings
-    CHROMA_PERSIST_DIR: Path = Path("./data/chroma")
+    CHROMA_PERSIST_DIR: Path = _BACKEND_DIR / "data" / "chroma"
     CHROMA_COLLECTION_NAME: str = "sovereign_knowledge"
     RAG_CHUNK_SIZE: int = 500
     RAG_CHUNK_OVERLAP: int = 50
+
+    # Artifact & flight-record storage
+    ARTIFACTS_DIR: Path = _BACKEND_DIR / "data" / "artifacts"
+    FLIGHT_RECORDS_DIR: Path = _BACKEND_DIR / "data" / "flight_records"
 
     model_config = SettingsConfigDict(
         env_file=".env",

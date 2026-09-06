@@ -35,7 +35,8 @@ class ApprovalNoteGeneratorTool(BaseTool):
     """
 
     def __init__(self, artifacts_dir: Optional[Path] = None) -> None:
-        self.artifacts_dir = artifacts_dir or Path("data/artifacts")
+        from app.config import settings  # local import avoids circular at module load
+        self.artifacts_dir = artifacts_dir or settings.ARTIFACTS_DIR
         try:
             self.artifacts_dir.mkdir(parents=True, exist_ok=True)
         except Exception as ex:

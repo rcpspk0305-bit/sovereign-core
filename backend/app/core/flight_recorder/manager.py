@@ -39,7 +39,7 @@ class FlightRecorderManager:
         self.records: Dict[str, FlightRecord] = {}
         self.active_connections: Set[WebSocket] = set()
         self.task_connections: Dict[str, Set[WebSocket]] = {}
-        self.storage_dir = storage_dir or Path("data/flight_records")
+        self.storage_dir = storage_dir or settings.FLIGHT_RECORDS_DIR
         try:
             self.storage_dir.mkdir(parents=True, exist_ok=True)
             self._load_persisted_records()
