@@ -23,7 +23,7 @@ export function ErrorsTab({ errors }: ErrorsTabProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+      <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
         Recorded Errors & Exceptions ({errors.length})
       </span>
 
@@ -32,45 +32,66 @@ export function ErrorsTab({ errors }: ErrorsTabProps) {
           const isViolation = err.severity === 'policy_violation';
           const isWarning = err.severity === 'warning';
 
-          const cardStyle = isViolation
-            ? 'bg-red-950/20 border-red-900/40 text-red-300'
+          const cardBg = isViolation
+            ? 'rgba(244, 63, 94, 0.12)'
             : isWarning
-            ? 'bg-amber-950/20 border-amber-900/40 text-amber-300'
-            : 'bg-rose-950/20 border-rose-900/40 text-rose-300';
+            ? 'rgba(245, 158, 11, 0.12)'
+            : 'rgba(244, 63, 94, 0.08)';
+
+          const cardBorder = isViolation
+            ? '1px solid rgba(244, 63, 94, 0.4)'
+            : isWarning
+            ? '1px solid rgba(245, 158, 11, 0.4)'
+            : '1px solid rgba(244, 63, 94, 0.25)';
+
+          const textColor = isViolation
+            ? 'var(--accent-rose)'
+            : isWarning
+            ? 'var(--accent-amber)'
+            : '#fda4af';
 
           return (
             <div
               key={idx}
-              className={`p-3.5 rounded-lg border flex flex-col gap-1.5 ${cardStyle}`}
+              style={{
+                padding: '14px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: cardBg,
+                border: cardBorder,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                backdropFilter: 'blur(8px)',
+              }}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   {isViolation ? (
-                    <ShieldAlert className="w-4 h-4 text-red-400" />
+                    <ShieldAlert size={16} color="var(--accent-rose)" />
                   ) : isWarning ? (
-                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    <AlertTriangle size={16} color="var(--accent-amber)" />
                   ) : (
-                    <XCircle className="w-4 h-4 text-rose-400" />
+                    <XCircle size={16} color="var(--accent-rose)" />
                   )}
-                  <span className="text-xs font-semibold uppercase tracking-wider">
+                  <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: textColor }}>
                     {err.severity.replace('_', ' ')}
                   </span>
                   {err.step_number !== undefined && (
-                    <span className="text-[11px] font-mono opacity-70">
+                    <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
                       Step #{err.step_number}
                     </span>
                   )}
                 </div>
 
                 {err.timestamp && (
-                  <span className="text-[11px] font-mono opacity-60 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
+                  <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock size={12} />
                     {new Date(err.timestamp).toLocaleTimeString()}
                   </span>
                 )}
               </div>
 
-              <div className="text-xs font-mono whitespace-pre-wrap leading-relaxed">
+              <div style={{ fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#f1f5f9' }}>
                 {err.error_message}
               </div>
             </div>

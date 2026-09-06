@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { FlightRecord, ApprovalStatus } from '@/lib/types';
 import { LiveLatencyCounter } from './LiveLatencyCounter';
-import { getApprovalBadgeClass } from './types';
+import { getApprovalBadgeStyle } from './types';
 import {
   Check,
   Copy,
@@ -39,7 +39,6 @@ export function TelemetryStatusRibbon({
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(currentRecord.task_id);
       } else {
-        // Fallback for non-secure / unsupported contexts
         window.prompt('Copy Task ID:', currentRecord.task_id);
       }
       setCopiedTaskId(true);
@@ -50,48 +49,86 @@ export function TelemetryStatusRibbon({
   };
 
   const badgeStyle = currentRecord
-    ? getApprovalBadgeClass(currentRecord.approval_status)
-    : { bg: 'bg-zinc-900', text: 'text-zinc-500', border: 'border-zinc-800' };
+    ? getApprovalBadgeStyle(currentRecord.approval_status)
+    : { backgroundColor: 'rgba(30, 41, 59, 0.5)', color: 'var(--text-muted)' };
+
+  const tileStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    padding: '12px 14px',
+    backgroundColor: 'rgba(11, 17, 32, 0.75)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 'var(--radius-sm)',
+    backdropFilter: 'blur(8px)',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: '10px',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    color: 'var(--text-muted)',
+    letterSpacing: '0.08em',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-sm shadow-sm">
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+        gap: '10px',
+        padding: '14px',
+        backgroundColor: 'rgba(8, 12, 24, 0.85)',
+        border: '1px solid var(--border-highlight)',
+        borderRadius: 'var(--radius-md)',
+        boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(56, 189, 248, 0.05)',
+      }}
+    >
       {/* 1. Task ID */}
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-          <Hash className="w-3 h-3" /> Task ID
+      <div style={tileStyle}>
+        <span style={labelStyle}>
+          <Hash size={12} color="var(--accent-cyan)" /> Mission ID
         </span>
-        <div className="flex items-center gap-1.5 font-mono text-sm text-zinc-200">
-          <span className="truncate max-w-[120px]" title={currentRecord?.task_id || 'No active task'}>
-            {currentRecord?.task_id ? currentRecord.task_id : '—'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'monospace', fontSize: '13px', color: '#ffffff' }}>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={currentRecord?.task_id || 'No active mission'}>
+            {currentRecord?.task_id || '—'}
           </span>
           {currentRecord?.task_id && (
             <button
               onClick={handleCopyTaskId}
-              className="p-1 hover:bg-zinc-800 rounded transition-colors text-zinc-400 hover:text-zinc-200"
-              title="Copy task ID"
-              aria-label="Copy task ID"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-muted)',
+                padding: '2px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+              title="Copy mission ID"
             >
-              {copiedTaskId ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copiedTaskId ? <Check size={13} color="var(--accent-emerald)" /> : <Copy size={13} />}
             </button>
           )}
         </div>
       </div>
 
       {/* 2. Model */}
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-          <Cpu className="w-3 h-3" /> Active Model
+      <div style={tileStyle}>
+        <span style={labelStyle}>
+          <Cpu size={12} color="var(--accent-indigo)" /> Neural Engine
         </span>
-        <span className="font-mono text-sm text-zinc-200 truncate" title={currentRecord?.model || '—'}>
+        <span style={{ fontFamily: 'monospace', fontSize: '13px', color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {currentRecord?.model || '—'}
         </span>
       </div>
 
       {/* 3. Latency */}
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
-          Total Latency
-        </span>
+      <div style={tileStyle}>
+        <span style={labelStyle}>Execution Latency</span>
         <LiveLatencyCounter
           running={running}
           finalLatencyMs={currentRecord?.total_latency_ms}
@@ -100,87 +137,160 @@ export function TelemetryStatusRibbon({
       </div>
 
       {/* 4. Approval Status */}
-      <div className="flex flex-col gap-1 relative">
-        <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider flex items-center justify-between">
-          <span>Approval</span>
+      <div style={{ ...tileStyle, position: 'relative' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={labelStyle}>
+            <Shield size={12} color="var(--accent-amber)" /> Status
+          </span>
           {currentRecord && (
             <button
               onClick={() => setShowApprovalMenu(!showApprovalMenu)}
-              className="text-[10px] text-zinc-400 hover:text-zinc-200 underline font-normal cursor-pointer"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--accent-cyan)',
+                fontSize: '10px',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
             >
-              Change
+              Modify
             </button>
           )}
-        </span>
-        <div className="flex items-center">
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyle.bg} ${badgeStyle.text} ${badgeStyle.border}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 10px',
+              borderRadius: '9999px',
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              ...badgeStyle,
+            }}
           >
-            {currentRecord?.approval_status === 'APPROVED' && <ShieldCheck className="w-3.5 h-3.5" />}
-            {currentRecord?.approval_status === 'AUTO_VERIFIED' && <Shield className="w-3.5 h-3.5" />}
-            {currentRecord?.approval_status === 'POLICY_VIOLATION' && <ShieldAlert className="w-3.5 h-3.5" />}
+            {currentRecord?.approval_status === 'APPROVED' && <ShieldCheck size={13} />}
+            {currentRecord?.approval_status === 'AUTO_VERIFIED' && <Shield size={13} />}
+            {currentRecord?.approval_status === 'POLICY_VIOLATION' && <ShieldAlert size={13} />}
             {currentRecord?.approval_status || 'PENDING'}
           </span>
         </div>
 
-        {/* Approval dropdown menu */}
+        {/* Modal / Menu */}
         {showApprovalMenu && currentRecord && (
-          <div className="absolute top-full mt-1 right-0 z-50 w-44 rounded-lg bg-zinc-900 border border-zinc-700 shadow-xl py-1 text-xs">
+          <div
+            style={{
+              position: 'absolute',
+              top: '100%',
+              right: 0,
+              marginTop: '4px',
+              zIndex: 50,
+              width: '180px',
+              backgroundColor: 'var(--space-dark)',
+              border: '1px solid var(--border-highlight)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.8)',
+              padding: '4px 0',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <button
               onClick={() => {
                 onUpdateApproval('APPROVED', 'Human auditor verified');
                 setShowApprovalMenu(false);
               }}
-              className="w-full text-left px-3 py-1.5 hover:bg-zinc-800 text-emerald-400 flex items-center gap-1.5"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 12px',
+                fontSize: '11px',
+                color: 'var(--accent-emerald)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
             >
-              <Check className="w-3.5 h-3.5" /> Approve (Verified)
+              <Check size={13} /> Approve (Verified)
             </button>
             <button
               onClick={() => {
                 onUpdateApproval('REJECTED', 'Human auditor rejected');
                 setShowApprovalMenu(false);
               }}
-              className="w-full text-left px-3 py-1.5 hover:bg-zinc-800 text-amber-400 flex items-center gap-1.5"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 12px',
+                fontSize: '11px',
+                color: 'var(--accent-amber)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
             >
-              <UserCheck className="w-3.5 h-3.5" /> Reject
+              <UserCheck size={13} /> Reject
             </button>
             <button
               onClick={() => {
                 onUpdateApproval('POLICY_VIOLATION', 'Flagged as policy violation');
                 setShowApprovalMenu(false);
               }}
-              className="w-full text-left px-3 py-1.5 hover:bg-zinc-800 text-red-400 flex items-center gap-1.5"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 12px',
+                fontSize: '11px',
+                color: 'var(--accent-rose)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
             >
-              <ShieldAlert className="w-3.5 h-3.5" /> Policy Violation
+              <ShieldAlert size={13} /> Policy Violation
             </button>
           </div>
         )}
       </div>
 
       {/* 5. Network Mode */}
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-          <Lock className="w-3 h-3" /> Network Boundary
+      <div style={tileStyle}>
+        <span style={labelStyle}>
+          <Lock size={12} color="var(--accent-emerald)" /> Network Perimeter
         </span>
-        <span className="inline-flex items-center gap-1.5 text-xs font-mono font-medium text-emerald-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'monospace', color: 'var(--accent-emerald)', fontWeight: 600 }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--accent-emerald)', boxShadow: '0 0 8px var(--accent-emerald)' }} />
           {currentRecord?.network_mode || 'AIR_GAPPED_LOCAL'}
         </span>
       </div>
 
-      {/* 6. Stream Status */}
-      <div className="flex flex-col gap-1">
-        <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-          <Radio className="w-3 h-3" /> Telemetry Stream
+      {/* 6. Telemetry Link */}
+      <div style={tileStyle}>
+        <span style={labelStyle}>
+          <Radio size={12} color="var(--accent-cyan)" /> Telemetry Beacon
         </span>
-        <div className="flex items-center gap-1.5 text-xs font-mono">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontFamily: 'monospace' }}>
           <span
-            className={`w-2 h-2 rounded-full ${
-              wsConnected ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' : 'bg-rose-500'
-            }`}
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: wsConnected ? 'var(--accent-cyan)' : 'var(--accent-rose)',
+              boxShadow: wsConnected ? '0 0 10px var(--accent-cyan)' : '0 0 6px var(--accent-rose)',
+              animation: wsConnected && running ? 'radar-pulse 1.2s infinite' : 'none',
+            }}
           />
-          <span className={wsConnected ? 'text-zinc-300' : 'text-zinc-500'}>
-            {wsConnected ? (running ? 'RECORDING' : 'READY') : 'CONNECTING'}
+          <span style={{ color: wsConnected ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: 600 }}>
+            {wsConnected ? (running ? 'ACTIVE ORBIT' : 'STANDBY') : 'DISCONNECTED'}
           </span>
         </div>
       </div>

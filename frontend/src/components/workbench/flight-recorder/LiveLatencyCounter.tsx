@@ -9,7 +9,7 @@ interface LiveLatencyCounterProps {
   startTime?: string;
 }
 
-export function LiveLatencyCounter({ running, finalLatencyMs, startTime }: LiveLatencyCounterProps) {
+export function LiveLatencyCounter({ running, finalLatencyMs }: LiveLatencyCounterProps) {
   const [elapsedMs, setElapsedMs] = useState<number>(0);
   const startRef = useRef<number | null>(null);
 
@@ -40,14 +40,31 @@ export function LiveLatencyCounter({ running, finalLatencyMs, startTime }: LiveL
     : 0;
 
   return (
-    <div className="flex items-center gap-1.5 font-mono text-sm">
-      <Clock className={`w-3.5 h-3.5 ${running ? 'text-amber-400 animate-spin' : 'text-zinc-400'}`} />
-      <span className={running ? 'text-amber-400 font-semibold' : 'text-zinc-200'}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'monospace', fontSize: '13px' }}>
+      <Clock
+        size={14}
+        color={running ? 'var(--accent-cyan)' : 'var(--text-muted)'}
+        style={{ animation: running ? 'radar-pulse 1.5s infinite' : 'none' }}
+      />
+      <span style={{ color: running ? 'var(--accent-cyan)' : 'var(--text-primary)', fontWeight: 600 }}>
         {displayMs > 0 ? `${displayMs.toLocaleString()} ms` : '—'}
       </span>
       {running && (
-        <span className="text-[10px] uppercase font-sans tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">
-          live
+        <span
+          style={{
+            fontSize: '9px',
+            fontFamily: 'sans-serif',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            backgroundColor: 'rgba(0, 240, 255, 0.15)',
+            color: 'var(--accent-cyan)',
+            border: '1px solid rgba(0, 240, 255, 0.3)',
+            boxShadow: '0 0 8px var(--accent-cyan-glow)',
+          }}
+        >
+          LIVE ORBIT
         </span>
       )}
     </div>

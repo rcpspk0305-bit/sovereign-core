@@ -11,52 +11,92 @@ interface ToolsTabProps {
 export function ToolsTab({ toolsCalled }: ToolsTabProps) {
   if (toolsCalled.length === 0) {
     return (
-      <div className="py-12 text-center text-zinc-500 text-sm flex flex-col items-center gap-2">
-        <Wrench className="w-8 h-8 opacity-30 text-zinc-400" />
-        <span>No tool executions dispatched in this flight record.</span>
+      <div
+        style={{
+          padding: '48px 24px',
+          textAlign: 'center',
+          color: 'var(--text-muted)',
+          fontSize: '13px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+        }}
+      >
+        <Wrench size={36} color="var(--border-highlight)" />
+        <span style={{ color: 'var(--text-secondary)' }}>No automated tool dispatches recorded in this trajectory.</span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-        Authorized Tool Calls ({toolsCalled.length})
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+        Dispatched Subsystem Tools ({toolsCalled.length})
       </span>
 
-      <div className="grid grid-cols-1 gap-3">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {toolsCalled.map((tool, idx) => (
           <div
             key={idx}
-            className="p-3.5 rounded-lg bg-zinc-900/50 border border-zinc-800/80 flex flex-col gap-2.5"
+            style={{
+              padding: '14px 16px',
+              backgroundColor: 'rgba(15, 23, 42, 0.7)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+            }}
           >
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-semibold text-zinc-200 px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: 'var(--accent-cyan)',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(0, 240, 255, 0.1)',
+                    border: '1px solid rgba(0, 240, 255, 0.3)',
+                  }}
+                >
                   {tool.tool_name}
                 </span>
-                <span className="text-[11px] text-zinc-500 font-mono">Step #{tool.step_number}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                  Checkpoint #{tool.step_number}
+                </span>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] font-mono text-zinc-400 flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-zinc-500" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Clock size={12} color="var(--text-muted)" />
                   {tool.execution_time_ms.toFixed(1)} ms
                 </span>
                 <span
-                  className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded ${
-                    tool.success
-                      ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/50'
-                      : 'bg-rose-950/40 text-rose-400 border border-rose-800/50'
-                  }`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    backgroundColor: tool.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
+                    color: tool.success ? 'var(--accent-emerald)' : 'var(--accent-rose)',
+                    border: tool.success ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(244, 63, 94, 0.35)',
+                  }}
                 >
                   {tool.success ? (
                     <>
-                      <CheckCircle2 className="w-3 h-3" /> Success
+                      <CheckCircle2 size={12} /> Success
                     </>
                   ) : (
                     <>
-                      <AlertTriangle className="w-3 h-3" /> Failed
+                      <AlertTriangle size={12} /> Fault
                     </>
                   )}
                 </span>
@@ -64,29 +104,61 @@ export function ToolsTab({ toolsCalled }: ToolsTabProps) {
             </div>
 
             {/* Arguments */}
-            <div className="bg-zinc-950/70 p-2 rounded border border-zinc-900 text-xs font-mono text-zinc-300">
-              <span className="text-[10px] uppercase tracking-wider text-zinc-500 block font-sans mb-0.5">
-                Parameters Dispatched:
+            <div
+              style={{
+                backgroundColor: 'rgba(3, 7, 18, 0.8)',
+                padding: '10px 12px',
+                borderRadius: '6px',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                color: '#cbd5e1',
+              }}
+            >
+              <span style={{ fontSize: '9px', fontFamily: 'sans-serif', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em', display: 'block', marginBottom: '4px' }}>
+                Telemetry Input Payload:
               </span>
-              <pre className="whitespace-pre-wrap overflow-x-auto">
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', overflowX: 'auto' }}>
                 {JSON.stringify(tool.tool_arguments, null, 2)}
               </pre>
             </div>
 
-            {/* Output or Error */}
+            {/* Error or Output */}
             {tool.error ? (
-              <div className="bg-rose-950/20 p-2 rounded border border-rose-900/40 text-xs font-mono text-rose-300">
-                <span className="text-[10px] uppercase tracking-wider text-rose-400 block font-sans mb-0.5">
-                  Execution Error:
+              <div
+                style={{
+                  backgroundColor: 'rgba(244, 63, 94, 0.12)',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(244, 63, 94, 0.3)',
+                  fontSize: '11px',
+                  fontFamily: 'monospace',
+                  color: '#fda4af',
+                }}
+              >
+                <span style={{ fontSize: '9px', fontFamily: 'sans-serif', fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-rose)', letterSpacing: '0.06em', display: 'block', marginBottom: '4px' }}>
+                  Execution Fault:
                 </span>
                 {tool.error}
               </div>
             ) : tool.output_preview ? (
-              <div className="bg-zinc-950/50 p-2 rounded border border-zinc-900 text-xs font-mono text-zinc-400 max-h-32 overflow-y-auto">
-                <span className="text-[10px] uppercase tracking-wider text-zinc-500 block font-sans mb-0.5">
-                  Output Preview:
+              <div
+                style={{
+                  backgroundColor: 'rgba(3, 7, 18, 0.6)',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  fontSize: '11px',
+                  fontFamily: 'monospace',
+                  color: '#94a3b8',
+                  maxHeight: '140px',
+                  overflowY: 'auto',
+                }}
+              >
+                <span style={{ fontSize: '9px', fontFamily: 'sans-serif', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em', display: 'block', marginBottom: '4px' }}>
+                  Telemetry Output Preview:
                 </span>
-                <pre className="whitespace-pre-wrap">{tool.output_preview}</pre>
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{tool.output_preview}</pre>
               </div>
             ) : null}
           </div>

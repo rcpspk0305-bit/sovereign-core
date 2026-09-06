@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { StepRecord } from '@/lib/types';
-import { Activity, Clock, Wrench } from 'lucide-react';
+import { Activity, Clock, Cpu, Orbit, Sparkles, Wrench } from 'lucide-react';
 
 interface StepsTabProps {
   steps: StepRecord[];
@@ -13,72 +13,144 @@ interface StepsTabProps {
 export function StepsTab({ steps, finalResponse, running }: StepsTabProps) {
   if (steps.length === 0) {
     return (
-      <div className="py-12 text-center text-zinc-500 text-sm flex flex-col items-center gap-2">
-        <Activity className="w-8 h-8 opacity-30 text-zinc-400 animate-pulse" />
-        <span>No execution steps recorded yet. Launch a mission above.</span>
+      <div
+        style={{
+          padding: '48px 24px',
+          textAlign: 'center',
+          color: 'var(--text-muted)',
+          fontSize: '13px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+        }}
+      >
+        <Orbit size={36} color="var(--border-highlight)" style={{ animation: 'radar-pulse 3s infinite' }} />
+        <span style={{ color: 'var(--text-secondary)' }}>No telemetry reasoning steps in orbit yet.</span>
+        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Launch a mission trajectory from the dispatcher above.</span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-          Execution Timeline ({steps.length} {steps.length === 1 ? 'step' : 'steps'})
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+          Trajectory Execution Log ({steps.length} {steps.length === 1 ? 'checkpoint' : 'checkpoints'})
         </span>
         {running && (
-          <span className="text-[11px] text-blue-400 flex items-center gap-1 animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> Agent reasoning active
+          <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--accent-cyan)', boxShadow: '0 0 8px var(--accent-cyan)' }} />
+            Autonomous Reasoning Active
           </span>
         )}
       </div>
 
-      <div className="relative border-l border-zinc-800 ml-3.5 space-y-4 pl-4">
+      <div style={{ position: 'relative', borderLeft: '2px solid var(--border-subtle)', marginLeft: '12px', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {steps.map((step, idx) => (
-          <div key={idx} className="relative group">
-            {/* Step marker pin */}
-            <div className="absolute -left-[23px] top-1 w-3.5 h-3.5 rounded-full bg-zinc-950 border-2 border-blue-500 flex items-center justify-center shadow-sm">
-              <span className="w-1 h-1 rounded-full bg-blue-400" />
+          <div key={idx} style={{ position: 'relative' }}>
+            {/* Orbital Node Indicator */}
+            <div
+              style={{
+                position: 'absolute',
+                left: '-28px',
+                top: '4px',
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--space-dark)',
+                border: '2px solid var(--accent-cyan)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 10px var(--accent-cyan-glow)',
+              }}
+            >
+              <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#ffffff' }} />
             </div>
 
-            <div className="p-3.5 rounded-lg bg-zinc-900/50 border border-zinc-800/80 hover:border-zinc-700 transition-colors flex flex-col gap-2">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <span className="text-xs font-semibold text-zinc-200">
-                  Step {step.step_number}
+            <div
+              style={{
+                padding: '14px 16px',
+                backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-cyan)', letterSpacing: '0.04em' }}>
+                  CHECKPOINT #{step.step_number}
                 </span>
                 {step.timestamp && (
-                  <span className="text-[11px] font-mono text-zinc-500 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {new Date(step.timestamp).toLocaleTimeString()}
+                  <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock size={12} /> {new Date(step.timestamp).toLocaleTimeString()}
                   </span>
                 )}
               </div>
 
               {step.thought && (
-                <div className="text-xs text-zinc-300 bg-zinc-950/60 p-2.5 rounded border border-zinc-800/60 font-sans">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block font-semibold mb-1">
-                    Agent Thought / Reasoning:
+                <div
+                  style={{
+                    fontSize: '12px',
+                    color: 'var(--text-primary)',
+                    backgroundColor: 'rgba(3, 7, 18, 0.7)',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(56, 189, 248, 0.1)',
+                    lineHeight: '1.5',
+                  }}
+                >
+                  <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-indigo)', letterSpacing: '0.06em', display: 'block', marginBottom: '4px' }}>
+                    Neural Reasoning:
                   </span>
                   {step.thought}
                 </div>
               )}
 
               {step.tool_name && (
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-zinc-400 flex items-center gap-1">
-                    <Wrench className="w-3 h-3 text-emerald-400" /> Dispatched Tool:
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                  <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Wrench size={13} color="var(--accent-emerald)" /> Subsystem Dispatched:
                   </span>
-                  <span className="font-mono px-2 py-0.5 rounded bg-emerald-950/40 text-emerald-300 border border-emerald-800/60 text-[11px]">
+                  <span
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                      color: 'var(--accent-emerald)',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                    }}
+                  >
                     {step.tool_name}
                   </span>
                 </div>
               )}
 
               {step.observation && (
-                <div className="text-xs font-mono text-zinc-400 bg-zinc-950/80 p-2.5 rounded border border-zinc-900 overflow-x-auto max-h-40">
-                  <span className="text-[10px] font-sans text-zinc-500 uppercase tracking-wider block font-semibold mb-1">
-                    Observation Output:
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontFamily: 'monospace',
+                    color: '#94a3b8',
+                    backgroundColor: 'rgba(3, 7, 18, 0.9)',
+                    padding: '10px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    maxHeight: '180px',
+                    overflowX: 'auto',
+                    overflowY: 'auto',
+                  }}
+                >
+                  <span style={{ fontSize: '9px', fontFamily: 'sans-serif', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em', display: 'block', marginBottom: '4px' }}>
+                    Telemetry Sensor Feedback:
                   </span>
-                  <pre className="whitespace-pre-wrap">{step.observation}</pre>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{step.observation}</pre>
                 </div>
               )}
             </div>
@@ -87,11 +159,23 @@ export function StepsTab({ steps, finalResponse, running }: StepsTabProps) {
       </div>
 
       {finalResponse && (
-        <div className="p-4 rounded-xl bg-blue-950/20 border border-blue-900/50 flex flex-col gap-2 mt-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-400">
-            Final Agent Synthesis & Verdict
+        <div
+          style={{
+            padding: '18px 20px',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'rgba(99, 102, 241, 0.08)',
+            border: '1px solid rgba(99, 102, 241, 0.35)',
+            boxShadow: '0 8px 30px rgba(99, 102, 241, 0.15)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            marginTop: '8px',
+          }}
+        >
+          <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--accent-cyan)', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Sparkles size={14} color="var(--accent-cyan)" /> Final Autonomous Forensic Analysis & Verdict
           </span>
-          <div className="text-sm text-zinc-200 whitespace-pre-wrap leading-relaxed font-sans">
+          <div style={{ fontSize: '13px', color: '#f8fafc', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
             {finalResponse}
           </div>
         </div>

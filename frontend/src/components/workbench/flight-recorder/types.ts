@@ -1,4 +1,5 @@
-import { ApprovalStatus, NetworkMode } from '@/lib/types';
+import { ApprovalStatus } from '@/lib/types';
+import React from 'react';
 
 export type FlightRecorderTab =
   | 'steps'
@@ -14,20 +15,48 @@ export interface TabItem {
   count?: number;
 }
 
-export function getApprovalBadgeClass(status: ApprovalStatus): { bg: string; text: string; border: string } {
+export function getApprovalBadgeStyle(status: ApprovalStatus): React.CSSProperties {
   switch (status) {
     case 'APPROVED':
-      return { bg: 'bg-emerald-950/40', text: 'text-emerald-400', border: 'border-emerald-800/60' };
+      return {
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        color: 'var(--accent-emerald)',
+        border: '1px solid rgba(16, 185, 129, 0.4)',
+        boxShadow: '0 0 12px rgba(16, 185, 129, 0.25)',
+      };
     case 'AUTO_VERIFIED':
-      return { bg: 'bg-blue-950/40', text: 'text-blue-400', border: 'border-blue-800/60' };
+      return {
+        backgroundColor: 'rgba(0, 240, 255, 0.15)',
+        color: 'var(--accent-cyan)',
+        border: '1px solid rgba(0, 240, 255, 0.4)',
+        boxShadow: '0 0 12px rgba(0, 240, 255, 0.25)',
+      };
     case 'POLICY_VIOLATION':
-      return { bg: 'bg-red-950/50', text: 'text-red-400', border: 'border-red-800/80' };
+      return {
+        backgroundColor: 'rgba(244, 63, 94, 0.2)',
+        color: 'var(--accent-rose)',
+        border: '1px solid rgba(244, 63, 94, 0.5)',
+        boxShadow: '0 0 12px rgba(244, 63, 94, 0.3)',
+      };
     case 'FAILED':
-      return { bg: 'bg-rose-950/40', text: 'text-rose-400', border: 'border-rose-800/60' };
+      return {
+        backgroundColor: 'rgba(244, 63, 94, 0.15)',
+        color: '#fb7185',
+        border: '1px solid rgba(244, 63, 94, 0.35)',
+      };
     case 'REJECTED':
-      return { bg: 'bg-amber-950/40', text: 'text-amber-400', border: 'border-amber-800/60' };
+      return {
+        backgroundColor: 'rgba(245, 158, 11, 0.15)',
+        color: 'var(--accent-amber)',
+        border: '1px solid rgba(245, 158, 11, 0.4)',
+        boxShadow: '0 0 12px rgba(245, 158, 11, 0.25)',
+      };
     case 'PENDING':
     default:
-      return { bg: 'bg-zinc-900', text: 'text-zinc-400', border: 'border-zinc-700' };
+      return {
+        backgroundColor: 'rgba(30, 41, 59, 0.6)',
+        color: 'var(--text-secondary)',
+        border: '1px solid rgba(148, 163, 184, 0.3)',
+      };
   }
 }

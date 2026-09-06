@@ -353,14 +353,35 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
   return (
     <div className="flex flex-col gap-5 max-w-7xl mx-auto p-4 sm:p-6 font-sans">
       {/* 1. Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          borderBottom: '1px solid var(--border-subtle)',
+          paddingBottom: '16px',
+          flexWrap: 'wrap',
+        }}
+      >
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-zinc-100 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+          <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span
+              className="pulse-beacon"
+              style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--accent-cyan)',
+                boxShadow: '0 0 12px var(--accent-cyan-glow)',
+                display: 'inline-block',
+              }}
+            />
             AI Flight Recorder & Blackbox Telemetry
           </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Real-time forensic auditing, reasoning trace, tool execution, and evidence provenance.
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+            Real-time forensic auditing, cosmic reasoning trace, tool telemetry, and evidence provenance.
           </p>
         </div>
 
@@ -368,11 +389,12 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
           <button
             onClick={() => fetchRecords()}
             disabled={loadingHistory}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 transition-colors disabled:opacity-50"
+            className="btn btn-secondary"
             title="Refresh history"
+            style={{ fontSize: '12px', padding: '6px 12px' }}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
-            Refresh History
+            <RefreshCw size={13} className={loadingHistory ? 'spin' : ''} />
+            Refresh Telemetry
           </button>
         </div>
       </div>
@@ -400,19 +422,31 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
       {/* 4. Main Body: History Sidebar + Tab Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
         {/* Left: Mission History List */}
-        <div className="lg:col-span-1 rounded-xl bg-zinc-900/40 border border-zinc-800/80 p-3.5 flex flex-col gap-2.5">
+        <div
+          style={{
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--space-card)',
+            border: '1px solid var(--border-subtle)',
+            padding: '14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            backdropFilter: 'blur(10px)',
+          }}
+          className="lg:col-span-1"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
               Recorded Flights
             </span>
-            <span className="text-[11px] text-zinc-500 font-mono">
+            <span style={{ fontSize: '11px', fontFamily: 'monospace', color: 'var(--accent-cyan)' }}>
               {recordsHistory.length} total
             </span>
           </div>
 
           <div className="flex flex-col gap-1.5 max-h-[520px] overflow-y-auto pr-1">
             {recordsHistory.length === 0 ? (
-              <div className="py-8 text-center text-xs text-zinc-500">
+              <div style={{ padding: '32px 0', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
                 No flight records stored.
               </div>
             ) : (
@@ -422,24 +456,44 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
                   <button
                     key={rec.task_id}
                     onClick={() => setCurrentRecord(rec)}
-                    className={`w-full text-left p-2.5 rounded-lg border transition-all text-xs flex flex-col gap-1 ${
-                      isSelected
-                        ? 'bg-blue-950/30 border-blue-800 text-zinc-100 shadow-sm'
-                        : 'bg-zinc-950/40 border-zinc-900 hover:bg-zinc-800/50 text-zinc-400'
-                    }`}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '10px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: isSelected ? '1px solid var(--accent-cyan)' : '1px solid rgba(255, 255, 255, 0.05)',
+                      backgroundColor: isSelected ? 'rgba(0, 240, 255, 0.1)' : 'rgba(3, 7, 18, 0.6)',
+                      boxShadow: isSelected ? '0 0 12px var(--accent-cyan-glow)' : 'none',
+                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      transition: 'all 0.15s ease',
+                    }}
                   >
                     <div className="flex items-center justify-between gap-1">
-                      <span className="font-mono font-semibold truncate max-w-[110px]">
+                      <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: '12px', color: isSelected ? 'var(--accent-cyan)' : 'var(--text-primary)' }} className="truncate max-w-[110px]">
                         {rec.task_id}
                       </span>
-                      <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          textTransform: 'uppercase',
+                          fontFamily: 'monospace',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                          color: 'var(--text-secondary)',
+                        }}
+                      >
                         {rec.approval_status}
                       </span>
                     </div>
-                    <div className="text-[11px] text-zinc-400 line-clamp-1">
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {rec.prompt || 'Untitled mission'}
                     </div>
-                    <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono pt-1">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', paddingTop: '2px' }}>
                       <span>{new Date(rec.start_time).toLocaleTimeString()}</span>
                       {rec.total_latency_ms && <span>{rec.total_latency_ms.toFixed(0)} ms</span>}
                     </div>
@@ -451,9 +505,21 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
         </div>
 
         {/* Right: Tabbed Deep Evidence Explorer */}
-        <div className="lg:col-span-3 rounded-xl bg-zinc-900/40 border border-zinc-800/80 p-4 flex flex-col gap-4">
+        <div
+          style={{
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--space-card)',
+            border: '1px solid var(--border-subtle)',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            backdropFilter: 'blur(12px)',
+          }}
+          className="lg:col-span-3"
+        >
           {/* Tabs Bar */}
-          <div className="flex items-center gap-1 border-b border-zinc-800 pb-2 overflow-x-auto">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '10px', overflowX: 'auto' }}>
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               const hasErrors = tab.id === 'errors' && (tab.count || 0) > 0;
@@ -462,30 +528,58 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-sm'
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    border: isActive
+                      ? '1px solid var(--accent-cyan)'
                       : hasErrors
-                      ? 'text-rose-400 hover:bg-zinc-800'
-                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
-                  }`}
+                      ? '1px solid rgba(244, 63, 94, 0.4)'
+                      : '1px solid transparent',
+                    background: isActive
+                      ? 'linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(99, 102, 241, 0.2))'
+                      : 'transparent',
+                    color: isActive
+                      ? 'var(--accent-cyan)'
+                      : hasErrors
+                      ? 'var(--accent-rose)'
+                      : 'var(--text-secondary)',
+                    boxShadow: isActive ? '0 0 12px var(--accent-cyan-glow)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
                 >
-                  {tab.id === 'steps' && <Activity className="w-3.5 h-3.5" />}
-                  {tab.id === 'tools' && <Wrench className="w-3.5 h-3.5" />}
-                  {tab.id === 'sources' && <Database className="w-3.5 h-3.5" />}
-                  {tab.id === 'artifacts' && <FileCode className="w-3.5 h-3.5" />}
-                  {tab.id === 'errors' && <AlertTriangle className="w-3.5 h-3.5" />}
-                  {tab.id === 'raw_stream' && <Terminal className="w-3.5 h-3.5" />}
+                  {tab.id === 'steps' && <Activity size={14} />}
+                  {tab.id === 'tools' && <Wrench size={14} />}
+                  {tab.id === 'sources' && <Database size={14} />}
+                  {tab.id === 'artifacts' && <FileCode size={14} />}
+                  {tab.id === 'errors' && <AlertTriangle size={14} />}
+                  {tab.id === 'raw_stream' && <Terminal size={14} />}
                   <span>{tab.label}</span>
                   {tab.count !== undefined && tab.count > 0 && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                        isActive
-                          ? 'bg-blue-700 text-white'
+                      style={{
+                        fontSize: '10px',
+                        padding: '1px 6px',
+                        borderRadius: '9999px',
+                        fontFamily: 'monospace',
+                        backgroundColor: isActive
+                          ? 'rgba(0, 240, 255, 0.25)'
                           : hasErrors
-                          ? 'bg-rose-950 text-rose-300'
-                          : 'bg-zinc-800 text-zinc-400'
-                      }`}
+                          ? 'rgba(244, 63, 94, 0.25)'
+                          : 'rgba(255, 255, 255, 0.08)',
+                        color: isActive
+                          ? 'var(--accent-cyan)'
+                          : hasErrors
+                          ? 'var(--accent-rose)'
+                          : 'var(--text-secondary)',
+                      }}
                     >
                       {tab.count}
                     </span>

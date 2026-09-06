@@ -44,37 +44,67 @@ export function RawStreamTab({ rawEvents, onClearEvents }: RawStreamTabProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-          Blackbox WebSocket Telemetry Stream ({rawEvents.length} events)
+        <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.08em' }}>
+          Blackbox Telemetry Packet Stream ({rawEvents.length} events)
         </span>
         <div className="flex items-center gap-2">
           <button
             onClick={handleCopy}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
+            className="btn btn-secondary"
+            style={{ padding: '4px 10px', fontSize: '11px' }}
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check size={13} color="var(--accent-emerald)" /> : <Copy size={13} />}
             Copy JSON
           </button>
           <button
             onClick={onClearEvents}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="btn btn-secondary"
+            style={{ padding: '4px 10px', fontSize: '11px' }}
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 size={13} />
             Clear
           </button>
         </div>
       </div>
 
-      <div className="p-3.5 rounded-lg bg-zinc-950 border border-zinc-900 font-mono text-xs text-zinc-300 max-h-96 overflow-y-auto space-y-1.5 leading-relaxed">
+      <div
+        style={{
+          padding: '14px',
+          borderRadius: 'var(--radius-md)',
+          backgroundColor: 'rgba(3, 7, 18, 0.9)',
+          border: '1px solid var(--border-subtle)',
+          fontFamily: 'monospace',
+          fontSize: '11px',
+          color: '#cbd5e1',
+          maxHeight: '400px',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.5)',
+        }}
+      >
         {rawEvents.map((ev, idx) => (
-          <div key={idx} className="hover:bg-zinc-900/50 p-1.5 rounded transition-colors flex flex-col gap-0.5">
-            <div className="flex items-center gap-2 text-[11px] text-zinc-500">
-              <span className="text-zinc-600">#{idx + 1}</span>
-              <span className="text-blue-400 font-semibold uppercase">{ev.event_type}</span>
+          <div
+            key={idx}
+            style={{
+              padding: '8px 10px',
+              borderRadius: '4px',
+              backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              border: '1px solid rgba(255, 255, 255, 0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px',
+              transition: 'background-color 0.15s ease',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
+              <span style={{ color: '#475569' }}>#{idx + 1}</span>
+              <span style={{ color: 'var(--accent-cyan)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{ev.event_type}</span>
               <span>{new Date(ev.timestamp).toLocaleTimeString()}</span>
-              {ev.task_id && <span className="text-zinc-500">[{ev.task_id}]</span>}
+              {ev.task_id && <span style={{ color: 'var(--accent-indigo)' }}>[{ev.task_id}]</span>}
             </div>
-            <pre className="text-zinc-300 text-[11px] overflow-x-auto whitespace-pre-wrap pl-4">
+            <pre style={{ margin: 0, color: '#94a3b8', fontSize: '11px', overflowX: 'auto', whiteSpace: 'pre-wrap', paddingLeft: '8px' }}>
               {JSON.stringify(ev.data, null, 2)}
             </pre>
           </div>

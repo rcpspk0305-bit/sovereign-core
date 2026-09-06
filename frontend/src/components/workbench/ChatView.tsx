@@ -156,11 +156,12 @@ export default function ChatView({ model }: ChatViewProps) {
               {!isUser && (
                 <div
                   style={{
-                    width: '32px',
-                    height: '32px',
+                    width: '34px',
+                    height: '34px',
                     borderRadius: '50%',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-subtle)',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: '1px solid rgba(0, 240, 255, 0.3)',
+                    boxShadow: '0 0 10px var(--accent-cyan-glow)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -173,13 +174,19 @@ export default function ChatView({ model }: ChatViewProps) {
 
               <div
                 style={{
-                  background: isUser ? 'var(--accent-indigo)' : 'var(--bg-card)',
+                  background: isUser
+                    ? 'linear-gradient(135deg, var(--accent-indigo), #4338ca)'
+                    : 'rgba(15, 23, 42, 0.75)',
                   color: '#ffffff',
                   padding: '12px 16px',
                   borderRadius: '12px',
-                  fontSize: '14px',
-                  lineHeight: '1.5',
-                  border: isUser ? 'none' : '1px solid var(--border-subtle)',
+                  fontSize: '13px',
+                  lineHeight: '1.6',
+                  border: isUser ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid var(--border-subtle)',
+                  boxShadow: isUser
+                    ? '0 4px 16px var(--accent-indigo-glow)'
+                    : '0 4px 20px rgba(0, 0, 0, 0.4)',
+                  backdropFilter: 'blur(10px)',
                   whiteSpace: 'pre-wrap',
                 }}
               >
@@ -189,10 +196,11 @@ export default function ChatView({ model }: ChatViewProps) {
               {isUser && (
                 <div
                   style={{
-                    width: '32px',
-                    height: '32px',
+                    width: '34px',
+                    height: '34px',
                     borderRadius: '50%',
-                    background: 'var(--accent-indigo)',
+                    background: 'linear-gradient(135deg, var(--accent-indigo), #4f46e5)',
+                    boxShadow: '0 0 10px var(--accent-indigo-glow)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -206,32 +214,37 @@ export default function ChatView({ model }: ChatViewProps) {
           );
         })}
         {loading && !streamMode && (
-          <div style={{ display: 'flex', gap: '8px', color: 'var(--text-muted)', fontSize: '13px' }}>
-            <Bot size={16} />
-            <span>Thinking...</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)', fontSize: '12px', paddingLeft: '46px' }}>
+            <Bot size={15} className="pulse-beacon" />
+            <span>Computing neural tokens...</span>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div style={{ display: 'flex', gap: '8px', paddingTop: '8px' }}>
+      <div style={{ display: 'flex', gap: '10px', paddingTop: '8px' }}>
         <input
           type="text"
           className="input"
-          placeholder="Type a message or prompt..."
+          placeholder="Transmit prompt or query to local intelligence node..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
           disabled={loading}
+          style={{
+            backgroundColor: 'rgba(3, 7, 18, 0.85)',
+            backdropFilter: 'blur(12px)',
+          }}
         />
         <button
           className="btn btn-primary"
           onClick={handleSend}
           disabled={loading || !input.trim()}
+          style={{ minWidth: '95px' }}
         >
-          <Send size={16} />
-          <span>Send</span>
+          <Send size={15} />
+          <span>Transmit</span>
         </button>
       </div>
     </div>
