@@ -8,6 +8,8 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
 
 ---
 
+-->Foundation Layer for AI Workbench<---
+
 ## Key Features & Architecture
 
 - **Local LLM Execution**: Native, async communication with local Ollama daemon using **Gemma 4 E2B** (`gemma4:e2b`) as default model, supporting streaming, prompt evaluation, and timeout handling.
@@ -82,6 +84,7 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
 ## Getting Started
 
 ### Prerequisites
+
 - Python 3.11+
 - Node.js 18+
 - [Ollama](https://ollama.com) installed and running locally (`ollama serve`)
@@ -110,6 +113,7 @@ pytest -v
 # Start FastAPI dev server
 uvicorn app.main:app --reload --port 8000
 ```
+
 Interactive API documentation is available at `http://localhost:8000/docs`.
 
 ### 2. Local Development (Frontend)
@@ -119,6 +123,7 @@ cd frontend
 npm install
 npm run dev
 ```
+
 Open `http://localhost:3000` to access the Sovereign-Core workbench.
 
 ### 3. Docker Compose Spin-up
@@ -127,6 +132,7 @@ Open `http://localhost:3000` to access the Sovereign-Core workbench.
 cp .env.example .env
 docker compose up --build
 ```
+
 The backend will connect to your host machine's Ollama instance via `host.docker.internal:11434`.
 
 ---
@@ -134,10 +140,12 @@ The backend will connect to your host machine's Ollama instance via `host.docker
 ## Testing
 
 Run the full backend test suite:
+
 ```bash
 cd backend
 pytest -v
 ```
+
 The 64+ tests cover interface adherence, mock and live LLM streaming, PyMuPDF parsing, metadata retention, ChromaDB vector indexing and retrieval, tool schema validation, agent reasoning loops, real-time WebSocket telemetry streaming, claim-evidence grounding validation, local DOCX artifact generation, and audit event persistence.
 
 ---
