@@ -19,10 +19,19 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
   - **Neural Embeddings**: Seamless vector generation via Ollama's `nomic-embed-text:latest` with zero-downtime deterministic fallback.
   - **Source Citation Retention**: Every indexed and retrieved chunk retains `document_name`, `page_number`, `chunk_index`, and `source` metadata so responses can cite exact origins.
 - **Controlled Inspection-Analysis Agent**:
-  - Single controlled reasoning agent bounded exclusively to authorized tools: `document_retrieval`, `calculator`, and `document_generation`.
+  - Single controlled reasoning agent bounded exclusively to authorized tools: `document_retrieval`, `calculator`, `document_generation`, and `approval_note_generator`.
   - Strict security guardrails: Zero unrestricted shell access and zero autonomous internet access with deterministic policy enforcement.
   - Step budget bounds: Configurable step count ceiling (1 to 10 steps) preventing infinite loops.
   - End-to-end audit logging: Captures structured tool calls, parameter validations, observations, and latencies.
+- **AI Flight Recorder & Real-Time Telemetry Stream**:
+  - Real-time FastAPI WebSocket telemetry streaming (`/api/v1/flight-recorder/ws` and `/ws/{task_id}`).
+  - Captures complete blackbox mission records: task ID, selected model, step-by-step reasoning thoughts, tools called, retrieved vector sources, execution latencies, errors/violations, generated artifacts, approval status, and network mode.
+  - Interactive auditor disposition controls (`AUTO_VERIFIED`, `APPROVED`, `PENDING`, `REJECTED`, `POLICY_VIOLATION`, `FAILED`).
+  - Historical mission replay and forensic blackbox wire terminal.
+- **Approval-Note Artifact Generator & Grounding Validation**:
+  - Structured Approval Note generation producing local Microsoft Word (`.docx`) documents with cryptographic SHA-256 verification.
+  - **Claim-Evidence Validation Engine**: Unsupported assertions lacking source citations or evidence backing are explicitly flagged as `UNVERIFIED_CLAIM` with caution banners, preventing hallucinations from being silently presented as facts.
+  - **Explicit Human Approval Block**: Formal sign-off table with Required Approver Role, Approver Name, Formal Disposition checkboxes (`[ ] APPROVED [ ] CONDITIONAL [ ] REJECTED`), Signature line, Date, and Conditions/Caveats.
 - **Explicit Core Interfaces**:
   - `BaseLLMClient`: Abstract interface for language model providers.
   - `BaseRetriever`: Abstract interface for document indexing and vector search.
@@ -30,7 +39,7 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
   - `BaseTool`: Type-safe tool execution engine with Pydantic JSON schema introspection.
   - `BaseAgent`: Orchestration loop contract with multi-step reasoning traces.
   - `BaseAuditLogger`: Structured JSON audit stream capturing latency, tokens, prompts, and tool invocations.
-- **Modern Frontend**: TypeScript Next.js dark-themed dashboard with live model selection, streaming chat, RAG workbench with drag-and-drop PDF upload and citation badges, tool inspector, and audit log viewer.
+- **Modern Evidence-Oriented Frontend**: TypeScript Next.js dark-themed workbench with live model selection, streaming chat, RAG knowledge viewer, tool registry inspector, controlled agent loop runner, AI Flight Recorder telemetry dashboard, and structured audit log viewer.
 - **Docker Compose Ready**: One-command containerized spin-up with host-gateway resolution for local GPU-accelerated Ollama.
 
 ---
@@ -41,24 +50,25 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
 .
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/          # Modular API endpoints (chat, models, rag, tools, agents, audit)
+│   │   ├── api/v1/          # Modular API endpoints (chat, models, rag, tools, agents, flight-recorder, audit)
 │   │   ├── core/
 │   │   │   ├── interfaces/  # Abstract contracts (llm, rag, tools, agents, audit)
 │   │   │   ├── llm/         # Ollama client & typed LLMService implementation
 │   │   │   ├── rag/         # PyMuPDF parser, chunker, embeddings, & ChromaDB vector store
-│   │   │   ├── tools/       # Tool registry & execution engine
-│   │   │   ├── agents/      # Agent orchestration engine
+│   │   │   ├── tools/       # Tool registry, calculator, doc retrieval, doc generation, approval note
+│   │   │   ├── agents/      # Controlled inspection agent orchestration engine
+│   │   │   ├── flight_recorder/ # Blackbox manager, telemetry event broadcaster, data models
 │   │   │   └── audit/       # Structured JSON audit logger
 │   │   ├── config.py        # Settings management
-│   │   └── main.py          # Application entrypoint
-│   ├── data/                # Persistent ChromaDB storage & audit logs
-│   ├── tests/               # Pytest unit & integration test suite
+│   │   └── main.py          # Application entrypoint & WebSocket routes
+│   ├── data/                # Persistent ChromaDB storage, flight_records/, artifacts/, audit logs
+│   ├── tests/               # Pytest unit & integration test suite (64+ tests)
 │   ├── Dockerfile
 │   └── pyproject.toml
 ├── frontend/
 │   ├── src/
 │   │   ├── app/             # App router pages & global styling
-│   │   ├── components/      # UI & workbench components (Chat, RAG, Tools, Agents, Audit)
+│   │   ├── components/      # UI workbench components (Chat, RAG, Tools, Agents, FlightRecorder, Audit)
 │   │   └── lib/             # API client & TypeScript interfaces
 │   ├── Dockerfile
 │   └── package.json
@@ -128,7 +138,7 @@ Run the full backend test suite:
 cd backend
 pytest -v
 ```
-The 45+ tests cover interface adherence, mock and live LLM streaming, PyMuPDF parsing, metadata retention, ChromaDB vector indexing and retrieval, tool schema validation, agent reasoning loops, and audit event persistence.
+The 64+ tests cover interface adherence, mock and live LLM streaming, PyMuPDF parsing, metadata retention, ChromaDB vector indexing and retrieval, tool schema validation, agent reasoning loops, real-time WebSocket telemetry streaming, claim-evidence grounding validation, local DOCX artifact generation, and audit event persistence.
 
 ---
 
