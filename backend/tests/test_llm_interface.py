@@ -7,8 +7,12 @@ from app.core.interfaces.llm import (
     BaseLLMClient,
     ChatMessage,
     ChatRole,
+    LLMConnectionError,
+    LLMModelNotFoundError,
     LLMResponse,
+    LLMTimeoutError,
 )
+from app.core.llm.service import LLMService, get_llm_service
 from tests.conftest import MockLLMClient
 
 
@@ -18,10 +22,10 @@ async def test_mock_llm_client_complete():
     messages = [
         ChatMessage(role=ChatRole.USER, content="Say hello"),
     ]
-    response: LLMResponse = await client.complete(messages=messages, model="test-model")
+    response: LLMResponse = await client.complete(messages=messages, model="gemma4:e2b")
 
     assert response.content == "Hello from test suite"
-    assert response.model == "test-model"
+    assert response.model == "gemma4:e2b"
     assert response.usage is not None
     assert response.usage.total_tokens == 15
     assert response.latency_ms is not None
@@ -53,7 +57,7 @@ def test_chat_api_completion(test_client: TestClient):
         "messages": [
             {"role": "user", "content": "How are you?"}
         ],
-        "model": "llama3.2:latest",
+        "model": "gemma4:e2b",
         "temperature": 0.5,
         "stream": False,
     }
@@ -61,7 +65,7 @@ def test_chat_api_completion(test_client: TestClient):
     assert response.status_code == 200
     data = response.json()
     assert "content" in data
-    assert data["model"] == "llama3.2:latest"
+    assert data["model"] == "gemma4:e2b"
 
 
 def test_chat_api_streaming(test_client: TestClient):
@@ -84,3 +88,50 @@ def test_models_listing_endpoint(test_client: TestClient):
     assert isinstance(models, list)
     assert len(models) >= 1
     assert "id" in models[0]
+    assert any(m["id"] == "gemma4:e2b" for m in models)
+
+
+def test_chat_api_timeout_error(test_client: TestClient):
+    class TimeoutClient(MockLLMClient):
+        async def complete(self, *args, **kwargs):
+            raise LLMTimeoutError("Inference timed out", timeout_seconds=120.0, provider="ollama", model="gemma4:e2b")
+
+    app = test_client.app
+    app.dependency_overrides[get_llm_service] = lambda: LLMService(TimeoutClient())
+
+    payload = {"messages": [{"role": "user", "content": "Hello"}]}
+    res = test_client.post("/api/v1/chat", json=payload)
+    assert res.status_code == 504
+    data = res.json()
+    assert data["error"] == "LLMTimeoutError"
+    assert data["timeout_seconds"] == 120.0
+
+
+def test_chat_api_connection_error(test_client: TestClient):
+    class ConnectionFailClient(MockLLMClient):
+        async def complete(self, *args, **kwargs):
+            raise LLMConnectionError("Failed to connect to daemon", provider="ollama", model="gemma4:e2b")
+
+    app = test_client.app
+    app.dependency_overrides[get_llm_service] = lambda: LLMService(ConnectionFailClient())
+
+    payload = {"messages": [{"role": "user", "content": "Hello"}]}
+    res = test_client.post("/api/v1/chat", json=payload)
+    assert res.status_code == 503
+    data = res.json()
+    assert data["error"] == "LLMConnectionError"
+
+
+def test_chat_api_model_not_found_error(test_client: TestClient):
+    class ModelNotFoundClient(MockLLMClient):
+        async def complete(self, *args, **kwargs):
+            raise LLMModelNotFoundError("Model not found", provider="ollama", model="nonexistent:latest")
+
+    app = test_client.app
+    app.dependency_overrides[get_llm_service] = lambda: LLMService(ModelNotFoundClient())
+
+    payload = {"messages": [{"role": "user", "content": "Hello"}], "model": "nonexistent:latest"}
+    res = test_client.post("/api/v1/chat", json=payload)
+    assert res.status_code == 404
+    data = res.json()
+    assert data["error"] == "LLMModelNotFoundError"

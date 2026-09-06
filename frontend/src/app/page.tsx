@@ -11,7 +11,7 @@ import AuditViewer from '@/components/workbench/AuditViewer';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabId>('chat');
-  const [selectedModel, setSelectedModel] = useState<string>('llama3.2:latest');
+  const [selectedModel, setSelectedModel] = useState<string>('gemma4:e2b');
 
   return (
     <div className="app-container">

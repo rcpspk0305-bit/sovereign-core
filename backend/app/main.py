@@ -8,6 +8,14 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1.router import api_v1_router
 from app.config import settings
+from app.core.interfaces.llm import (
+    LLMConnectionError,
+    LLMError,
+    LLMModelNotFoundError,
+    LLMResponseError,
+    LLMTimeoutError,
+    LLMValidationError,
+)
 
 
 @asynccontextmanager
@@ -48,6 +56,82 @@ def create_application() -> FastAPI:
             "docs": "/docs",
             "api": "/api/v1",
         }
+
+    # Register LLM domain exception handlers
+    @app.exception_handler(LLMConnectionError)
+    async def handle_llm_connection_error(request: Request, exc: LLMConnectionError):
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "LLMConnectionError",
+                "detail": exc.message,
+                "provider": exc.provider,
+                "path": request.url.path,
+            },
+        )
+
+    @app.exception_handler(LLMTimeoutError)
+    async def handle_llm_timeout_error(request: Request, exc: LLMTimeoutError):
+        return JSONResponse(
+            status_code=504,
+            content={
+                "error": "LLMTimeoutError",
+                "detail": exc.message,
+                "timeout_seconds": exc.timeout_seconds,
+                "provider": exc.provider,
+                "model": exc.model,
+                "path": request.url.path,
+            },
+        )
+
+    @app.exception_handler(LLMModelNotFoundError)
+    async def handle_llm_model_not_found(request: Request, exc: LLMModelNotFoundError):
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": "LLMModelNotFoundError",
+                "detail": exc.message,
+                "model": exc.model,
+                "provider": exc.provider,
+                "path": request.url.path,
+            },
+        )
+
+    @app.exception_handler(LLMResponseError)
+    async def handle_llm_response_error(request: Request, exc: LLMResponseError):
+        return JSONResponse(
+            status_code=502,
+            content={
+                "error": "LLMResponseError",
+                "detail": exc.message,
+                "status_code": exc.status_code,
+                "provider": exc.provider,
+                "path": request.url.path,
+            },
+        )
+
+    @app.exception_handler(LLMValidationError)
+    async def handle_llm_validation_error(request: Request, exc: LLMValidationError):
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": "LLMValidationError",
+                "detail": exc.message,
+                "path": request.url.path,
+            },
+        )
+
+    @app.exception_handler(LLMError)
+    async def handle_llm_base_error(request: Request, exc: LLMError):
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "LLMError",
+                "detail": exc.message,
+                "provider": exc.provider,
+                "path": request.url.path,
+            },
+        )
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):

@@ -52,6 +52,78 @@ class StreamChunk(BaseModel):
     finish_reason: Optional[str] = None
 
 
+class LLMHealthStatus(BaseModel):
+    is_alive: bool
+    provider: str
+    default_model: str
+    default_model_available: bool
+    available_models: List[str] = Field(default_factory=list)
+    latency_ms: Optional[float] = None
+    error: Optional[str] = None
+
+
+class LLMError(Exception):
+    """Base exception for all LLM provider and service failures."""
+
+    def __init__(
+        self,
+        message: str,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.provider = provider
+        self.model = model
+        self.details = details or {}
+
+
+class LLMConnectionError(LLMError):
+    """Raised when the LLM daemon or host cannot be reached."""
+    pass
+
+
+class LLMTimeoutError(LLMError):
+    """Raised when an inference or network request times out."""
+
+    def __init__(
+        self,
+        message: str,
+        timeout_seconds: Optional[float] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        super().__init__(message, provider=provider, model=model, details=details)
+        self.timeout_seconds = timeout_seconds
+
+
+class LLMModelNotFoundError(LLMError):
+    """Raised when the requested model is not downloaded or available."""
+    pass
+
+
+class LLMResponseError(LLMError):
+    """Raised when the LLM provider returns an HTTP error or malformed payload."""
+
+    def __init__(
+        self,
+        message: str,
+        status_code: Optional[int] = None,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        super().__init__(message, provider=provider, model=model, details=details)
+        self.status_code = status_code
+
+
+class LLMValidationError(LLMError):
+    """Raised when prompt, parameters, or messages fail validation."""
+    pass
+
+
 class BaseLLMClient(ABC):
     """Clean abstract base client for local LLM inference engines."""
 
@@ -98,3 +170,13 @@ class BaseLLMClient(ABC):
     async def health(self) -> bool:
         """Check if the LLM runtime is reachable and ready."""
         pass
+
+    async def health_check(self) -> LLMHealthStatus:
+        """Detailed health check returning latency and model availability."""
+        is_ok = await self.health()
+        return LLMHealthStatus(
+            is_alive=is_ok,
+            provider="unknown",
+            default_model="unknown",
+            default_model_available=is_ok,
+        )

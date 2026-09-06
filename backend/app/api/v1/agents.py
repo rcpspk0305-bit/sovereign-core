@@ -7,13 +7,14 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.api.v1.chat import get_audit_logger, get_llm_client
+from app.api.v1.chat import get_audit_logger
 from app.api.v1.tools import get_tool_registry
 from app.core.agents.orchestrator import SimpleOrchestratorAgent
 from app.core.interfaces.agents import AgentResult, BaseAgent
 from app.core.interfaces.audit import AuditEvent, AuditEventType, BaseAuditLogger
 from app.core.interfaces.llm import BaseLLMClient
 from app.core.interfaces.tools import BaseToolRegistry
+from app.core.llm.service import get_llm_provider
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
 
@@ -26,7 +27,7 @@ class AgentRunRequest(BaseModel):
 
 
 def get_agent(
-    llm_client: BaseLLMClient = Depends(get_llm_client),
+    llm_client: BaseLLMClient = Depends(get_llm_provider),
     tool_registry: BaseToolRegistry = Depends(get_tool_registry),
 ) -> BaseAgent:
     return SimpleOrchestratorAgent(

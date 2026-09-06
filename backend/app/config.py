@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # Ollama settings
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    DEFAULT_MODEL: str = "llama3.2:latest"
+    DEFAULT_MODEL: str = "gemma4:e2b"
     DEFAULT_EMBEDDING_MODEL: str = "nomic-embed-text:latest"
     LLM_TIMEOUT_SECONDS: float = 120.0
 

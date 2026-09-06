@@ -12,18 +12,13 @@ from pydantic import BaseModel, Field
 
 from app.core.audit.logger import FileAndMemoryAuditLogger
 from app.core.interfaces.audit import AuditEvent, AuditEventType, BaseAuditLogger
-from app.core.interfaces.llm import BaseLLMClient, ChatMessage, LLMResponse
-from app.core.llm.ollama import OllamaClient
+from app.core.interfaces.llm import ChatMessage, LLMError, LLMResponse
+from app.core.llm.service import LLMService, get_llm_service
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
-# Shared singleton dependencies
+# Shared singleton audit logger
 _shared_audit_logger = FileAndMemoryAuditLogger()
-_shared_llm_client = OllamaClient()
-
-
-def get_llm_client() -> BaseLLMClient:
-    return _shared_llm_client
 
 
 def get_audit_logger() -> BaseAuditLogger:
@@ -42,10 +37,10 @@ class ChatRequest(BaseModel):
 @router.post("", response_model=Optional[LLMResponse])
 async def create_chat_completion(
     request: ChatRequest,
-    llm_client: BaseLLMClient = Depends(get_llm_client),
+    llm_service: LLMService = Depends(get_llm_service),
     audit_logger: BaseAuditLogger = Depends(get_audit_logger),
 ):
-    """Execute non-streaming or SSE streaming chat completion."""
+    """Execute non-streaming or SSE streaming chat completion via typed LLMService."""
     session_id = request.session_id or str(uuid.uuid4())
     start_time = time.perf_counter()
 
@@ -68,7 +63,7 @@ async def create_chat_completion(
         async def event_generator():
             full_response = []
             try:
-                async for chunk in llm_client.stream(
+                async for chunk in llm_service.stream(
                     messages=request.messages,
                     model=request.model,
                     temperature=request.temperature,
@@ -109,7 +104,7 @@ async def create_chat_completion(
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     try:
-        response = await llm_client.complete(
+        response = await llm_service.complete(
             messages=request.messages,
             model=request.model,
             temperature=request.temperature,
@@ -139,6 +134,19 @@ async def create_chat_completion(
             )
         )
         return response
+    except LLMError as exc:
+        await audit_logger.log(
+            AuditEvent(
+                id=str(uuid.uuid4()),
+                timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                event_type=AuditEventType.LLM_ERROR,
+                session_id=session_id,
+                model=request.model,
+                error=exc.message,
+                status="failed",
+            )
+        )
+        raise exc
     except Exception as exc:
         await audit_logger.log(
             AuditEvent(

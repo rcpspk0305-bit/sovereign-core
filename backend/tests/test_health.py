@@ -10,6 +10,10 @@ def test_health_check_endpoint(test_client: TestClient):
     assert data["status"] == "healthy"
     assert data["ollama_connected"] is True
     assert "ollama_url" in data
+    assert data["default_model"] == "gemma4:e2b"
+    assert data["default_model_available"] is True
+    assert isinstance(data["available_models"], list)
+    assert data["latency_ms"] is not None
 
 
 def test_root_endpoint(test_client: TestClient):
