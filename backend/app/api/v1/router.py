@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1.agents import router as agents_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.chat import router as chat_router
+from app.api.v1.flight_recorder import router as flight_recorder_router
 from app.api.v1.health import router as health_router
 from app.api.v1.models import router as models_router
 from app.api.v1.rag import router as rag_router
@@ -19,3 +20,4 @@ api_v1_router.include_router(rag_router)
 api_v1_router.include_router(tools_router)
 api_v1_router.include_router(agents_router)
 api_v1_router.include_router(audit_router)
+api_v1_router.include_router(flight_recorder_router)

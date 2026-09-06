@@ -181,11 +181,22 @@ class InspectionAnalysisAgent(BaseAgent):
             ChatMessage(role=ChatRole.USER, content=prompt),
         ]
 
+        event_callback = kwargs.get("event_callback")
         step_counter = 1
         final_answer: Optional[str] = None
 
         while step_counter <= bounded_steps:
             now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            if event_callback:
+                try:
+                    await event_callback({
+                        "type": "step_started",
+                        "step_number": step_counter,
+                        "timestamp": now_iso,
+                    })
+                except Exception:
+                    pass
+
             try:
                 llm_res = await self.llm_client.complete(messages=messages, **kwargs)
                 raw_text = llm_res.content.strip()
@@ -193,6 +204,17 @@ class InspectionAnalysisAgent(BaseAgent):
                 elapsed = (time.perf_counter() - start_time) * 1000.0
                 error_msg = f"LLM inference error at step {step_counter}: {str(exc)}"
                 logger.error(error_msg)
+                if event_callback:
+                    try:
+                        await event_callback({
+                            "type": "error_recorded",
+                            "step_number": step_counter,
+                            "error_message": error_msg,
+                            "severity": "error",
+                            "timestamp": now_iso,
+                        })
+                    except Exception:
+                        pass
                 return AgentResult(
                     session_id=session,
                     final_response=error_msg,
@@ -222,6 +244,19 @@ class InspectionAnalysisAgent(BaseAgent):
             if tool_name:
                 step_thought = thought or f"Invoking tool '{tool_name}'"
 
+                if event_callback:
+                    try:
+                        await event_callback({
+                            "type": "tool_called",
+                            "step_number": step_counter,
+                            "tool_name": tool_name,
+                            "tool_arguments": tool_args or {},
+                            "thought": step_thought,
+                            "timestamp": now_iso,
+                        })
+                    except Exception:
+                        pass
+
                 # Security check: verify against allowed tools
                 if tool_name not in self.ALLOWED_TOOLS or not self.tool_registry.get(tool_name):
                     violation_msg = (
@@ -249,6 +284,18 @@ class InspectionAnalysisAgent(BaseAgent):
                             timestamp=now_iso,
                         )
                     )
+
+                    if event_callback:
+                        try:
+                            await event_callback({
+                                "type": "error_recorded",
+                                "step_number": step_counter,
+                                "error_message": violation_msg,
+                                "severity": "policy_violation",
+                                "timestamp": now_iso,
+                            })
+                        except Exception:
+                            pass
 
                     # Feed violation back to LLM to allow correction
                     messages.append(ChatMessage(role=ChatRole.ASSISTANT, content=raw_text))
@@ -300,6 +347,36 @@ class InspectionAnalysisAgent(BaseAgent):
                         timestamp=now_iso,
                     )
                 )
+
+                if event_callback:
+                    try:
+                        await event_callback({
+                            "type": "tool_completed",
+                            "step_number": step_counter,
+                            "tool_name": tool_name,
+                            "tool_arguments": tool_args or {},
+                            "execution_time_ms": round(t_elapsed, 2),
+                            "success": tool_result.success,
+                            "output_preview": str(tool_result.output)[:200] if tool_result.success else None,
+                            "error": tool_result.error,
+                            "timestamp": now_iso,
+                        })
+                        if tool_name == "document_retrieval" and tool_result.success and isinstance(tool_result.output, dict) and "chunks" in tool_result.output:
+                            await event_callback({
+                                "type": "sources_retrieved",
+                                "step_number": step_counter,
+                                "chunks": tool_result.output["chunks"],
+                                "timestamp": now_iso,
+                            })
+                        elif tool_name == "document_generation" and tool_result.success and isinstance(tool_result.output, dict):
+                            await event_callback({
+                                "type": "artifact_generated",
+                                "step_number": step_counter,
+                                "artifact": tool_result.output,
+                                "timestamp": now_iso,
+                            })
+                    except Exception:
+                        pass
 
                 messages.append(ChatMessage(role=ChatRole.ASSISTANT, content=raw_text))
                 messages.append(

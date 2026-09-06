@@ -7,10 +7,11 @@ import {
   FileText,
   Layers,
   MessageSquare,
+  Radio,
   Wrench,
 } from 'lucide-react';
 
-export type TabId = 'chat' | 'rag' | 'tools' | 'agents' | 'audit';
+export type TabId = 'chat' | 'rag' | 'tools' | 'agents' | 'flight-recorder' | 'audit';
 
 interface SidebarProps {
   activeTab: TabId;
@@ -23,6 +24,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     { id: 'rag', label: 'RAG Knowledge', icon: <Database size={18} /> },
     { id: 'tools', label: 'Tool Registry', icon: <Wrench size={18} /> },
     { id: 'agents', label: 'Agent Loops', icon: <Bot size={18} /> },
+    { id: 'flight-recorder', label: 'Flight Recorder', icon: <Radio size={18} /> },
     { id: 'audit', label: 'Audit Trail', icon: <FileText size={18} /> },
   ];
 

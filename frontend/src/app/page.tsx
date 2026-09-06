@@ -7,6 +7,7 @@ import ChatView from '@/components/workbench/ChatView';
 import RagView from '@/components/workbench/RagView';
 import ToolsView from '@/components/workbench/ToolsView';
 import AgentView from '@/components/workbench/AgentView';
+import FlightRecorderView from '@/components/workbench/FlightRecorderView';
 import AuditViewer from '@/components/workbench/AuditViewer';
 
 export default function Home() {
@@ -26,6 +27,7 @@ export default function Home() {
           {activeTab === 'rag' && <RagView />}
           {activeTab === 'tools' && <ToolsView />}
           {activeTab === 'agents' && <AgentView model={selectedModel} />}
+          {activeTab === 'flight-recorder' && <FlightRecorderView model={selectedModel} />}
           {activeTab === 'audit' && <AuditViewer />}
         </div>
       </main>
