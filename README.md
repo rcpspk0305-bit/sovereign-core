@@ -61,10 +61,14 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
 │   │   │   ├── agents/      # Controlled inspection agent orchestration engine
 │   │   │   ├── flight_recorder/ # Blackbox manager, telemetry event broadcaster, data models
 │   │   │   └── audit/       # Structured JSON audit logger
-│   │   ├── config.py        # Settings management
+│   │   ├── config.py        # Settings & absolute path anchoring (all data dirs relative to backend/)
 │   │   └── main.py          # Application entrypoint & WebSocket routes
-│   ├── data/                # Persistent ChromaDB storage, flight_records/, artifacts/, audit logs
-│   ├── tests/               # Pytest unit & integration test suite (64+ tests)
+│   ├── data/                # Runtime data — always resolved relative to backend/ regardless of CWD
+│   │   ├── artifacts/       # Generated DOCX approval notes
+│   │   ├── audit/           # Structured JSON audit logs
+│   │   ├── chroma/          # ChromaDB persistent vector index
+│   │   └── flight_records/  # Persisted mission blackbox JSON records
+│   ├── tests/               # Pytest unit & integration test suite (66+ tests)
 │   ├── Dockerfile
 │   └── pyproject.toml
 ├── frontend/
@@ -110,7 +114,7 @@ pip install -r requirements-dev.txt
 # Run test suite
 pytest -v
 
-# Start FastAPI dev server
+# Start FastAPI dev server (can be launched from any directory — data paths are absolute)
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -146,7 +150,7 @@ cd backend
 pytest -v
 ```
 
-The 64+ tests cover interface adherence, mock and live LLM streaming, PyMuPDF parsing, metadata retention, ChromaDB vector indexing and retrieval, tool schema validation, agent reasoning loops, real-time WebSocket telemetry streaming, claim-evidence grounding validation, local DOCX artifact generation, and audit event persistence.
+The 66+ tests cover interface adherence, mock and live LLM streaming, PyMuPDF parsing, metadata retention, ChromaDB vector indexing and retrieval, tool schema validation, agent reasoning loops, real-time WebSocket telemetry streaming, claim-evidence grounding validation, local DOCX artifact generation, and audit event persistence.
 
 ---
 
