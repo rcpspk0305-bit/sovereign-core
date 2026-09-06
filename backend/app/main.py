@@ -57,6 +57,10 @@ def create_application() -> FastAPI:
             "api": "/api/v1",
         }
 
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon():
+        return JSONResponse(status_code=204, content=None)
+
     # Register LLM domain exception handlers
     @app.exception_handler(LLMConnectionError)
     async def handle_llm_connection_error(request: Request, exc: LLMConnectionError):
