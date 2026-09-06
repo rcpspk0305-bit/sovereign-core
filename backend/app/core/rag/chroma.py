@@ -83,12 +83,29 @@ class ChromaVectorStore(BaseRetriever):
                 embeddings[idx] = emb
                 documents[idx].embedding = emb
 
-        self._collection.upsert(
-            ids=ids,
-            documents=contents,
-            metadatas=metadatas,
-            embeddings=embeddings,
-        )
+        try:
+            self._collection.upsert(
+                ids=ids,
+                documents=contents,
+                metadatas=metadatas,
+                embeddings=embeddings,
+            )
+        except Exception as exc:
+            if "dimension" in str(exc).lower():
+                logger.warning(
+                    "Dimensionality mismatch in collection '%s' (%s). Re-initializing collection for new embedding model.",
+                    self.collection_name,
+                    exc,
+                )
+                await self.clear()
+                self._collection.upsert(
+                    ids=ids,
+                    documents=contents,
+                    metadatas=metadatas,
+                    embeddings=embeddings,
+                )
+            else:
+                raise exc
 
         logger.info("Upserted %d documents into ChromaDB collection '%s'", len(ids), self.collection_name)
         return ids
@@ -106,11 +123,22 @@ class ChromaVectorStore(BaseRetriever):
         query_emb = await self.embedding_provider.embed_query(query)
         k = min(top_k, self._collection.count())
 
-        results = self._collection.query(
-            query_embeddings=[query_emb],
-            n_results=k,
-            include=["documents", "metadatas", "distances"],
-        )
+        try:
+            results = self._collection.query(
+                query_embeddings=[query_emb],
+                n_results=k,
+                include=["documents", "metadatas", "distances"],
+            )
+        except Exception as exc:
+            if "dimension" in str(exc).lower():
+                logger.warning(
+                    "Dimensionality mismatch for query against collection '%s' (%s). Clearing outdated collection.",
+                    self.collection_name,
+                    exc,
+                )
+                await self.clear()
+                return []
+            raise exc
 
         matched_ids = results.get("ids", [[]])[0]
         matched_docs = results.get("documents", [[]])[0]
