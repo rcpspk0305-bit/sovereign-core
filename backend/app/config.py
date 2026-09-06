@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     AUDIT_LOG_DIR: Path = Path("./data/audit")
     AUDIT_LOG_FILE: str = "audit.jsonl"
 
+    # RAG & Chroma settings
+    CHROMA_PERSIST_DIR: Path = Path("./data/chroma")
+    CHROMA_COLLECTION_NAME: str = "sovereign_knowledge"
+    RAG_CHUNK_SIZE: int = 500
+    RAG_CHUNK_OVERLAP: int = 50
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
