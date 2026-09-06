@@ -34,6 +34,7 @@ python_files = "test_*.py"
 filterwarnings = [
     "ignore::starlette.exceptions.StarletteDeprecationWarning",
     "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning:starlette.testclient",
+    "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:chromadb.*",
 ]
 
 [tool.ruff]
