@@ -2,10 +2,12 @@
 
 import datetime
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
-from app.core.interfaces.audit import AuditEvent, AuditEventType
+
 from app.core.audit.logger import FileAndMemoryAuditLogger
+from app.core.interfaces.audit import AuditEvent, AuditEventType
 
 
 @pytest.mark.asyncio

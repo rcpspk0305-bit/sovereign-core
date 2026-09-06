@@ -2,6 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
+
 from app.core.interfaces.rag import Document
 from app.core.rag.in_memory import InMemoryVectorStore, cosine_similarity
 

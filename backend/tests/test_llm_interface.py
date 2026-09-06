@@ -2,6 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
+
 from app.core.interfaces.llm import (
     BaseLLMClient,
     ChatMessage,

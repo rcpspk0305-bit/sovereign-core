@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import List, Union
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

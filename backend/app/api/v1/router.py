@@ -1,6 +1,7 @@
 """Master router for API v1."""
 
 from fastapi import APIRouter
+
 from app.api.v1.agents import router as agents_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.chat import router as chat_router

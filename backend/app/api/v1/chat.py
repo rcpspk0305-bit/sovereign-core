@@ -5,13 +5,14 @@ import json
 import time
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from app.core.audit.logger import FileAndMemoryAuditLogger
 from app.core.interfaces.audit import AuditEvent, AuditEventType, BaseAuditLogger
 from app.core.interfaces.llm import BaseLLMClient, ChatMessage, LLMResponse
-from app.core.audit.logger import FileAndMemoryAuditLogger
 from app.core.llm.ollama import OllamaClient
 
 router = APIRouter(prefix="/chat", tags=["Chat"])

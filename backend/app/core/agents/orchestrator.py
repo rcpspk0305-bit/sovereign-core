@@ -2,7 +2,8 @@
 
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
+
 from app.core.interfaces.agents import (
     AgentResult,
     AgentStep,
@@ -61,7 +62,6 @@ class SimpleOrchestratorAgent(BaseAgent):
         ]
 
         step_counter = 1
-        current_thought = "Analyzing user intent and available tools."
 
         try:
             llm_res = await self.llm_client.complete(messages=messages, **kwargs)

@@ -1,7 +1,9 @@
 """Model discovery and inspection router."""
 
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
+
 from app.api.v1.chat import get_llm_client
 from app.core.interfaces.llm import BaseLLMClient, ModelInfo
 

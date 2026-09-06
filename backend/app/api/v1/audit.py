@@ -1,7 +1,9 @@
 """Audit log query router."""
 
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, Query
+
 from app.api.v1.chat import get_audit_logger
 from app.core.interfaces.audit import AuditEvent, AuditEventType, BaseAuditLogger
 

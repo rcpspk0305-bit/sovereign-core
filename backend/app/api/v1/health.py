@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+
 from app.config import settings
 from app.core.interfaces.llm import BaseLLMClient
 from app.core.llm.ollama import OllamaClient

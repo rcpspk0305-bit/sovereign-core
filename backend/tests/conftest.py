@@ -3,24 +3,22 @@
 import sys
 from pathlib import Path
 from typing import Any, AsyncIterator, List, Optional
+
 import pytest
 from fastapi.testclient import TestClient
 
 # Ensure backend root is in PYTHONPATH
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from app.core.audit.logger import FileAndMemoryAuditLogger
 from app.core.interfaces.llm import (
     BaseLLMClient,
     ChatMessage,
-    ChatRole,
     LLMResponse,
     LLMUsage,
     ModelInfo,
     StreamChunk,
 )
-from app.core.interfaces.rag import Document
-from app.core.interfaces.audit import AuditEvent, AuditEventType
-from app.core.audit.logger import FileAndMemoryAuditLogger
 from app.core.rag.in_memory import InMemoryVectorStore, SimpleEmbeddingProvider
 from app.core.tools.registry import ToolRegistry
 from app.main import create_application

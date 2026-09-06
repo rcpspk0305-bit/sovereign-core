@@ -2,6 +2,7 @@
 
 import math
 from typing import Dict, List, Optional
+
 from app.core.interfaces.rag import (
     BaseEmbeddingProvider,
     BaseRetriever,

@@ -2,7 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from app.core.interfaces.tools import BaseTool, ToolDefinition, ToolResult
+
 from app.core.tools.registry import CalculatorTool, SystemInfoTool, ToolRegistry
 
 

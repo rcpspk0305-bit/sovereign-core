@@ -2,6 +2,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
+
 from app.core.agents.orchestrator import SimpleOrchestratorAgent
 from app.core.interfaces.agents import AgentResult
 from app.core.tools.registry import ToolRegistry
