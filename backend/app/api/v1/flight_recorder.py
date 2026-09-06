@@ -91,9 +91,7 @@ async def websocket_flight_telemetry(
                 )
             elif action == "subscribe" and msg.get("task_id"):
                 tid = str(msg.get("task_id"))
-                if tid not in manager.task_connections:
-                    manager.task_connections[tid] = set()
-                manager.task_connections[tid].add(websocket)
+                manager.subscribe(websocket, tid)
                 await websocket.send_text(
                     json.dumps({
                         "event_type": "subscribed",

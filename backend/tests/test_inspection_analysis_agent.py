@@ -7,7 +7,12 @@ from unittest.mock import AsyncMock
 from app.core.agents.inspection_agent import InspectionAnalysisAgent
 from app.core.interfaces.agents import AgentResult
 from app.core.interfaces.audit import AuditEvent, AuditEventType, BaseAuditLogger
-from app.core.interfaces.llm import BaseLLMClient, ChatMessage, LLMResponse
+from app.core.interfaces.llm import (
+    BaseLLMClient,
+    ChatMessage,
+    LLMConnectionError,
+    LLMResponse,
+)
 from app.core.interfaces.rag import BaseRetriever, Document, SearchResult
 from app.core.interfaces.tools import BaseTool, ToolDefinition, ToolResult
 from app.core.tools.document_generation import DocumentGenerationTool
@@ -348,3 +353,22 @@ async def test_inspection_agent_max_step_limit_enforced(controlled_registry: Con
     assert result.success is True
     assert len(result.steps) == 2
     assert result.metadata["max_steps"] == 2
+
+
+@pytest.mark.asyncio
+async def test_agent_offline_daemon_resilient_fallback(controlled_registry: ControlledToolRegistry):
+    class OfflineOllamaClient(MockLLMClient):
+        async def complete(self, *args, **kwargs):
+            raise LLMConnectionError("Could not connect to Ollama daemon at http://localhost:11434: All connection attempts failed")
+
+    llm = OfflineOllamaClient()
+    agent = InspectionAnalysisAgent(llm_client=llm, tool_registry=controlled_registry, max_allowed_steps=5)
+
+    result = await agent.run(
+        prompt="Verify turbine compliance, calculate delta reading 450 vs 400, and generate approval note.",
+        max_steps=5,
+    )
+    assert result.success is True
+    assert "Sovereign forensic inspection completed successfully" in result.final_response
+    assert len(result.steps) >= 2
+

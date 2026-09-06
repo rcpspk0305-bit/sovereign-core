@@ -1,6 +1,7 @@
 """Chat completion endpoints supporting standard and streaming responses."""
 
 import datetime
+import functools
 import json
 import time
 import uuid
@@ -17,12 +18,11 @@ from app.core.llm.service import LLMService, get_llm_service
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
-# Shared singleton audit logger
-_shared_audit_logger = FileAndMemoryAuditLogger()
 
-
+@functools.lru_cache()
 def get_audit_logger() -> BaseAuditLogger:
-    return _shared_audit_logger
+    """Dependency provider returning singleton audit logger."""
+    return FileAndMemoryAuditLogger()
 
 
 class ChatRequest(BaseModel):

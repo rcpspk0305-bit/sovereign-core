@@ -64,3 +64,20 @@ async def execute_tool(
         raise HTTPException(status_code=400, detail="Tool execution failed.")
 
     return result
+
+
+@router.get("/approval-note/download")
+async def download_approval_note(path: str):
+    """Securely download a locally generated DOCX approval note."""
+    from pathlib import Path
+    from fastapi.responses import FileResponse
+
+    file_path = Path(path).resolve()
+    artifacts_dir = Path("data/artifacts").resolve()
+    if not file_path.exists() or not (str(file_path).startswith(str(artifacts_dir)) or file_path.suffix == ".docx"):
+        raise HTTPException(status_code=404, detail="Requested file not found or unauthorized.")
+    return FileResponse(
+        path=file_path,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename=file_path.name,
+    )

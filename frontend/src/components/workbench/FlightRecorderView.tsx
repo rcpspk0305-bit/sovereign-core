@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api-client';
 import {
   ApprovalStatus,
@@ -15,31 +15,24 @@ import {
 import {
   Activity,
   AlertTriangle,
-  Check,
-  CheckCircle2,
   Clock,
-  Copy,
-  Cpu,
   Database,
-  Download,
-  FileCheck,
   FileCode,
-  FileText,
-  Hash,
   Layers,
-  Lock,
-  Play,
-  Radio,
   RefreshCw,
-  Search,
-  Shield,
-  ShieldAlert,
-  ShieldCheck,
   Terminal,
-  UserCheck,
   Wrench,
-  XCircle,
 } from 'lucide-react';
+
+import { FlightRecorderTab, TabItem } from './flight-recorder/types';
+import { TelemetryStatusRibbon } from './flight-recorder/TelemetryStatusRibbon';
+import { MissionDispatcher } from './flight-recorder/MissionDispatcher';
+import { StepsTab } from './flight-recorder/tabs/StepsTab';
+import { ToolsTab } from './flight-recorder/tabs/ToolsTab';
+import { SourcesTab } from './flight-recorder/tabs/SourcesTab';
+import { ArtifactsTab } from './flight-recorder/tabs/ArtifactsTab';
+import { ErrorsTab } from './flight-recorder/tabs/ErrorsTab';
+import { RawStreamTab } from './flight-recorder/tabs/RawStreamTab';
 
 interface FlightRecorderViewProps {
   model: string;
@@ -52,10 +45,8 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
   const [networkMode, setNetworkMode] = useState<NetworkMode>('AIR_GAPPED_LOCAL');
   const [maxSteps, setMaxSteps] = useState<number>(5);
   const [running, setRunning] = useState<boolean>(false);
-  const [copiedTaskId, setCopiedTaskId] = useState<boolean>(false);
-  const [copiedArtifact, setCopiedArtifact] = useState<boolean>(false);
 
-  // Active record state
+  // Active record state & history
   const [currentRecord, setCurrentRecord] = useState<FlightRecord | null>(null);
   const [recordsHistory, setRecordsHistory] = useState<FlightRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
@@ -63,1587 +54,480 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
   // Live WebSocket state & event stream
   const [wsConnected, setWsConnected] = useState<boolean>(false);
   const [rawEvents, setRawEvents] = useState<FlightEvent[]>([]);
-  const [activeTab, setActiveTab] = useState<
-    'steps' | 'tools' | 'sources' | 'artifacts' | 'errors' | 'raw_stream'
-  >('steps');
+  const [activeTab, setActiveTab] = useState<FlightRecorderTab>('steps');
 
-  // Real-time latency stopwatch during execution
-  const [liveLatencyMs, setLiveLatencyMs] = useState<number>(0);
-  const runStartTimeRef = useRef<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const terminalBottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Ref to hold the current event handler, preventing stale closures in the WebSocket listener
+  const handleIncomingEventRef = useRef<(event: FlightEvent) => void>(() => {});
 
   // Load history on mount
-  const fetchRecords = async () => {
+  const fetchRecords = useCallback(async () => {
     setLoadingHistory(true);
     try {
       const list = await api.getFlightRecords(20);
       setRecordsHistory(list);
-      if (list.length > 0 && !currentRecord) {
-        setCurrentRecord(list[0]);
+      if (list.length > 0) {
+        setCurrentRecord((prev) => prev || list[0]);
       }
     } catch (err) {
       console.warn('Could not load flight records history:', err);
     } finally {
       setLoadingHistory(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRecords();
-  }, []);
+  }, [fetchRecords]);
 
-  // Real-time stopwatch ticker
-  useEffect(() => {
-    let timer: any = null;
-    if (running) {
-      runStartTimeRef.current = Date.now();
-      timer = setInterval(() => {
-        if (runStartTimeRef.current) {
-          setLiveLatencyMs(Date.now() - runStartTimeRef.current);
-        }
-      }, 50);
-    } else {
-      if (timer) clearInterval(timer);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [running]);
+  // Event handler for live streaming events
+  const handleIncomingFlightEvent = useCallback((flightEvent: FlightEvent) => {
+    setRawEvents((prev) => [...prev.slice(-199), flightEvent]);
 
-  // WebSocket Connection Management
-  useEffect(() => {
-    const wsUrl = api.getWebSocketUrl();
-    let socket: WebSocket | null = null;
-    let reconnectTimeout: any = null;
+    const { event_type, data, task_id } = flightEvent;
 
-    const connectWebSocket = () => {
-      try {
-        socket = new WebSocket(wsUrl);
-        wsRef.current = socket;
-
-        socket.onopen = () => {
-          setWsConnected(true);
-        };
-
-        socket.onclose = () => {
-          setWsConnected(false);
-          reconnectTimeout = setTimeout(connectWebSocket, 3000);
-        };
-
-        socket.onerror = () => {
-          setWsConnected(false);
-        };
-
-        socket.onmessage = (event) => {
-          try {
-            const data: FlightEvent = JSON.parse(event.data);
-            handleIncomingFlightEvent(data);
-          } catch (e) {
-            // non-json or ping frame
-          }
-        };
-      } catch (err) {
-        setWsConnected(false);
-      }
-    };
-
-    connectWebSocket();
-
-    return () => {
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      if (socket) {
-        socket.onclose = null;
-        socket.close();
-      }
-    };
-  }, []);
-
-  // Handle incoming live telemetry events
-  const handleIncomingFlightEvent = (ev: FlightEvent) => {
-    setRawEvents((prev) => [...prev.slice(-100), ev]);
-
-    if (terminalBottomRef.current) {
-      terminalBottomRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    if (ev.event_type === 'task_started') {
-      setCurrentRecord((prev) => ({
-        task_id: ev.task_id,
-        model: ev.data.model || model,
-        prompt: ev.data.prompt || '',
-        network_mode: ev.data.network_mode || 'AIR_GAPPED_LOCAL',
-        approval_status: ev.data.approval_status || 'PENDING',
+    if (event_type === 'task_started') {
+      setRunning(true);
+      setCurrentRecord({
+        task_id,
+        model: data.model || model,
+        prompt: data.prompt || '',
+        network_mode: data.network_mode || 'AIR_GAPPED_LOCAL',
+        approval_status: data.approval_status || 'PENDING',
         status: 'running',
-        start_time: ev.timestamp,
+        start_time: data.start_time || new Date().toISOString(),
         steps: [],
         tools_called: [],
         retrieved_sources: [],
         artifacts_generated: [],
         errors: [],
         metadata: {},
-      }));
-    } else if (ev.event_type === 'step_started') {
+      });
+    } else if (event_type === 'step_started') {
       setCurrentRecord((prev) => {
-        if (!prev || prev.task_id !== ev.task_id) return prev;
-        const exists = prev.steps.some((s) => s.step_number === ev.data.step_number);
+        if (!prev) return prev;
+        const exists = prev.steps.some((s) => s.step_number === data.step_number);
         if (exists) return prev;
         return {
           ...prev,
           steps: [
             ...prev.steps,
             {
-              step_number: ev.data.step_number,
-              thought: ev.data.thought,
-              timestamp: ev.timestamp,
+              step_number: data.step_number,
+              thought: data.thought || '',
+              timestamp: flightEvent.timestamp,
               status: 'running',
             },
           ],
         };
       });
-    } else if (ev.event_type === 'tool_called') {
-      setCurrentRecord((prev) => {
-        if (!prev || prev.task_id !== ev.task_id) return prev;
-        return {
-          ...prev,
-          steps: prev.steps.map((s) =>
-            s.step_number === ev.data.step_number
-              ? { ...s, thought: ev.data.thought || s.thought }
-              : s
-          ),
-        };
-      });
-    } else if (ev.event_type === 'tool_completed') {
+    } else if (event_type === 'tool_completed') {
       const toolRec: ToolExecutionRecord = {
-        step_number: ev.data.step_number,
-        tool_name: ev.data.tool_name,
-        tool_arguments: ev.data.tool_arguments || {},
-        execution_time_ms: ev.data.execution_time_ms || 0,
-        success: ev.data.success !== false,
-        error: ev.data.error,
-        output_preview: ev.data.output_preview,
+        step_number: data.step_number,
+        tool_name: data.tool_name,
+        tool_arguments: data.tool_arguments || {},
+        execution_time_ms: data.execution_time_ms || 0,
+        success: data.success ?? true,
+        error: data.error,
+        output_preview: data.output_preview,
       };
       setCurrentRecord((prev) => {
-        if (!prev || prev.task_id !== ev.task_id) return prev;
+        if (!prev) return prev;
         return {
           ...prev,
           tools_called: [...prev.tools_called, toolRec],
         };
       });
-    } else if (ev.event_type === 'sources_retrieved') {
-      const sources: RetrievedSource[] = ev.data.sources || [];
+    } else if (event_type === 'sources_retrieved') {
+      const newSources: RetrievedSource[] = (data.sources || []).map((s: any) => ({
+        document_name: s.document_name,
+        page_number: s.page_number,
+        similarity_score: s.similarity_score,
+        chunk_preview: s.chunk_preview,
+        metadata: s.metadata,
+      }));
       setCurrentRecord((prev) => {
-        if (!prev || prev.task_id !== ev.task_id) return prev;
+        if (!prev) return prev;
         return {
           ...prev,
-          retrieved_sources: [...prev.retrieved_sources, ...sources],
+          retrieved_sources: [...prev.retrieved_sources, ...newSources],
         };
       });
-    } else if (ev.event_type === 'artifact_generated') {
-      const artifact: GeneratedArtifact = ev.data as GeneratedArtifact;
+    } else if (event_type === 'artifact_generated') {
+      const artifact: GeneratedArtifact = {
+        artifact_id: data.artifact_id,
+        artifact_type: data.artifact_type,
+        title: data.title,
+        content: data.content,
+        checksum_sha256: data.checksum_sha256,
+        timestamp: data.timestamp,
+        metadata: data.metadata,
+      };
       setCurrentRecord((prev) => {
-        if (!prev || prev.task_id !== ev.task_id) return prev;
+        if (!prev) return prev;
         return {
           ...prev,
           artifacts_generated: [...prev.artifacts_generated, artifact],
         };
       });
-    } else if (ev.event_type === 'error_recorded') {
+    } else if (event_type === 'error_recorded') {
       const errorRec: RecordedError = {
-        step_number: ev.data.step_number,
-        error_message: ev.data.error_message,
-        severity: ev.data.severity || 'error',
-        timestamp: ev.timestamp,
+        step_number: data.step_number,
+        error_message: data.error_message || 'Error occurred',
+        severity: data.severity || 'error',
+        timestamp: flightEvent.timestamp,
       };
       setCurrentRecord((prev) => {
-        if (!prev || prev.task_id !== ev.task_id) return prev;
+        if (!prev) return prev;
         return {
           ...prev,
           errors: [...prev.errors, errorRec],
         };
       });
-    } else if (ev.event_type === 'task_completed') {
+    } else if (event_type === 'task_completed') {
       setRunning(false);
       setCurrentRecord((prev) => {
-        if (!prev || prev.task_id !== ev.task_id) return prev;
-        const updated: FlightRecord = {
+        if (!prev) return prev;
+        return {
           ...prev,
-          status: ev.data.status || 'completed',
-          approval_status: ev.data.approval_status || prev.approval_status,
-          total_latency_ms: ev.data.total_latency_ms,
-          final_response: ev.data.final_response,
+          status: data.status || 'completed',
+          approval_status: data.approval_status || prev.approval_status,
+          total_latency_ms: data.total_latency_ms,
+          final_response: data.final_response,
         };
-        setRecordsHistory((old) => [
-          updated,
-          ...old.filter((r) => r.task_id !== updated.task_id),
-        ]);
-        return updated;
       });
-    } else if (ev.event_type === 'approval_updated') {
+      fetchRecords();
+    } else if (event_type === 'approval_updated') {
       setCurrentRecord((prev) => {
-        if (!prev || prev.task_id !== ev.task_id) return prev;
-        const updated: FlightRecord = {
+        if (!prev || prev.task_id !== task_id) return prev;
+        return {
           ...prev,
-          approval_status: ev.data.approval_status,
+          approval_status: data.approval_status,
           metadata: {
             ...prev.metadata,
-            approval_notes: ev.data.notes,
+            approval_notes: data.notes,
           },
         };
-        setRecordsHistory((old) =>
-          old.map((r) => (r.task_id === updated.task_id ? updated : r))
-        );
-        return updated;
       });
+      fetchRecords();
     }
-  };
+  }, [fetchRecords, model]);
 
-  const handleLaunchMission = async () => {
+  // Keep ref up to date
+  useEffect(() => {
+    handleIncomingEventRef.current = handleIncomingFlightEvent;
+  }, [handleIncomingFlightEvent]);
+
+  // WebSocket lifecycle management
+  useEffect(() => {
+    const wsUrl = api.getWebSocketUrl();
+    let socket: WebSocket | null = null;
+    let reconnectTimeout: any = null;
+    let isDisposed = false;
+
+    const connectWs = () => {
+      try {
+        socket = new WebSocket(wsUrl);
+        wsRef.current = socket;
+
+        socket.onopen = () => {
+          if (isDisposed) return;
+          setWsConnected(true);
+        };
+
+        socket.onmessage = (event) => {
+          try {
+            const parsed = JSON.parse(event.data);
+            if (parsed.event_type) {
+              handleIncomingEventRef.current(parsed);
+            }
+          } catch {
+            // Ignore non-JSON heartbeat frames
+          }
+        };
+
+        socket.onclose = () => {
+          if (isDisposed) return;
+          setWsConnected(false);
+          reconnectTimeout = setTimeout(connectWs, 3000);
+        };
+
+        socket.onerror = () => {
+          if (isDisposed) return;
+          setWsConnected(false);
+        };
+      } catch (err) {
+        console.warn('WebSocket connection attempt failed:', err);
+        if (!isDisposed) {
+          reconnectTimeout = setTimeout(connectWs, 3000);
+        }
+      }
+    };
+
+    connectWs();
+
+    return () => {
+      isDisposed = true;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (socket) {
+        socket.close();
+      }
+    };
+  }, []);
+
+  // Dispatch mission
+  const handleRunMission = async () => {
     if (!prompt.trim() || running) return;
     setRunning(true);
     setRawEvents([]);
-    const generatedTaskId = `mission_${Math.random().toString(36).substring(2, 9)}`;
-
-    setCurrentRecord({
-      task_id: generatedTaskId,
-      model: model || 'gemma4:e2b',
-      prompt: prompt.trim(),
-      network_mode: networkMode,
-      approval_status: 'PENDING',
-      status: 'running',
-      start_time: new Date().toISOString(),
-      steps: [],
-      tools_called: [],
-      retrieved_sources: [],
-      artifacts_generated: [],
-      errors: [],
-      metadata: {},
-    });
 
     try {
-      const finishedRecord = await api.runFlightMission(
-        prompt.trim(),
-        model || 'gemma4:e2b',
-        networkMode,
-        generatedTaskId,
-        maxSteps
-      );
-      setCurrentRecord(finishedRecord);
-      setRecordsHistory((old) => [
-        finishedRecord,
-        ...old.filter((r) => r.task_id !== finishedRecord.task_id),
-      ]);
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        // Fast streaming mode via WebSocket
+        wsRef.current.send(
+          JSON.stringify({
+            action: 'run_mission',
+            prompt,
+            model: model || undefined,
+            network_mode: networkMode,
+            max_steps: maxSteps,
+          })
+        );
+        // Fallback REST execution
+        const res = await api.runFlightMission(
+          prompt,
+          model || undefined,
+          networkMode,
+          undefined,
+          maxSteps
+        );
+        setCurrentRecord(res);
+        setRunning(false);
+        fetchRecords();
+      }
     } catch (err: any) {
       console.error('Mission launch failed:', err);
-      setCurrentRecord((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: 'failed',
-              approval_status: 'FAILED',
-              errors: [
-                ...prev.errors,
-                {
-                  error_message: err.message || 'Execution failed',
-                  severity: 'error',
-                  timestamp: new Date().toISOString(),
-                },
-              ],
-            }
-          : null
-      );
-    } finally {
       setRunning(false);
+      setCurrentRecord((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          status: 'failed',
+          approval_status: 'FAILED',
+          errors: [
+            ...prev.errors,
+            {
+              error_message: String(err?.message || err),
+              severity: 'error',
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        };
+      });
     }
   };
 
-  const handleUpdateApproval = async (status: ApprovalStatus) => {
-    if (!currentRecord) return;
+  // Update human approval
+  const handleUpdateApproval = async (newStatus: ApprovalStatus, notes?: string) => {
+    if (!currentRecord?.task_id) return;
     try {
-      const updated = await api.updateFlightApproval(
-        currentRecord.task_id,
-        status,
-        `Auditor manual disposition set to ${status}`
-      );
+      const updated = await api.updateFlightApproval(currentRecord.task_id, newStatus, notes);
       setCurrentRecord(updated);
-      setRecordsHistory((old) =>
-        old.map((r) => (r.task_id === updated.task_id ? updated : r))
-      );
+      fetchRecords();
     } catch (err) {
       console.error('Failed to update approval:', err);
     }
   };
 
-  const copyTaskId = () => {
-    if (!currentRecord?.task_id) return;
-    navigator.clipboard.writeText(currentRecord.task_id);
-    setCopiedTaskId(true);
-    setTimeout(() => setCopiedTaskId(false), 2000);
-  };
-
-  const copyArtifactContent = (content: string) => {
-    navigator.clipboard.writeText(content);
-    setCopiedArtifact(true);
-    setTimeout(() => setCopiedArtifact(false), 2000);
-  };
-
-  const getApprovalBadge = (status: ApprovalStatus) => {
-    switch (status) {
-      case 'AUTO_VERIFIED':
-        return {
-          bg: 'rgba(16, 185, 129, 0.15)',
-          color: 'var(--accent-emerald)',
-          border: 'rgba(16, 185, 129, 0.3)',
-          icon: <ShieldCheck size={13} />,
-          text: 'AUTO-VERIFIED',
-        };
-      case 'APPROVED':
-        return {
-          bg: 'rgba(6, 182, 212, 0.15)',
-          color: 'var(--accent-cyan)',
-          border: 'rgba(6, 182, 212, 0.3)',
-          icon: <CheckCircle2 size={13} />,
-          text: 'HUMAN APPROVED',
-        };
-      case 'PENDING':
-        return {
-          bg: 'rgba(245, 158, 11, 0.15)',
-          color: 'var(--accent-amber)',
-          border: 'rgba(245, 158, 11, 0.3)',
-          icon: <Clock size={13} />,
-          text: 'PENDING AUDIT',
-        };
-      case 'POLICY_VIOLATION':
-        return {
-          bg: 'rgba(244, 63, 94, 0.2)',
-          color: 'var(--accent-rose)',
-          border: 'rgba(244, 63, 94, 0.4)',
-          icon: <ShieldAlert size={13} />,
-          text: 'POLICY VIOLATION',
-        };
-      case 'REJECTED':
-      case 'FAILED':
-      default:
-        return {
-          bg: 'rgba(244, 63, 94, 0.15)',
-          color: 'var(--accent-rose)',
-          border: 'rgba(244, 63, 94, 0.3)',
-          icon: <XCircle size={13} />,
-          text: status,
-        };
-    }
-  };
-
-  const approvalUI = getApprovalBadge(currentRecord?.approval_status || 'PENDING');
-
-  const presets = [
-    {
-      label: 'Apollo99 Cold-Start Inspection',
-      prompt:
-        'Retrieve document details about Apollo99, calculate (82 - 75) temperature delta, and generate an inspection report with citations.',
-    },
-    {
-      label: 'Generate Verified Approval Note (DOCX + Human Sign-off)',
-      prompt:
-        'Retrieve document details about Apollo99, verify baseline operating limits, and generate a formal Approval Note with source citations and explicit human sign-off.',
-    },
-    {
-      label: 'Air-Gapped Security Compliance',
-      prompt:
-        'Search the knowledge base for air-gapped security guidelines and summarize key findings.',
-    },
-    {
-      label: 'Deterministic Calculation Audit',
-      prompt:
-        'Use the calculator tool to compute ((145 * 12) + 360) / 4 and show your work.',
-    },
+  // Tab definitions with dynamic counts
+  const tabs: TabItem[] = [
+    { id: 'steps', label: 'Execution Steps', count: currentRecord?.steps.length || 0 },
+    { id: 'tools', label: 'Tools Called', count: currentRecord?.tools_called.length || 0 },
+    { id: 'sources', label: 'Retrieved Sources', count: currentRecord?.retrieved_sources.length || 0 },
+    { id: 'artifacts', label: 'Artifacts', count: currentRecord?.artifacts_generated.length || 0 },
+    { id: 'errors', label: 'Errors & Violations', count: currentRecord?.errors.length || 0 },
+    { id: 'raw_stream', label: 'Blackbox Log', count: rawEvents.length },
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {/* 1. FORENSIC TELEMETRY STATUS RIBBON */}
-      <div
-        className="card"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          padding: '16px 20px',
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border-subtle)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: 'var(--radius-sm)',
-                background: 'rgba(6, 182, 212, 0.15)',
-                color: 'var(--accent-cyan)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '1px solid rgba(6, 182, 212, 0.3)',
-              }}
-            >
-              <Radio size={18} />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '0.02em' }}>
-                AI FLIGHT RECORDER & TELEMETRY
-              </h2>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Forensic blackbox audit logging with real-time WebSocket event emission
-              </div>
-            </div>
-          </div>
+    <div className="flex flex-col gap-5 max-w-7xl mx-auto p-4 sm:p-6 font-sans">
+      {/* 1. Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-zinc-100 flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+            AI Flight Recorder & Blackbox Telemetry
+          </h1>
+          <p className="text-xs text-zinc-400 mt-1">
+            Real-time forensic auditing, reasoning trace, tool execution, and evidence provenance.
+          </p>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '11px',
-                padding: '4px 10px',
-                borderRadius: '9999px',
-                background: wsConnected
-                  ? 'rgba(16, 185, 129, 0.12)'
-                  : 'rgba(244, 63, 94, 0.12)',
-                color: wsConnected ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                border: `1px solid ${
-                  wsConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'
-                }`,
-              }}
-            >
-              <span
-                style={{
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: wsConnected ? 'var(--accent-emerald)' : 'var(--accent-rose)',
-                  boxShadow: wsConnected
-                    ? '0 0 6px var(--accent-emerald)'
-                    : '0 0 6px var(--accent-rose)',
-                }}
-              />
-              <span>{wsConnected ? 'LIVE WEBSOCKET STREAM' : 'WS DISCONNECTED'}</span>
-            </div>
-            <span
-              style={{
-                fontSize: '11px',
-                fontFamily: 'monospace',
-                color: 'var(--text-muted)',
-              }}
-            >
-              {rawEvents.length} events
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchRecords()}
+            disabled={loadingHistory}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-300 transition-colors disabled:opacity-50"
+            title="Refresh history"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
+            Refresh History
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Top Telemetry Status Ribbon */}
+      <TelemetryStatusRibbon
+        currentRecord={currentRecord}
+        running={running}
+        wsConnected={wsConnected}
+        onUpdateApproval={handleUpdateApproval}
+      />
+
+      {/* 3. Mission Dispatcher Box */}
+      <MissionDispatcher
+        prompt={prompt}
+        setPrompt={setPrompt}
+        networkMode={networkMode}
+        setNetworkMode={setNetworkMode}
+        maxSteps={maxSteps}
+        setMaxSteps={setMaxSteps}
+        running={running}
+        onRunMission={handleRunMission}
+      />
+
+      {/* 4. Main Body: History Sidebar + Tab Panels */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
+        {/* Left: Mission History List */}
+        <div className="lg:col-span-1 rounded-xl bg-zinc-900/40 border border-zinc-800/80 p-3.5 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Recorded Flights
+            </span>
+            <span className="text-[11px] text-zinc-500 font-mono">
+              {recordsHistory.length} total
             </span>
           </div>
-        </div>
 
-        {/* Metadata Tiles */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '10px',
-            paddingTop: '8px',
-            borderTop: '1px solid var(--border-subtle)',
-          }}
-        >
-          {/* TASK ID */}
-          <div
-            style={{
-              padding: '8px 12px',
-              background: 'var(--bg-tertiary)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Task ID
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
-              <span
-                style={{
-                  fontFamily: 'monospace',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: 'var(--accent-cyan)',
-                  maxWidth: '140px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-                title={currentRecord?.task_id || 'None'}
-              >
-                {currentRecord?.task_id || 'No active task'}
-              </span>
-              {currentRecord?.task_id && (
-                <button
-                  onClick={copyTaskId}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: copiedTaskId ? 'var(--accent-emerald)' : 'var(--text-muted)',
-                    cursor: 'pointer',
-                    padding: '2px',
-                  }}
-                  title="Copy Task ID"
-                >
-                  {copiedTaskId ? <Check size={13} /> : <Copy size={13} />}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* SELECTED MODEL */}
-          <div
-            style={{
-              padding: '8px 12px',
-              background: 'var(--bg-tertiary)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Selected Model
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-              <Cpu size={14} style={{ color: 'var(--accent-cyan)' }} />
-              <span style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'monospace' }}>
-                {currentRecord?.model || model || 'gemma4:e2b'}
-              </span>
-            </div>
-          </div>
-
-          {/* NETWORK MODE */}
-          <div
-            style={{
-              padding: '8px 12px',
-              background: 'var(--bg-tertiary)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Network Mode
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-              <Lock size={13} style={{ color: 'var(--accent-emerald)' }} />
-              <span
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  fontFamily: 'monospace',
-                  color: 'var(--accent-emerald)',
-                }}
-              >
-                {currentRecord?.network_mode || networkMode}
-              </span>
-            </div>
-          </div>
-
-          {/* APPROVAL STATUS */}
-          <div
-            style={{
-              padding: '8px 12px',
-              background: 'var(--bg-tertiary)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Approval Status
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  fontFamily: 'monospace',
-                  background: approvalUI.bg,
-                  color: approvalUI.color,
-                  border: `1px solid ${approvalUI.border}`,
-                }}
-              >
-                {approvalUI.icon}
-                {approvalUI.text}
-              </span>
-            </div>
-          </div>
-
-          {/* EXECUTION LATENCY */}
-          <div
-            style={{
-              padding: '8px 12px',
-              background: 'var(--bg-tertiary)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>
-              Mission Latency
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-              <Clock size={14} style={{ color: running ? 'var(--accent-amber)' : 'var(--text-secondary)' }} />
-              <span style={{ fontSize: '13px', fontWeight: 600, fontFamily: 'monospace' }}>
-                {running
-                  ? `${liveLatencyMs.toLocaleString()} ms (running)`
-                  : currentRecord?.total_latency_ms != null
-                  ? `${currentRecord.total_latency_ms.toLocaleString()} ms`
-                  : '-- ms'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. MISSION DISPATCHER & FORENSIC SELECTOR */}
-      <div
-        className="card"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          padding: '16px 20px',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Activity size={15} style={{ color: 'var(--accent-cyan)' }} />
-            Mission Parameter Deck
-          </div>
-
-          {/* Historical Record Replay Selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Replay Record:</span>
-            <select
-              className="select"
-              style={{ padding: '4px 8px', fontSize: '12px', width: 'auto', minWidth: '180px' }}
-              value={currentRecord?.task_id || ''}
-              onChange={(e) => {
-                const found = recordsHistory.find((r) => r.task_id === e.target.value);
-                if (found) setCurrentRecord(found);
-              }}
-            >
-              {recordsHistory.length === 0 ? (
-                <option value="">No recorded missions</option>
-              ) : (
-                recordsHistory.map((rec) => (
-                  <option key={rec.task_id} value={rec.task_id}>
-                    {rec.task_id} [{rec.approval_status}] ({rec.tools_called.length} tools)
-                  </option>
-                ))
-              )}
-            </select>
-            <button
-              className="btn btn-secondary"
-              onClick={fetchRecords}
-              disabled={loadingHistory}
-              style={{ padding: '4px 8px', fontSize: '12px' }}
-              title="Refresh records"
-            >
-              <RefreshCw size={12} className={loadingHistory ? 'spin' : ''} />
-            </button>
-          </div>
-        </div>
-
-        {/* Preset Chips */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {presets.map((p, idx) => (
-            <button
-              key={idx}
-              disabled={running}
-              onClick={() => setPrompt(p.prompt)}
-              style={{
-                background: prompt === p.prompt ? 'var(--accent-cyan-glow)' : 'var(--bg-tertiary)',
-                color: prompt === p.prompt ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-                border: `1px solid ${
-                  prompt === p.prompt ? 'var(--accent-cyan)' : 'var(--border-subtle)'
-                }`,
-                borderRadius: 'var(--radius-sm)',
-                padding: '4px 10px',
-                fontSize: '11px',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Prompt Input & Controls */}
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-          <textarea
-            className="textarea"
-            rows={2}
-            value={prompt}
-            disabled={running}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Enter mission prompt to execute under blackbox recording..."
-            style={{ flex: 1, fontFamily: 'monospace', fontSize: '12px' }}
-          />
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '200px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', width: '60px' }}>Mode:</span>
-              <select
-                className="select"
-                disabled={running}
-                value={networkMode}
-                onChange={(e) => setNetworkMode(e.target.value as NetworkMode)}
-                style={{ padding: '4px 8px', fontSize: '11px' }}
-              >
-                <option value="AIR_GAPPED_LOCAL">AIR_GAPPED_LOCAL</option>
-                <option value="NO_EGRESS">NO_EGRESS</option>
-              </select>
-            </div>
-
-            <button
-              className="btn btn-primary"
-              disabled={running || !prompt.trim()}
-              onClick={handleLaunchMission}
-              style={{ width: '100%', fontSize: '13px', fontWeight: 600, padding: '8px 12px' }}
-            >
-              {running ? (
-                <>
-                  <RefreshCw size={14} className="spin" />
-                  <span>RECORDING...</span>
-                </>
-              ) : (
-                <>
-                  <Play size={14} />
-                  <span>LAUNCH MISSION</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Human-in-the-loop Disposition Controls */}
-        {currentRecord && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingTop: '8px',
-              borderTop: '1px solid var(--border-subtle)',
-              fontSize: '11px',
-              color: 'var(--text-muted)',
-            }}
-          >
-            <span>Auditor Governance Sign-Off:</span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                className="btn btn-secondary"
-                style={{
-                  padding: '3px 8px',
-                  fontSize: '11px',
-                  color: 'var(--accent-emerald)',
-                  borderColor: 'rgba(16, 185, 129, 0.3)',
-                }}
-                onClick={() => handleUpdateApproval('APPROVED')}
-                disabled={running}
-              >
-                <CheckCircle2 size={12} />
-                <span>Mark Approved</span>
-              </button>
-              <button
-                className="btn btn-secondary"
-                style={{
-                  padding: '3px 8px',
-                  fontSize: '11px',
-                  color: 'var(--accent-rose)',
-                  borderColor: 'rgba(244, 63, 94, 0.3)',
-                }}
-                onClick={() => handleUpdateApproval('REJECTED')}
-                disabled={running}
-              >
-                <XCircle size={12} />
-                <span>Reject</span>
-              </button>
-              <button
-                className="btn btn-secondary"
-                style={{
-                  padding: '3px 8px',
-                  fontSize: '11px',
-                  color: 'var(--accent-cyan)',
-                  borderColor: 'rgba(6, 182, 212, 0.3)',
-                }}
-                onClick={() => handleUpdateApproval('AUTO_VERIFIED')}
-                disabled={running}
-              >
-                <ShieldCheck size={12} />
-                <span>Auto-Verify</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 3. EVIDENCE-ORIENTED FORENSIC PANELS */}
-      <div
-        className="card"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '0px',
-          overflow: 'hidden',
-          minHeight: '440px',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            borderBottom: '1px solid var(--border-subtle)',
-            background: 'var(--bg-secondary)',
-            overflowX: 'auto',
-          }}
-        >
-          {[
-            {
-              id: 'steps',
-              label: 'Execution Steps',
-              icon: <Layers size={14} />,
-              count: currentRecord?.steps.length || 0,
-            },
-            {
-              id: 'tools',
-              label: 'Tools Called',
-              icon: <Wrench size={14} />,
-              count: currentRecord?.tools_called.length || 0,
-            },
-            {
-              id: 'sources',
-              label: 'Retrieved Sources',
-              icon: <Database size={14} />,
-              count: currentRecord?.retrieved_sources.length || 0,
-            },
-            {
-              id: 'artifacts',
-              label: 'Artifacts Generated',
-              icon: <FileCheck size={14} />,
-              count: currentRecord?.artifacts_generated.length || 0,
-            },
-            {
-              id: 'errors',
-              label: 'Errors & Violations',
-              icon: <AlertTriangle size={14} />,
-              count: currentRecord?.errors.length || 0,
-              highlight: (currentRecord?.errors.length || 0) > 0,
-            },
-            {
-              id: 'raw_stream',
-              label: 'WebSocket Blackbox Log',
-              icon: <Terminal size={14} />,
-              count: rawEvents.length,
-            },
-          ].map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 18px',
-                  background: isActive ? 'var(--bg-card)' : 'transparent',
-                  color: isActive
-                    ? 'var(--accent-cyan)'
-                    : tab.highlight
-                    ? 'var(--accent-rose)'
-                    : 'var(--text-secondary)',
-                  border: 'none',
-                  borderBottom: isActive
-                    ? '2px solid var(--accent-cyan)'
-                    : '2px solid transparent',
-                  fontWeight: isActive ? 600 : 500,
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {tab.icon}
-                <span>{tab.label}</span>
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontFamily: 'monospace',
-                    padding: '1px 6px',
-                    borderRadius: '10px',
-                    background: tab.highlight
-                      ? 'rgba(244, 63, 94, 0.2)'
-                      : 'var(--bg-tertiary)',
-                    color: tab.highlight ? 'var(--accent-rose)' : 'var(--text-muted)',
-                  }}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tab Content Body */}
-        <div style={{ padding: '20px', flex: 1, overflowY: 'auto' }}>
-          {/* TAB 1: EXECUTION STEPS */}
-          {activeTab === 'steps' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {(!currentRecord?.steps || currentRecord.steps.length === 0) ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  No execution steps recorded yet. Launch a mission or choose a recorded replay.
-                </div>
-              ) : (
-                currentRecord.steps.map((step, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '14px 16px',
-                      display: 'flex',
-                      gap: '14px',
-                      alignItems: 'flex-start',
-                    }}
+          <div className="flex flex-col gap-1.5 max-h-[520px] overflow-y-auto pr-1">
+            {recordsHistory.length === 0 ? (
+              <div className="py-8 text-center text-xs text-zinc-500">
+                No flight records stored.
+              </div>
+            ) : (
+              recordsHistory.map((rec) => {
+                const isSelected = currentRecord?.task_id === rec.task_id;
+                return (
+                  <button
+                    key={rec.task_id}
+                    onClick={() => setCurrentRecord(rec)}
+                    className={`w-full text-left p-2.5 rounded-lg border transition-all text-xs flex flex-col gap-1 ${
+                      isSelected
+                        ? 'bg-blue-950/30 border-blue-800 text-zinc-100 shadow-sm'
+                        : 'bg-zinc-950/40 border-zinc-900 hover:bg-zinc-800/50 text-zinc-400'
+                    }`}
                   >
-                    <div
-                      style={{
-                        fontFamily: 'monospace',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        background: 'rgba(6, 182, 212, 0.15)',
-                        color: 'var(--accent-cyan)',
-                        border: '1px solid rgba(6, 182, 212, 0.3)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      STEP {step.step_number}
-                    </div>
-
-                    <div style={{ flex: 1 }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          marginBottom: '6px',
-                        }}
-                      >
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                          {step.timestamp ? new Date(step.timestamp).toLocaleTimeString() : 'Recorded'}
-                        </span>
-                        <span
-                          className="badge badge-success"
-                          style={{ fontSize: '10px', textTransform: 'uppercase' }}
-                        >
-                          {step.status || 'Completed'}
-                        </span>
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '13px',
-                          color: 'var(--text-primary)',
-                          fontFamily: 'monospace',
-                          background: 'var(--bg-tertiary)',
-                          padding: '10px 12px',
-                          borderRadius: '4px',
-                          whiteSpace: 'pre-wrap',
-                          lineHeight: '1.5',
-                        }}
-                      >
-                        {step.thought || 'Executing reasoning phase...'}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-
-              {currentRecord?.final_response && (
-                <div
-                  style={{
-                    marginTop: '12px',
-                    padding: '16px',
-                    background: 'rgba(16, 185, 129, 0.05)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      color: 'var(--accent-emerald)',
-                      marginBottom: '8px',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    <CheckCircle2 size={14} />
-                    Final Synthesized Agent Output
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '13px',
-                      whiteSpace: 'pre-wrap',
-                      lineHeight: '1.6',
-                      color: 'var(--text-primary)',
-                    }}
-                  >
-                    {currentRecord.final_response}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* TAB 2: TOOLS CALLED */}
-          {activeTab === 'tools' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {(!currentRecord?.tools_called || currentRecord.tools_called.length === 0) ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  No tools called during this mission.
-                </div>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                  <thead>
-                    <tr
-                      style={{
-                        borderBottom: '1px solid var(--border-subtle)',
-                        color: 'var(--text-muted)',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <th style={{ padding: '8px 12px', width: '70px' }}>Step #</th>
-                      <th style={{ padding: '8px 12px', width: '200px' }}>Tool Name</th>
-                      <th style={{ padding: '8px 12px' }}>Arguments (JSON)</th>
-                      <th style={{ padding: '8px 12px', width: '110px' }}>Latency</th>
-                      <th style={{ padding: '8px 12px', width: '90px' }}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {currentRecord.tools_called.map((tool, idx) => (
-                      <tr
-                        key={idx}
-                        style={{
-                          borderBottom: '1px solid var(--border-subtle)',
-                          background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.01)',
-                        }}
-                      >
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontWeight: 600 }}>
-                          #{tool.step_number}
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span
-                            style={{
-                              fontFamily: 'monospace',
-                              fontWeight: 600,
-                              color: 'var(--accent-cyan)',
-                              padding: '2px 6px',
-                              background: 'var(--bg-tertiary)',
-                              borderRadius: '4px',
-                            }}
-                          >
-                            {tool.tool_name}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: '11px' }}>
-                          <div
-                            style={{
-                              background: 'var(--bg-primary)',
-                              padding: '6px 10px',
-                              borderRadius: '4px',
-                              maxHeight: '80px',
-                              overflowY: 'auto',
-                              color: 'var(--text-secondary)',
-                            }}
-                          >
-                            {JSON.stringify(tool.tool_arguments, null, 2)}
-                          </div>
-                        </td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'monospace' }}>
-                          {tool.execution_time_ms} ms
-                        </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span
-                            className={`badge ${tool.success ? 'badge-success' : 'badge-error'}`}
-                            style={{ fontSize: '10px' }}
-                          >
-                            {tool.success ? 'SUCCESS' : 'FAILED'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          )}
-
-          {/* TAB 3: RETRIEVED SOURCES */}
-          {activeTab === 'sources' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {(!currentRecord?.retrieved_sources || currentRecord.retrieved_sources.length === 0) ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  No vector sources retrieved. Run a mission that queries the document repository.
-                </div>
-              ) : (
-                currentRecord.retrieved_sources.map((src, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '12px 16px',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '8px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Database size={14} style={{ color: 'var(--accent-cyan)' }} />
-                        <span style={{ fontWeight: 600, fontSize: '13px' }}>
-                          {src.document_name}
-                        </span>
-                        {src.page_number && (
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              padding: '1px 6px',
-                              background: 'var(--bg-tertiary)',
-                              borderRadius: '4px',
-                              color: 'var(--text-muted)',
-                            }}
-                          >
-                            Page {src.page_number}
-                          </span>
-                        )}
-                      </div>
-
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          fontFamily: 'monospace',
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          background: 'rgba(6, 182, 212, 0.15)',
-                          color: 'var(--accent-cyan)',
-                          border: '1px solid rgba(6, 182, 212, 0.3)',
-                        }}
-                      >
-                        Similarity: {(src.similarity_score * 100).toFixed(1)}%
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-mono font-semibold truncate max-w-[110px]">
+                        {rec.task_id}
+                      </span>
+                      <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                        {rec.approval_status}
                       </span>
                     </div>
-
-                    <div
-                      style={{
-                        fontSize: '12px',
-                        color: 'var(--text-secondary)',
-                        fontFamily: 'monospace',
-                        background: 'var(--bg-primary)',
-                        padding: '10px 12px',
-                        borderRadius: '4px',
-                        whiteSpace: 'pre-wrap',
-                      }}
-                    >
-                      {src.chunk_preview}
+                    <div className="text-[11px] text-zinc-400 line-clamp-1">
+                      {rec.prompt || 'Untitled mission'}
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {/* TAB 4: ARTIFACTS GENERATED (Enhanced with DOCX & Validation Badges) */}
-          {activeTab === 'artifacts' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {(!currentRecord?.artifacts_generated || currentRecord.artifacts_generated.length === 0) ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  No artifacts generated during this mission.
-                </div>
-              ) : (
-                currentRecord.artifacts_generated.map((art, idx) => {
-                  const hasDocx = Boolean(art.metadata?.docx_file_path);
-                  const isApprovalNote = art.artifact_type === 'approval_note';
-                  const validationStatus = art.metadata?.validation_status;
-                  const unsupportedCount = art.metadata?.unsupported_claims_count || 0;
-                  const isFlagged = unsupportedCount > 0;
-
-                  return (
-                    <div
-                      key={idx}
-                      style={{
-                        background: 'var(--bg-secondary)',
-                        border: isFlagged
-                          ? '1px solid rgba(244, 63, 94, 0.4)'
-                          : '1px solid var(--border-subtle)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '16px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '12px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          flexWrap: 'wrap',
-                          gap: '8px',
-                        }}
-                      >
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <div style={{ fontSize: '15px', fontWeight: 700 }}>
-                              {art.title}
-                            </div>
-                            <span
-                              className="badge"
-                              style={{
-                                background: isApprovalNote
-                                  ? 'rgba(6, 182, 212, 0.15)'
-                                  : 'var(--bg-tertiary)',
-                                color: isApprovalNote
-                                  ? 'var(--accent-cyan)'
-                                  : 'var(--text-secondary)',
-                                border: '1px solid var(--border-subtle)',
-                                fontSize: '10px',
-                                textTransform: 'uppercase',
-                              }}
-                            >
-                              {art.artifact_type}
-                            </span>
-                            {hasDocx && (
-                              <span
-                                className="badge"
-                                style={{
-                                  background: 'rgba(59, 130, 246, 0.15)',
-                                  color: '#60a5fa',
-                                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                                  fontSize: '10px',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                }}
-                              >
-                                <FileText size={11} />
-                                DOCX GENERATED ({Math.round((art.metadata?.docx_file_size_bytes || 0) / 1024)} KB)
-                              </span>
-                            )}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: '11px',
-                              color: 'var(--text-muted)',
-                              fontFamily: 'monospace',
-                              marginTop: '2px',
-                            }}
-                          >
-                            ID: {art.artifact_id} | Created: {new Date(art.timestamp).toLocaleTimeString()}
-                          </div>
-                        </div>
-
-                        <button
-                          className="btn btn-secondary"
-                          onClick={() => copyArtifactContent(art.content)}
-                          style={{ padding: '6px 12px', fontSize: '12px' }}
-                        >
-                          {copiedArtifact ? <Check size={13} /> : <Copy size={13} />}
-                          <span>{copiedArtifact ? 'Copied' : 'Copy Content'}</span>
-                        </button>
-                      </div>
-
-                      {/* Claim Validation Status Banner */}
-                      {validationStatus && (
-                        <div
-                          style={{
-                            padding: '8px 12px',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            background: isFlagged
-                              ? 'rgba(244, 63, 94, 0.12)'
-                              : 'rgba(16, 185, 129, 0.12)',
-                            color: isFlagged
-                              ? 'var(--accent-rose)'
-                              : 'var(--accent-emerald)',
-                            border: `1px solid ${
-                              isFlagged
-                                ? 'rgba(244, 63, 94, 0.3)'
-                                : 'rgba(16, 185, 129, 0.3)'
-                            }`,
-                          }}
-                        >
-                          {isFlagged ? <ShieldAlert size={14} /> : <ShieldCheck size={14} />}
-                          <span style={{ fontWeight: 600 }}>Grounding Validation:</span>
-                          <span>{validationStatus}</span>
-                        </div>
-                      )}
-
-                      {/* Local File Path Provenance */}
-                      {art.metadata?.docx_file_path && (
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            fontFamily: 'monospace',
-                            color: 'var(--text-muted)',
-                            background: 'var(--bg-primary)',
-                            padding: '6px 10px',
-                            borderRadius: '4px',
-                            border: '1px solid var(--border-subtle)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            wordBreak: 'break-all',
-                          }}
-                        >
-                          <FileText size={13} style={{ color: '#60a5fa', flexShrink: 0 }} />
-                          <span style={{ color: 'var(--text-muted)' }}>Local DOCX:</span>
-                          <span style={{ color: '#93c5fd' }}>{art.metadata.docx_file_path}</span>
-                        </div>
-                      )}
-
-                      {/* SHA-256 Checksum Provenance */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 10px',
-                          background: 'var(--bg-primary)',
-                          borderRadius: '4px',
-                          border: '1px solid var(--border-subtle)',
-                          fontSize: '11px',
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        <Hash size={13} style={{ color: 'var(--accent-emerald)' }} />
-                        <span style={{ color: 'var(--text-muted)' }}>SHA-256:</span>
-                        <span style={{ color: 'var(--accent-emerald)', wordBreak: 'break-all' }}>
-                          {art.checksum_sha256}
-                        </span>
-                      </div>
-
-                      {/* Artifact Content Viewer */}
-                      <div
-                        style={{
-                          padding: '14px',
-                          background: 'var(--bg-primary)',
-                          borderRadius: 'var(--radius-sm)',
-                          fontFamily: 'monospace',
-                          fontSize: '12px',
-                          whiteSpace: 'pre-wrap',
-                          maxHeight: '300px',
-                          overflowY: 'auto',
-                          lineHeight: '1.6',
-                          color: 'var(--text-primary)',
-                          border: '1px solid var(--border-subtle)',
-                        }}
-                      >
-                        {art.content}
-                      </div>
+                    <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono pt-1">
+                      <span>{new Date(rec.start_time).toLocaleTimeString()}</span>
+                      {rec.total_latency_ms && <span>{rec.total_latency_ms.toFixed(0)} ms</span>}
                     </div>
-                  );
-                })
-              )}
-            </div>
-          )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
 
-          {/* TAB 5: ERRORS & VIOLATIONS */}
-          {activeTab === 'errors' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {(!currentRecord?.errors || currentRecord.errors.length === 0) ? (
-                <div
-                  style={{
-                    textAlign: 'center',
-                    padding: '40px',
-                    color: 'var(--accent-emerald)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
+        {/* Right: Tabbed Deep Evidence Explorer */}
+        <div className="lg:col-span-3 rounded-xl bg-zinc-900/40 border border-zinc-800/80 p-4 flex flex-col gap-4">
+          {/* Tabs Bar */}
+          <div className="flex items-center gap-1 border-b border-zinc-800 pb-2 overflow-x-auto">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              const hasErrors = tab.id === 'errors' && (tab.count || 0) > 0;
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : hasErrors
+                      ? 'text-rose-400 hover:bg-zinc-800'
+                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                  }`}
                 >
-                  <ShieldCheck size={32} />
-                  <span>Zero errors or policy violations recorded for this mission.</span>
-                </div>
-              ) : (
-                currentRecord.errors.map((err, idx) => {
-                  const isViolation = err.severity === 'policy_violation';
-                  return (
-                    <div
-                      key={idx}
-                      style={{
-                        background: isViolation ? 'rgba(244, 63, 94, 0.08)' : 'var(--bg-secondary)',
-                        border: `1px solid ${
-                          isViolation ? 'rgba(244, 63, 94, 0.3)' : 'var(--border-subtle)'
-                        }`,
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '12px 16px',
-                        display: 'flex',
-                        gap: '12px',
-                        alignItems: 'flex-start',
-                      }}
-                    >
-                      {isViolation ? (
-                        <ShieldAlert size={18} style={{ color: 'var(--accent-rose)', flexShrink: 0 }} />
-                      ) : (
-                        <AlertTriangle size={18} style={{ color: 'var(--accent-amber)', flexShrink: 0 }} />
-                      )}
-                      <div style={{ flex: 1 }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '4px',
-                          }}
-                        >
-                          <span
-                            className={`badge ${isViolation ? 'badge-error' : 'badge-warning'}`}
-                            style={{ fontSize: '10px', textTransform: 'uppercase' }}
-                          >
-                            {err.severity}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '11px',
-                              fontFamily: 'monospace',
-                              color: 'var(--text-muted)',
-                            }}
-                          >
-                            {err.step_number ? `Step #${err.step_number} • ` : ''}
-                            {new Date(err.timestamp).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '12px',
-                            fontFamily: 'monospace',
-                            color: isViolation ? 'var(--accent-rose)' : 'var(--text-primary)',
-                            marginTop: '4px',
-                          }}
-                        >
-                          {err.error_message}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          )}
-
-          {/* TAB 6: RAW WEBSOCKET WIRE STREAM */}
-          {activeTab === 'raw_stream' && (
-            <div
-              style={{
-                background: '#07090e',
-                borderRadius: 'var(--radius-sm)',
-                border: '1px solid var(--border-subtle)',
-                padding: '14px',
-                fontFamily: 'monospace',
-                fontSize: '11px',
-                minHeight: '350px',
-                maxHeight: '450px',
-                overflowY: 'auto',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-              }}
-            >
-              <div
-                style={{
-                  color: 'var(--text-muted)',
-                  borderBottom: '1px solid #1a2235',
-                  paddingBottom: '6px',
-                  marginBottom: '6px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <span>[FASTAPI WEBSOCKET /api/v1/flight-recorder/ws TELEMETRY FEED]</span>
-                <span>STATUS: {wsConnected ? 'STREAMING' : 'OFFLINE'}</span>
-              </div>
-
-              {rawEvents.length === 0 ? (
-                <div style={{ color: 'var(--text-muted)', padding: '20px 0' }}>
-                  Awaiting live socket frames from FastAPI...
-                </div>
-              ) : (
-                rawEvents.map((ev, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      display: 'flex',
-                      gap: '8px',
-                      lineHeight: '1.4',
-                      borderBottom: '1px solid rgba(255, 255, 255, 0.03)',
-                      paddingBottom: '4px',
-                    }}
-                  >
-                    <span style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                      [{new Date(ev.timestamp).toLocaleTimeString()}]
-                    </span>
+                  {tab.id === 'steps' && <Activity className="w-3.5 h-3.5" />}
+                  {tab.id === 'tools' && <Wrench className="w-3.5 h-3.5" />}
+                  {tab.id === 'sources' && <Database className="w-3.5 h-3.5" />}
+                  {tab.id === 'artifacts' && <FileCode className="w-3.5 h-3.5" />}
+                  {tab.id === 'errors' && <AlertTriangle className="w-3.5 h-3.5" />}
+                  {tab.id === 'raw_stream' && <Terminal className="w-3.5 h-3.5" />}
+                  <span>{tab.label}</span>
+                  {tab.count !== undefined && tab.count > 0 && (
                     <span
-                      style={{
-                        color:
-                          ev.event_type === 'task_completed'
-                            ? 'var(--accent-emerald)'
-                            : ev.event_type === 'error_recorded'
-                            ? 'var(--accent-rose)'
-                            : ev.event_type === 'tool_called'
-                            ? 'var(--accent-amber)'
-                            : 'var(--accent-cyan)',
-                        fontWeight: 600,
-                        flexShrink: 0,
-                      }}
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                        isActive
+                          ? 'bg-blue-700 text-white'
+                          : hasErrors
+                          ? 'bg-rose-950 text-rose-300'
+                          : 'bg-zinc-800 text-zinc-400'
+                      }`}
                     >
-                      {ev.event_type}
+                      {tab.count}
                     </span>
-                    <span style={{ color: '#94a3b8', wordBreak: 'break-all' }}>
-                      {JSON.stringify(ev.data)}
-                    </span>
-                  </div>
-                ))
-              )}
-              <div ref={terminalBottomRef} />
-            </div>
-          )}
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active Tab Panel */}
+          <div className="pt-1">
+            {activeTab === 'steps' && (
+              <StepsTab
+                steps={currentRecord?.steps || []}
+                finalResponse={currentRecord?.final_response}
+                running={running}
+              />
+            )}
+
+            {activeTab === 'tools' && (
+              <ToolsTab toolsCalled={currentRecord?.tools_called || []} />
+            )}
+
+            {activeTab === 'sources' && (
+              <SourcesTab retrievedSources={currentRecord?.retrieved_sources || []} />
+            )}
+
+            {activeTab === 'artifacts' && (
+              <ArtifactsTab artifacts={currentRecord?.artifacts_generated || []} />
+            )}
+
+            {activeTab === 'errors' && (
+              <ErrorsTab errors={currentRecord?.errors || []} />
+            )}
+
+            {activeTab === 'raw_stream' && (
+              <RawStreamTab
+                rawEvents={rawEvents}
+                onClearEvents={() => setRawEvents([])}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

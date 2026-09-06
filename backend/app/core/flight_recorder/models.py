@@ -78,6 +78,17 @@ class FlightEvent(BaseModel):
     data: Dict[str, Any] = Field(default_factory=dict)
 
 
+class StepRecord(BaseModel):
+    """Detailed record of an individual reasoning and execution step."""
+    step_number: int
+    thought: Optional[str] = ""
+    tool_name: Optional[str] = None
+    tool_arguments: Dict[str, Any] = Field(default_factory=dict)
+    observation: Optional[str] = None
+    timestamp: Optional[str] = None
+    status: Optional[str] = "completed"
+
+
 class FlightRecord(BaseModel):
     """Complete blackbox mission record for audit and replay."""
     task_id: str
@@ -89,7 +100,7 @@ class FlightRecord(BaseModel):
     start_time: str
     end_time: Optional[str] = None
     total_latency_ms: Optional[float] = None
-    steps: List[Dict[str, Any]] = Field(default_factory=list)
+    steps: List[StepRecord] = Field(default_factory=list)
     tools_called: List[ToolExecutionRecord] = Field(default_factory=list)
     retrieved_sources: List[RetrievedSource] = Field(default_factory=list)
     artifacts_generated: List[GeneratedArtifact] = Field(default_factory=list)

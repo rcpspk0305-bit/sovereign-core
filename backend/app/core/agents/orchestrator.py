@@ -1,5 +1,11 @@
-"""Agent orchestrator implementing BaseAgent."""
+"""Lightweight demonstration agent orchestrator implementing BaseAgent.
 
+Note: For production and forensic inspection missions, use InspectionAnalysisAgent
+in app.core.agents.inspection_agent, which enforces bounded tools, strict schema
+validation, and fine-grained audit logging.
+"""
+
+import json
 import time
 import uuid
 from typing import Any, List, Optional
@@ -14,7 +20,7 @@ from app.core.interfaces.tools import BaseToolRegistry
 
 
 class SimpleOrchestratorAgent(BaseAgent):
-    """Deterministic, step-aware agent orchestrator with tool dispatching."""
+    """Deterministic, step-aware demonstration agent orchestrator with tool dispatching."""
 
     def __init__(
         self,
@@ -73,7 +79,6 @@ class SimpleOrchestratorAgent(BaseAgent):
                 tool_name = parts[0].replace("TOOL:", "").strip()
                 args_str = parts[1].replace("ARGS:", "").strip()
 
-                import json
                 try:
                     tool_args = json.loads(args_str)
                 except Exception:

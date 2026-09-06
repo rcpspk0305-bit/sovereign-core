@@ -1,6 +1,7 @@
 """FastAPI main application entrypoint for Sovereign-Core."""
 
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +17,8 @@ from app.core.interfaces.llm import (
     LLMTimeoutError,
     LLMValidationError,
 )
+
+logger = logging.getLogger("sovereign.main")
 
 
 @asynccontextmanager
@@ -139,11 +142,14 @@ def create_application() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
+        logger.exception("Unhandled server exception at %s: %s", request.url.path, exc)
+        is_production = settings.ENVIRONMENT.lower() == "production"
+        detail = "An unexpected error occurred." if is_production else str(exc)
         return JSONResponse(
             status_code=500,
             content={
                 "error": "InternalServerError",
-                "detail": str(exc),
+                "detail": detail,
                 "path": request.url.path,
             },
         )

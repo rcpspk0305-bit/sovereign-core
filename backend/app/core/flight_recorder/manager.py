@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from fastapi import WebSocket
 
+from app.config import settings
 from app.core.flight_recorder.models import (
     ApprovalStatus,
     FlightEvent,
@@ -21,6 +22,7 @@ from app.core.flight_recorder.models import (
     NetworkMode,
     RecordedError,
     RetrievedSource,
+    StepRecord,
     ToolExecutionRecord,
 )
 from app.core.interfaces.agents import BaseAgent
@@ -30,6 +32,8 @@ logger = logging.getLogger("sovereign.flight_recorder")
 
 class FlightRecorderManager:
     """Manages active mission blackbox recordings and real-time WebSocket telemetry."""
+
+    MAX_STORED_RECORDS: int = 500
 
     def __init__(self, storage_dir: Optional[Path] = None) -> None:
         self.records: Dict[str, FlightRecord] = {}
@@ -50,12 +54,23 @@ class FlightRecorderManager:
             try:
                 data = json.loads(file.read_text(encoding="utf-8"))
                 record = FlightRecord(**data)
-                self.records[record.task_id] = record
+                self._add_record_with_eviction(record)
             except Exception as ex:
                 logger.warning("Failed to load flight record from %s: %s", file, ex)
 
+    def _add_record_with_eviction(self, record: FlightRecord) -> None:
+        """Add record and evict oldest if capacity exceeded."""
+        if len(self.records) >= self.MAX_STORED_RECORDS and record.task_id not in self.records:
+            try:
+                oldest_task_id = min(self.records.keys(), key=lambda k: self.records[k].start_time)
+                del self.records[oldest_task_id]
+            except Exception:
+                pass
+        self.records[record.task_id] = record
+
     def _persist_record(self, record: FlightRecord) -> None:
         """Save record to disk."""
+        self._add_record_with_eviction(record)
         try:
             self.storage_dir.mkdir(parents=True, exist_ok=True)
             path = self.storage_dir / f"{record.task_id}.json"
@@ -68,9 +83,20 @@ class FlightRecorderManager:
         await websocket.accept()
         self.active_connections.add(websocket)
         if task_id:
-            if task_id not in self.task_connections:
-                self.task_connections[task_id] = set()
-            self.task_connections[task_id].add(websocket)
+            self.subscribe(websocket, task_id)
+
+    def subscribe(self, websocket: WebSocket, task_id: str) -> None:
+        """Subscribe a WebSocket connection to a specific task ID."""
+        if task_id not in self.task_connections:
+            self.task_connections[task_id] = set()
+        self.task_connections[task_id].add(websocket)
+
+    def unsubscribe(self, websocket: WebSocket, task_id: str) -> None:
+        """Unsubscribe a WebSocket connection from a specific task ID."""
+        if task_id in self.task_connections:
+            self.task_connections[task_id].discard(websocket)
+            if not self.task_connections[task_id]:
+                del self.task_connections[task_id]
 
     def disconnect(self, websocket: WebSocket, task_id: Optional[str] = None) -> None:
         """Unregister a disconnected WebSocket client."""
@@ -84,7 +110,7 @@ class FlightRecorderManager:
             self.task_connections[tid].discard(websocket)
 
     async def broadcast_event(self, event: FlightEvent) -> None:
-        """Broadcast event to both global subscribers and task-specific subscribers."""
+        """Broadcast event concurrently to both global subscribers and task-specific subscribers."""
         payload = event.model_dump()
         text = json.dumps(payload)
 
@@ -92,15 +118,20 @@ class FlightRecorderManager:
         if event.task_id in self.task_connections:
             targets.update(self.task_connections[event.task_id])
 
-        disconnected: List[WebSocket] = []
-        for ws in targets:
+        if not targets:
+            return
+
+        async def _safe_send(ws: WebSocket) -> Optional[WebSocket]:
             try:
                 await ws.send_text(text)
+                return None
             except Exception:
-                disconnected.append(ws)
+                return ws
 
-        for ws in disconnected:
-            self.disconnect(ws)
+        results = await asyncio.gather(*[_safe_send(ws) for ws in targets], return_exceptions=True)
+        for res in results:
+            if isinstance(res, WebSocket):
+                self.disconnect(res)
 
     def get_record(self, task_id: str) -> Optional[FlightRecord]:
         return self.records.get(task_id)
@@ -153,7 +184,7 @@ class FlightRecorderManager:
         start_time = time.perf_counter()
         now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
         tid = task_id or f"task_{uuid.uuid4().hex[:8]}"
-        resolved_model = model or "gemma4:e2b"
+        resolved_model = model or settings.DEFAULT_MODEL
 
         # Initialize flight record
         record = FlightRecord(
@@ -195,12 +226,14 @@ class FlightRecorderManager:
 
             if ev_type_str == "step_started":
                 step_num = raw_event.get("step_number", len(record.steps) + 1)
-                record.steps.append({
-                    "step_number": step_num,
-                    "thought": raw_event.get("thought", ""),
-                    "timestamp": ts,
-                    "status": "running",
-                })
+                record.steps.append(
+                    StepRecord(
+                        step_number=step_num,
+                        thought=raw_event.get("thought", ""),
+                        timestamp=ts,
+                        status="running",
+                    )
+                )
                 await self.broadcast_event(
                     FlightEvent(
                         event_type=FlightEventType.STEP_STARTED,
@@ -350,10 +383,24 @@ class FlightRecorderManager:
             record.end_time = end_iso
             record.total_latency_ms = round(total_elapsed, 2)
             record.final_response = agent_result.final_response
+            if agent_result.steps:
+                record.steps = [
+                    StepRecord(
+                        step_number=s.step_number,
+                        thought=s.thought,
+                        tool_name=s.tool_name,
+                        tool_arguments=s.tool_arguments or {},
+                        observation=s.observation,
+                        timestamp=s.timestamp,
+                        status="completed",
+                    )
+                    for s in agent_result.steps
+                ]
 
             # Evaluate approval status
             has_violations = any(e.severity == "policy_violation" for e in record.errors)
             has_errors = any(e.severity == "error" for e in record.errors)
+            used_fallback = bool(agent_result.metadata.get("used_fallback", False))
 
             if has_violations:
                 record.approval_status = ApprovalStatus.POLICY_VIOLATION
@@ -361,6 +408,10 @@ class FlightRecorderManager:
             elif not agent_result.success or has_errors:
                 record.approval_status = ApprovalStatus.FAILED
                 record.status = "failed"
+            elif used_fallback:
+                # Offline/fallback runs must not be automatically certified
+                record.approval_status = ApprovalStatus.PENDING
+                record.status = "completed"
             else:
                 record.approval_status = ApprovalStatus.AUTO_VERIFIED
                 record.status = "completed"

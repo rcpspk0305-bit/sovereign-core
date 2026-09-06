@@ -152,7 +152,12 @@ The 64+ tests cover interface adherence, mock and live LLM streaming, PyMuPDF pa
 
 ## Documentation Links
 
-- [Technology Stack & Architecture](TECHNOLOGIES.md)
+- [System Architecture](docs/ARCHITECTURE.md)
+- [AI Flight Recorder Specification](docs/FLIGHT_RECORDER_SPEC.md)
+- [Approval Note Generator Specification](docs/APPROVAL_NOTE_SPEC.md)
+- [Security & Governance Specification](docs/SECURITY_AND_GOVERNANCE.md)
+- [API Reference](docs/API_REFERENCE.md)
+- [Technology Stack Overview](TECHNOLOGIES.md)
 - [API Documentation (Swagger UI)](http://localhost:8000/docs)
 
 ---
@@ -160,3 +165,4 @@ The 64+ tests cover interface adherence, mock and live LLM streaming, PyMuPDF pa
 ## License
 
 Licensed under the [Apache License, Version 2.0](LICENSE).
+

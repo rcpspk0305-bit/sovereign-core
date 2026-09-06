@@ -14,7 +14,11 @@ from tests.conftest import MockLLMClient
 @pytest.fixture
 def test_app():
     """Create a test application instance with mocked dependencies."""
+    from app.core.llm.service import get_llm_provider
     app = create_application()
+    app.dependency_overrides[get_llm_provider] = lambda: MockLLMClient(
+        response_text='{"tool": "calculator", "arguments": {"expression": "25 - 20"}, "thought": "Calculating delta."}'
+    )
     return app
 
 
@@ -96,3 +100,38 @@ def test_websocket_flight_telemetry(test_app):
             ws.send_json({"action": "ping"})
             pong_frame = ws.receive_json()
             assert pong_frame["event_type"] == "pong"
+
+
+def test_run_flight_mission_fallback_approval_pending(test_app):
+    """Verify that missions executed via offline fallback remain PENDING approval, not AUTO_VERIFIED."""
+    from app.core.interfaces.agents import AgentResult, AgentStep, BaseAgent
+
+    class FallbackAgent(BaseAgent):
+        @property
+        def name(self) -> str:
+            return "fallback_test_agent"
+
+        @property
+        def description(self) -> str:
+            return "Test agent reporting fallback"
+
+        async def run(self, *args, **kwargs) -> AgentResult:
+            return AgentResult(
+                session_id="fallback_sess",
+                final_response="Synthesized offline response.",
+                steps=[AgentStep(step_number=1, thought="Offline fallback step.")],
+                success=True,
+                total_latency_ms=10.0,
+                metadata={"used_fallback": True},
+            )
+
+    test_app.dependency_overrides[get_agent] = lambda: FallbackAgent()
+    with TestClient(test_app) as c:
+        res = c.post(
+            "/api/v1/flight-recorder/run",
+            json={"prompt": "Test fallback policy"},
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["approval_status"] == "PENDING"
+        assert data["status"] == "completed"

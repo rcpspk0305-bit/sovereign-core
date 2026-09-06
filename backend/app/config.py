@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
 
-    # Server binding
+    # Server binding (0.0.0.0 enables Docker container port mapping; set to 127.0.0.1 for local-only workstation isolation)
     BACKEND_HOST: str = "0.0.0.0"
     BACKEND_PORT: int = 8000
     ALLOWED_ORIGINS: Union[str, List[str]] = Field(
