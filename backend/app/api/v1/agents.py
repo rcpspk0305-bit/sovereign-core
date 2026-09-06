@@ -16,6 +16,7 @@ from app.core.interfaces.llm import BaseLLMClient
 from app.core.interfaces.rag import BaseRetriever
 from app.core.interfaces.tools import ToolDefinition
 from app.core.llm.service import get_llm_provider
+from app.core.tools.approval_note import ApprovalNoteGeneratorTool
 from app.core.tools.document_generation import DocumentGenerationTool
 from app.core.tools.document_retrieval import DocumentRetrievalTool
 from app.core.tools.registry import CalculatorTool, ControlledToolRegistry
@@ -39,6 +40,7 @@ def get_controlled_tool_registry(
     registry.register(DocumentRetrievalTool(retriever=retriever))
     registry.register(CalculatorTool())
     registry.register(DocumentGenerationTool())
+    registry.register(ApprovalNoteGeneratorTool())
     return registry
 
 

@@ -1,5 +1,6 @@
 """Tools module."""
 
+from app.core.tools.approval_note import ApprovalNoteGeneratorTool
 from app.core.tools.document_generation import DocumentGenerationTool
 from app.core.tools.document_retrieval import DocumentRetrievalTool
 from app.core.tools.registry import (
@@ -16,4 +17,5 @@ __all__ = [
     "CalculatorTool",
     "DocumentRetrievalTool",
     "DocumentGenerationTool",
+    "ApprovalNoteGeneratorTool",
 ]

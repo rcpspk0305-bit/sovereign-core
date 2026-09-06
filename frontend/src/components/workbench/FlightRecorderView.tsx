@@ -21,7 +21,7 @@ import {
   Copy,
   Cpu,
   Database,
-  ExternalLink,
+  Download,
   FileCheck,
   FileCode,
   FileText,
@@ -36,6 +36,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Terminal,
+  UserCheck,
   Wrench,
   XCircle,
 } from 'lucide-react';
@@ -127,7 +128,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
 
         socket.onclose = () => {
           setWsConnected(false);
-          // Try reconnect after 3 seconds
           reconnectTimeout = setTimeout(connectWebSocket, 3000);
         };
 
@@ -163,7 +163,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
   const handleIncomingFlightEvent = (ev: FlightEvent) => {
     setRawEvents((prev) => [...prev.slice(-100), ev]);
 
-    // Auto-scroll raw stream if terminal is visible
     if (terminalBottomRef.current) {
       terminalBottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -203,7 +202,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
         };
       });
     } else if (ev.event_type === 'tool_called') {
-      // Step update with tool call
       setCurrentRecord((prev) => {
         if (!prev || prev.task_id !== ev.task_id) return prev;
         return {
@@ -275,7 +273,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
           total_latency_ms: ev.data.total_latency_ms,
           final_response: ev.data.final_response,
         };
-        // Update history cache
         setRecordsHistory((old) => [
           updated,
           ...old.filter((r) => r.task_id !== updated.task_id),
@@ -307,7 +304,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
     setRawEvents([]);
     const generatedTaskId = `mission_${Math.random().toString(36).substring(2, 9)}`;
 
-    // Set optimistic running record
     setCurrentRecord({
       task_id: generatedTaskId,
       model: model || 'gemma4:e2b',
@@ -325,7 +321,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
     });
 
     try {
-      // Launch through REST endpoint which hooks manager and broadcasts through WebSocket
       const finishedRecord = await api.runFlightMission(
         prompt.trim(),
         model || 'gemma4:e2b',
@@ -448,6 +443,11 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
         'Retrieve document details about Apollo99, calculate (82 - 75) temperature delta, and generate an inspection report with citations.',
     },
     {
+      label: 'Generate Verified Approval Note (DOCX + Human Sign-off)',
+      prompt:
+        'Retrieve document details about Apollo99, verify baseline operating limits, and generate a formal Approval Note with source citations and explicit human sign-off.',
+    },
+    {
       label: 'Air-Gapped Security Compliance',
       prompt:
         'Search the knowledge base for air-gapped security guidelines and summarize key findings.',
@@ -482,7 +482,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
             gap: '12px',
           }}
         >
-          {/* Title & Live Connection Pulse */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
@@ -509,7 +508,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
             </div>
           </div>
 
-          {/* Connection Status & Event counter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
@@ -553,7 +551,7 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
           </div>
         </div>
 
-        {/* Forensic Metadata Tiles */}
+        {/* Metadata Tiles */}
         <div
           style={{
             display: 'grid',
@@ -804,7 +802,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
           />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '200px' }}>
-            {/* Network Mode Toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', width: '60px' }}>Mode:</span>
               <select
@@ -819,7 +816,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
               </select>
             </div>
 
-            {/* Launch Button */}
             <button
               className="btn btn-primary"
               disabled={running || !prompt.trim()}
@@ -841,7 +837,7 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
           </div>
         </div>
 
-        {/* Human-in-the-loop Disposition Buttons */}
+        {/* Human-in-the-loop Disposition Controls */}
         {currentRecord && (
           <div
             style={{
@@ -854,7 +850,7 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
               color: 'var(--text-muted)',
             }}
           >
-            <span>Auditor Disposition Controls:</span>
+            <span>Auditor Governance Sign-Off:</span>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 className="btn btn-secondary"
@@ -914,7 +910,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
           minHeight: '440px',
         }}
       >
-        {/* Navigation Tabs */}
         <div
           style={{
             display: 'flex',
@@ -1087,7 +1082,6 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
                 ))
               )}
 
-              {/* Final Synthesis Output Display */}
               {currentRecord?.final_response && (
                 <div
                   style={{
@@ -1146,7 +1140,7 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
                       }}
                     >
                       <th style={{ padding: '8px 12px', width: '70px' }}>Step #</th>
-                      <th style={{ padding: '8px 12px', width: '180px' }}>Tool Name</th>
+                      <th style={{ padding: '8px 12px', width: '200px' }}>Tool Name</th>
                       <th style={{ padding: '8px 12px' }}>Arguments (JSON)</th>
                       <th style={{ padding: '8px 12px', width: '110px' }}>Latency</th>
                       <th style={{ padding: '8px 12px', width: '90px' }}>Status</th>
@@ -1291,103 +1285,200 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
             </div>
           )}
 
-          {/* TAB 4: ARTIFACTS GENERATED */}
+          {/* TAB 4: ARTIFACTS GENERATED (Enhanced with DOCX & Validation Badges) */}
           {activeTab === 'artifacts' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {(!currentRecord?.artifacts_generated || currentRecord.artifacts_generated.length === 0) ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                  No cryptographic artifacts generated during this mission.
+                  No artifacts generated during this mission.
                 </div>
               ) : (
-                currentRecord.artifacts_generated.map((art, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '16px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '12px',
-                    }}
-                  >
+                currentRecord.artifacts_generated.map((art, idx) => {
+                  const hasDocx = Boolean(art.metadata?.docx_file_path);
+                  const isApprovalNote = art.artifact_type === 'approval_note';
+                  const validationStatus = art.metadata?.validation_status;
+                  const unsupportedCount = art.metadata?.unsupported_claims_count || 0;
+                  const isFlagged = unsupportedCount > 0;
+
+                  return (
                     <div
+                      key={idx}
                       style={{
+                        background: 'var(--bg-secondary)',
+                        border: isFlagged
+                          ? '1px solid rgba(244, 63, 94, 0.4)'
+                          : '1px solid var(--border-subtle)',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '16px',
                         display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: '8px',
+                        flexDirection: 'column',
+                        gap: '12px',
                       }}
                     >
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: 700 }}>
-                          {art.title}
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <div style={{ fontSize: '15px', fontWeight: 700 }}>
+                              {art.title}
+                            </div>
+                            <span
+                              className="badge"
+                              style={{
+                                background: isApprovalNote
+                                  ? 'rgba(6, 182, 212, 0.15)'
+                                  : 'var(--bg-tertiary)',
+                                color: isApprovalNote
+                                  ? 'var(--accent-cyan)'
+                                  : 'var(--text-secondary)',
+                                border: '1px solid var(--border-subtle)',
+                                fontSize: '10px',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {art.artifact_type}
+                            </span>
+                            {hasDocx && (
+                              <span
+                                className="badge"
+                                style={{
+                                  background: 'rgba(59, 130, 246, 0.15)',
+                                  color: '#60a5fa',
+                                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                                  fontSize: '10px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                <FileText size={11} />
+                                DOCX GENERATED ({Math.round((art.metadata?.docx_file_size_bytes || 0) / 1024)} KB)
+                              </span>
+                            )}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: '11px',
+                              color: 'var(--text-muted)',
+                              fontFamily: 'monospace',
+                              marginTop: '2px',
+                            }}
+                          >
+                            ID: {art.artifact_id} | Created: {new Date(art.timestamp).toLocaleTimeString()}
+                          </div>
                         </div>
+
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => copyArtifactContent(art.content)}
+                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                        >
+                          {copiedArtifact ? <Check size={13} /> : <Copy size={13} />}
+                          <span>{copiedArtifact ? 'Copied' : 'Copy Content'}</span>
+                        </button>
+                      </div>
+
+                      {/* Claim Validation Status Banner */}
+                      {validationStatus && (
+                        <div
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            background: isFlagged
+                              ? 'rgba(244, 63, 94, 0.12)'
+                              : 'rgba(16, 185, 129, 0.12)',
+                            color: isFlagged
+                              ? 'var(--accent-rose)'
+                              : 'var(--accent-emerald)',
+                            border: `1px solid ${
+                              isFlagged
+                                ? 'rgba(244, 63, 94, 0.3)'
+                                : 'rgba(16, 185, 129, 0.3)'
+                            }`,
+                          }}
+                        >
+                          {isFlagged ? <ShieldAlert size={14} /> : <ShieldCheck size={14} />}
+                          <span style={{ fontWeight: 600 }}>Grounding Validation:</span>
+                          <span>{validationStatus}</span>
+                        </div>
+                      )}
+
+                      {/* Local File Path Provenance */}
+                      {art.metadata?.docx_file_path && (
                         <div
                           style={{
                             fontSize: '11px',
-                            color: 'var(--text-muted)',
                             fontFamily: 'monospace',
-                            marginTop: '2px',
+                            color: 'var(--text-muted)',
+                            background: 'var(--bg-primary)',
+                            padding: '6px 10px',
+                            borderRadius: '4px',
+                            border: '1px solid var(--border-subtle)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            wordBreak: 'break-all',
                           }}
                         >
-                          ID: {art.artifact_id} | Type: {art.artifact_type}
+                          <FileText size={13} style={{ color: '#60a5fa', flexShrink: 0 }} />
+                          <span style={{ color: 'var(--text-muted)' }}>Local DOCX:</span>
+                          <span style={{ color: '#93c5fd' }}>{art.metadata.docx_file_path}</span>
                         </div>
+                      )}
+
+                      {/* SHA-256 Checksum Provenance */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 10px',
+                          background: 'var(--bg-primary)',
+                          borderRadius: '4px',
+                          border: '1px solid var(--border-subtle)',
+                          fontSize: '11px',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        <Hash size={13} style={{ color: 'var(--accent-emerald)' }} />
+                        <span style={{ color: 'var(--text-muted)' }}>SHA-256:</span>
+                        <span style={{ color: 'var(--accent-emerald)', wordBreak: 'break-all' }}>
+                          {art.checksum_sha256}
+                        </span>
                       </div>
 
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => copyArtifactContent(art.content)}
-                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                      {/* Artifact Content Viewer */}
+                      <div
+                        style={{
+                          padding: '14px',
+                          background: 'var(--bg-primary)',
+                          borderRadius: 'var(--radius-sm)',
+                          fontFamily: 'monospace',
+                          fontSize: '12px',
+                          whiteSpace: 'pre-wrap',
+                          maxHeight: '300px',
+                          overflowY: 'auto',
+                          lineHeight: '1.6',
+                          color: 'var(--text-primary)',
+                          border: '1px solid var(--border-subtle)',
+                        }}
                       >
-                        {copiedArtifact ? <Check size={13} /> : <Copy size={13} />}
-                        <span>{copiedArtifact ? 'Copied' : 'Copy Content'}</span>
-                      </button>
+                        {art.content}
+                      </div>
                     </div>
-
-                    {/* SHA-256 Checksum Provenance Badge */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '6px 10px',
-                        background: 'var(--bg-primary)',
-                        borderRadius: '4px',
-                        border: '1px solid var(--border-subtle)',
-                        fontSize: '11px',
-                        fontFamily: 'monospace',
-                      }}
-                    >
-                      <Hash size={13} style={{ color: 'var(--accent-emerald)' }} />
-                      <span style={{ color: 'var(--text-muted)' }}>SHA-256:</span>
-                      <span style={{ color: 'var(--accent-emerald)', wordBreak: 'break-all' }}>
-                        {art.checksum_sha256}
-                      </span>
-                    </div>
-
-                    {/* Artifact Content Viewer */}
-                    <div
-                      style={{
-                        padding: '14px',
-                        background: 'var(--bg-primary)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontFamily: 'monospace',
-                        fontSize: '12px',
-                        whiteSpace: 'pre-wrap',
-                        maxHeight: '280px',
-                        overflowY: 'auto',
-                        lineHeight: '1.6',
-                        color: 'var(--text-primary)',
-                        border: '1px solid var(--border-subtle)',
-                      }}
-                    >
-                      {art.content}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

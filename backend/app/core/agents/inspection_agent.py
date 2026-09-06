@@ -35,6 +35,7 @@ class InspectionAnalysisAgent(BaseAgent):
         "document_retrieval",
         "calculator",
         "document_generation",
+        "approval_note_generator",
     }
 
     def __init__(
@@ -368,7 +369,7 @@ class InspectionAnalysisAgent(BaseAgent):
                                 "chunks": tool_result.output["chunks"],
                                 "timestamp": now_iso,
                             })
-                        elif tool_name == "document_generation" and tool_result.success and isinstance(tool_result.output, dict):
+                        elif tool_name in ("document_generation", "approval_note_generator") and tool_result.success and isinstance(tool_result.output, dict):
                             await event_callback({
                                 "type": "artifact_generated",
                                 "step_number": step_counter,

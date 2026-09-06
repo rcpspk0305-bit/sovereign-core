@@ -287,15 +287,25 @@ class FlightRecorderManager:
                 if not isinstance(content, str):
                     content = json.dumps(content, indent=2)
                 title = art_data.get("title", "Generated Inspection Report")
-                checksum = hashlib.sha256(content.encode("utf-8")).hexdigest()
+                checksum = art_data.get("checksum_sha256") or hashlib.sha256(content.encode("utf-8")).hexdigest()
                 artifact = GeneratedArtifact(
                     artifact_id=f"art_{uuid.uuid4().hex[:8]}",
-                    artifact_type=art_data.get("format", "report"),
+                    artifact_type=art_data.get("artifact_type") or art_data.get("format", "report"),
                     title=title,
                     content=content,
                     checksum_sha256=checksum,
                     timestamp=ts,
-                    metadata={"citations": art_data.get("citations", []), "step_number": raw_event.get("step_number")},
+                    metadata={
+                        "citations": art_data.get("citations", []),
+                        "step_number": raw_event.get("step_number"),
+                        "docx_file_path": art_data.get("docx_file_path"),
+                        "docx_file_name": art_data.get("docx_file_name"),
+                        "docx_file_size_bytes": art_data.get("docx_file_size_bytes"),
+                        "validation_status": art_data.get("validation_status"),
+                        "unsupported_claims_count": art_data.get("unsupported_claims_count", 0),
+                        "verified_claims_count": art_data.get("verified_claims_count", 0),
+                        "human_approval_role": art_data.get("human_approval_role"),
+                    },
                 )
                 record.artifacts_generated.append(artifact)
 

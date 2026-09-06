@@ -201,6 +201,7 @@ class ControlledToolRegistry(BaseToolRegistry):
         "document_retrieval",
         "calculator",
         "document_generation",
+        "approval_note_generator",
     }
 
     def __init__(self, allowed_tools: Optional[List[str]] = None) -> None:
