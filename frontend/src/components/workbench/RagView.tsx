@@ -67,9 +67,9 @@ export default function RagView() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div>
-        <h2 style={{ fontSize: '18px', fontWeight: 600 }}>RAG Knowledge Engine</h2>
+    <div className="workbench" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div className="workbench-title"><div className="eyebrow">Knowledge operations</div>
+        <h2 style={{ fontSize: '18px', fontWeight: 600 }}>RAG Knowledge</h2>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           Ingest local PDF documentation and text chunks with ChromaDB vector search and citations.
         </p>
@@ -84,7 +84,7 @@ export default function RagView() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div className="two-column">
         {/* Ingestion Panel */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

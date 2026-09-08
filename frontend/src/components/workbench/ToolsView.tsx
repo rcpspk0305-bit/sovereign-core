@@ -57,15 +57,15 @@ export default function ToolsView() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div>
-        <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Tool Registry & Inspector</h2>
+    <div className="workbench" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div className="workbench-title"><div className="eyebrow">Controlled capabilities</div>
+        <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Tool Registry</h2>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
           Discover registered local tools, inspect their JSON schemas, and test execution.
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: '20px' }}>
+      <div className="tool-grid">
         {/* Tool List */}
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>

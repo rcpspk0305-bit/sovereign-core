@@ -87,18 +87,17 @@ export default function ChatView({ model }: ChatViewProps) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
+    <div className="workbench" style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 'calc(100vh - 150px)', gap: '20px' }}>
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          paddingBottom: '12px',
-          borderBottom: '1px solid var(--border-subtle)',
+          padding: '20px 22px', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', background: 'var(--surface)',
         }}
       >
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Local LLM Playground</h2>
+          <div className="eyebrow">Interactive inference</div><h2 style={{ fontSize: '23px', fontWeight: 700, letterSpacing: '-.04em', marginTop: '5px' }}>Chat Playground</h2>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
             Active Target: <span style={{ color: 'var(--accent-cyan)' }}>{model || 'Default'}</span>
           </p>
@@ -175,18 +174,15 @@ export default function ChatView({ model }: ChatViewProps) {
               <div
                 style={{
                   background: isUser
-                    ? 'linear-gradient(135deg, var(--accent-indigo), #4338ca)'
-                    : 'rgba(15, 23, 42, 0.75)',
+                  ? 'var(--blue)'
+                    : 'var(--surface)',
                   color: '#ffffff',
                   padding: '12px 16px',
                   borderRadius: '12px',
                   fontSize: '13px',
                   lineHeight: '1.6',
                   border: isUser ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid var(--border-subtle)',
-                  boxShadow: isUser
-                    ? '0 4px 16px var(--accent-indigo-glow)'
-                    : '0 4px 20px rgba(0, 0, 0, 0.4)',
-                  backdropFilter: 'blur(10px)',
+                  boxShadow: 'var(--shadow-sm)',
                   whiteSpace: 'pre-wrap',
                 }}
               >
@@ -223,7 +219,7 @@ export default function ChatView({ model }: ChatViewProps) {
       </div>
 
       {/* Input Area */}
-      <div style={{ display: 'flex', gap: '10px', paddingTop: '8px' }}>
+      <div className="card" style={{ display: 'flex', gap: '10px', padding: '10px' }}>
         <input
           type="text"
           className="input"

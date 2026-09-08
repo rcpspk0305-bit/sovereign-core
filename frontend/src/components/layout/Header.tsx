@@ -12,36 +12,34 @@ interface HeaderProps {
 
 export default function Header({ selectedModel, onSelectModel }: HeaderProps) {
   return (
-    <header
+    <header className="topbar"
       style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '12px 24px',
+        padding: '14px 30px',
         borderBottom: '1px solid var(--border-subtle)',
-        backgroundColor: 'rgba(3, 7, 18, 0.75)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        backgroundColor: 'rgba(13, 16, 21, 0.92)',
         zIndex: 50,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div
           style={{
-            background: 'linear-gradient(135deg, var(--accent-cyan), var(--accent-indigo))',
-            borderRadius: '10px',
-            padding: '8px',
+            background: 'var(--accent)',
+            borderRadius: '9px',
+            padding: '9px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 16px var(--accent-cyan-glow)',
+            boxShadow: 'none',
           }}
         >
           <Shield size={20} color="#ffffff" />
         </div>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h1 style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            <h1 style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
               Sovereign-Core
             </h1>
             <span
@@ -51,27 +49,23 @@ export default function Header({ selectedModel, onSelectModel }: HeaderProps) {
                 fontWeight: 600,
                 padding: '2px 6px',
                 borderRadius: '4px',
-                backgroundColor: 'rgba(0, 240, 255, 0.12)',
-                color: 'var(--accent-cyan)',
-                border: '1px solid rgba(0, 240, 255, 0.3)',
+                backgroundColor: 'var(--accent-soft)', color: 'var(--accent)', border: '1px solid rgba(120, 209, 188, .22)',
               }}
             >
               AIR-GAPPED v0.1.0
             </span>
           </div>
-          <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-            Zero-Trust Sovereign AI Operations Command Deck
+          <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            Local intelligence operations
           </p>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <SystemStatus />
-        <ModelSelector
+      <div className="status-cluster" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}><SystemStatus /></div>
+      <div className="model-picker" style={{ display: 'flex', alignItems: 'center' }}><ModelSelector
           selectedModel={selectedModel}
           onSelectModel={onSelectModel}
-        />
-      </div>
+        /></div>
     </header>
   );
 }

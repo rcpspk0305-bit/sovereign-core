@@ -351,7 +351,7 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
   ];
 
   return (
-    <div className="flex flex-col gap-5 max-w-7xl mx-auto p-4 sm:p-6 font-sans">
+    <div className="workbench" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* 1. Header Banner */}
       <div
         style={{
@@ -366,7 +366,7 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
         }}
       >
         <div>
-          <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="eyebrow">Mission observability</div><h1 style={{ fontSize: '25px', fontWeight: 700, letterSpacing: '-.04em', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
             <span
               className="pulse-beacon"
               style={{
@@ -378,10 +378,10 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
                 display: 'inline-block',
               }}
             />
-            AI Flight Recorder & Blackbox Telemetry
+            Flight Recorder
           </h1>
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Real-time forensic auditing, cosmic reasoning trace, tool telemetry, and evidence provenance.
+            Real-time execution traces, tool telemetry, and evidence provenance.
           </p>
         </div>
 

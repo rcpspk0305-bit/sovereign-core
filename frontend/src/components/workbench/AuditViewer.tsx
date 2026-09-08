@@ -44,18 +44,17 @@ export default function AuditViewer() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="workbench" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          paddingBottom: '12px',
-          borderBottom: '1px solid var(--border-subtle)',
+          padding: '20px 22px', border: '1px solid var(--line)', borderRadius: 'var(--radius-md)', background: 'var(--surface)',
         }}
       >
         <div>
-          <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Structured Audit Trail</h2>
+          <div><div className="eyebrow">Immutable observability</div><h2 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-.04em', marginTop: '5px' }}>Audit Trail</h2></div>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
             Zero-loss audit stream capturing prompts, tokens, tool invocations, and latencies.
           </p>

@@ -2,3 +2,7 @@ node_modules/
 .next/
 .env
 .env.local
+
+# Keep frontend API bindings and shared TypeScript contracts tracked.
+!src/lib/
+!src/lib/**

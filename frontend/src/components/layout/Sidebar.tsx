@@ -29,14 +29,13 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   ];
 
   return (
-    <aside
+    <aside className="sidebar"
       style={{
-        width: '230px',
-        backgroundColor: 'rgba(3, 7, 18, 0.85)',
+        backgroundColor: 'rgba(13, 16, 21, 0.94)',
         borderRight: '1px solid var(--border-subtle)',
         display: 'flex',
         flexDirection: 'column',
-        padding: '16px 12px',
+        padding: '22px 12px',
         gap: '8px',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
@@ -68,20 +67,17 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 gap: '12px',
                 padding: '10px 14px',
                 borderRadius: 'var(--radius-sm)',
-                border: isActive ? '1px solid rgba(0, 240, 255, 0.3)' : '1px solid transparent',
-                background: isActive
-                  ? 'linear-gradient(90deg, rgba(0, 240, 255, 0.15), rgba(99, 102, 241, 0.05))'
-                  : 'transparent',
-                color: isActive ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                border: isActive ? '1px solid rgba(120, 209, 188, .2)' : '1px solid transparent',
+                background: isActive ? 'var(--accent-soft)' : 'transparent', color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
                 fontWeight: isActive ? 600 : 400,
                 fontSize: '13px',
                 cursor: 'pointer',
                 textAlign: 'left',
-                boxShadow: isActive ? '0 0 14px var(--accent-cyan-glow)' : 'none',
+                boxShadow: 'none',
                 transition: 'all 0.2s ease',
               }}
             >
-              <span style={{ color: isActive ? 'var(--accent-cyan)' : 'var(--text-muted)', display: 'flex' }}>
+              <span style={{ color: isActive ? 'var(--accent)' : 'var(--text-muted)', display: 'flex' }}>
                 {item.icon}
               </span>
               {item.label}
@@ -95,7 +91,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           marginTop: 'auto',
           padding: '14px',
           borderRadius: 'var(--radius-sm)',
-          backgroundColor: 'rgba(15, 23, 42, 0.5)',
+          backgroundColor: 'var(--surface)',
           border: '1px solid var(--border-subtle)',
           fontSize: '11px',
           display: 'flex',

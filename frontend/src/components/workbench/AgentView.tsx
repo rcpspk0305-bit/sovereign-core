@@ -89,12 +89,12 @@ export default function AgentView({ model }: AgentViewProps) {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="workbench" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header & Security Policy */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 600 }}>Inspection-Analysis Agent</h2>
+            <div><div className="eyebrow">Orchestrated execution</div><h2 style={{ fontSize: '23px', fontWeight: 700, letterSpacing: '-.04em', marginTop: '4px' }}>Agent Loops</h2></div>
             <span
               className="badge"
               style={{
