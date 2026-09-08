@@ -31,10 +31,16 @@ export default function AuditViewer({ isActive = true }: AuditViewerProps) {
     }
   };
 
+  // Fetch logs on mount and whenever the tab becomes active
   useEffect(() => {
-    if (!isActive) return;
-    fetchLogs();
-    if (!autoRefresh) return;
+    if (isActive) {
+      fetchLogs();
+    }
+  }, [isActive]);
+
+  // Periodic interval polling while active and auto-refresh is enabled
+  useEffect(() => {
+    if (!isActive || !autoRefresh) return;
     const interval = setInterval(fetchLogs, 5000);
     return () => clearInterval(interval);
   }, [isActive, autoRefresh]);
