@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { api } from '@/lib/api-client';
 import { ChatMessage } from '@/lib/types';
-import { Send, Bot, User, Zap, Clock } from 'lucide-react';
+import { Send, Bot, User, Zap, Clock, Trash2 } from 'lucide-react';
 
 interface ChatViewProps {
   model: string;
@@ -21,6 +21,16 @@ export default function ChatView({ model }: ChatViewProps) {
   const [streamMode, setStreamMode] = useState(true);
   const [lastMetrics, setLastMetrics] = useState<{ latency_ms?: number; tokens?: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleClear = () => {
+    setMessages([
+      {
+        role: 'assistant',
+        content: 'Welcome to Sovereign-Core. I am running entirely on your local machine via Ollama. How can I assist you today?',
+      },
+    ]);
+    setLastMetrics(null);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -124,9 +134,20 @@ export default function ChatView({ model }: ChatViewProps) {
               type="checkbox"
               checked={streamMode}
               onChange={(e) => setStreamMode(e.target.checked)}
+              aria-label="Toggle streaming response"
             />
             Stream Response
           </label>
+          <button
+            className="btn btn-secondary"
+            onClick={handleClear}
+            title="Reset conversation"
+            aria-label="Reset conversation"
+            style={{ padding: '6px 10px', fontSize: '12px' }}
+          >
+            <Trash2 size={13} />
+            <span>Reset</span>
+          </button>
         </div>
       </div>
 
@@ -143,6 +164,7 @@ export default function ChatView({ model }: ChatViewProps) {
       >
         {messages.map((m, idx) => {
           const isUser = m.role === 'user';
+          const isError = !isUser && m.content.startsWith('[Error:');
           return (
             <div
               key={idx}
@@ -159,16 +181,16 @@ export default function ChatView({ model }: ChatViewProps) {
                     width: '34px',
                     height: '34px',
                     borderRadius: '50%',
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '1px solid rgba(0, 240, 255, 0.3)',
-                    boxShadow: '0 0 10px var(--accent-cyan-glow)',
+                    background: isError ? 'rgba(244, 63, 94, 0.15)' : 'rgba(15, 23, 42, 0.8)',
+                    border: isError ? '1px solid var(--accent-rose)' : '1px solid rgba(0, 240, 255, 0.3)',
+                    boxShadow: isError ? '0 0 10px var(--accent-rose-glow)' : '0 0 10px var(--accent-cyan-glow)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                   }}
                 >
-                  <Bot size={18} color="var(--accent-cyan)" />
+                  <Bot size={18} color={isError ? 'var(--accent-rose)' : 'var(--accent-cyan)'} />
                 </div>
               )}
 
@@ -176,15 +198,23 @@ export default function ChatView({ model }: ChatViewProps) {
                 style={{
                   background: isUser
                     ? 'linear-gradient(135deg, var(--accent-indigo), #4338ca)'
+                    : isError
+                    ? 'rgba(244, 63, 94, 0.1)'
                     : 'rgba(15, 23, 42, 0.75)',
-                  color: '#ffffff',
+                  color: isError ? '#fda4af' : '#ffffff',
                   padding: '12px 16px',
                   borderRadius: '12px',
                   fontSize: '13px',
                   lineHeight: '1.6',
-                  border: isUser ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid var(--border-subtle)',
+                  border: isUser
+                    ? '1px solid rgba(99, 102, 241, 0.4)'
+                    : isError
+                    ? '1px solid rgba(244, 63, 94, 0.4)'
+                    : '1px solid var(--border-subtle)',
                   boxShadow: isUser
                     ? '0 4px 16px var(--accent-indigo-glow)'
+                    : isError
+                    ? '0 4px 16px var(--accent-rose-glow)'
                     : '0 4px 20px rgba(0, 0, 0, 0.4)',
                   backdropFilter: 'blur(10px)',
                   whiteSpace: 'pre-wrap',
@@ -226,6 +256,8 @@ export default function ChatView({ model }: ChatViewProps) {
       <div style={{ display: 'flex', gap: '10px', paddingTop: '8px' }}>
         <input
           type="text"
+          id="chat-prompt-input"
+          aria-label="Transmit prompt or query to local intelligence node"
           className="input"
           placeholder="Transmit prompt or query to local intelligence node..."
           value={input}
@@ -240,6 +272,7 @@ export default function ChatView({ model }: ChatViewProps) {
         <button
           className="btn btn-primary"
           onClick={handleSend}
+          aria-label="Transmit message"
           disabled={loading || !input.trim()}
           style={{ minWidth: '95px' }}
         >

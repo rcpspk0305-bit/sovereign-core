@@ -210,19 +210,21 @@ export default function AgentView({ model }: AgentViewProps) {
       {/* Directives & Configuration */}
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
+          <label htmlFor="agent-objective-input" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
             Inspection Objective / Directive
           </label>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            <label htmlFor="agent-step-budget" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
               Step Budget: <strong>{maxSteps}</strong> steps
             </label>
             <input
+              id="agent-step-budget"
               type="range"
               min="1"
               max="10"
               value={maxSteps}
-              onChange={(e) => setMaxSteps(parseInt(e.target.value))}
+              aria-label="Step Budget slider"
+              onChange={(e) => setMaxSteps(parseInt(e.target.value, 10) || 5)}
               style={{ width: '90px', accentColor: 'var(--accent-cyan)' }}
             />
           </div>
@@ -234,6 +236,7 @@ export default function AgentView({ model }: AgentViewProps) {
             <button
               key={idx}
               className="btn btn-secondary"
+              aria-label={`Apply preset ${p.label}`}
               style={{ fontSize: '11px', padding: '4px 10px' }}
               onClick={() => setPrompt(p.prompt)}
             >
@@ -243,6 +246,8 @@ export default function AgentView({ model }: AgentViewProps) {
         </div>
 
         <textarea
+          id="agent-objective-input"
+          aria-label="Inspection Objective or Directive"
           className="textarea"
           rows={3}
           value={prompt}
@@ -254,6 +259,7 @@ export default function AgentView({ model }: AgentViewProps) {
           <button
             className="btn btn-primary"
             onClick={handleRunAgent}
+            aria-label="Execute Controlled Agent"
             disabled={loading || !prompt.trim()}
           >
             <Play size={14} />

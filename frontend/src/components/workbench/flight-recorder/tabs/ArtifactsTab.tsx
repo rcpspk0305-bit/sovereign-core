@@ -26,7 +26,7 @@ export function ArtifactsTab({ artifacts }: ArtifactsTabProps) {
     }
   };
 
-  const handleDownloadDocx = (docxPath?: string, docxName?: string) => {
+  const handleDownloadDocx = (docxPath?: string) => {
     if (!docxPath) return;
     const url = api.getApprovalNoteDownloadUrl(docxPath);
     window.open(url, '_blank');
@@ -91,7 +91,7 @@ export function ArtifactsTab({ artifacts }: ArtifactsTabProps) {
                 <div className="flex items-center gap-2">
                   {docxPath && (
                     <button
-                      onClick={() => handleDownloadDocx(docxPath, docxName)}
+                      onClick={() => handleDownloadDocx(docxPath)}
                       className="btn"
                       style={{
                         padding: '6px 12px',

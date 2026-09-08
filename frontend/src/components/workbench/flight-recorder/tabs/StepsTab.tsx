@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { StepRecord } from '@/lib/types';
-import { Activity, Clock, Cpu, Orbit, Sparkles, Wrench } from 'lucide-react';
+import { Clock, Orbit, Sparkles, Wrench } from 'lucide-react';
 
 interface StepsTabProps {
   steps: StepRecord[];

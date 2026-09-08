@@ -5,7 +5,6 @@ import {
   Bot,
   Database,
   FileText,
-  Layers,
   MessageSquare,
   Radio,
   Wrench,
@@ -30,6 +29,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
   return (
     <aside
+      aria-label="Sovereign Command Sidebar"
       style={{
         width: '230px',
         backgroundColor: 'rgba(3, 7, 18, 0.85)',
@@ -55,13 +55,14 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         Navigation Console
       </div>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <nav aria-label="Console Navigation" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
+              aria-current={isActive ? 'page' : undefined}
               style={{
                 display: 'flex',
                 alignItems: 'center',

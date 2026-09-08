@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { NetworkMode } from '@/lib/types';
-import { Compass, Layers, Play, RefreshCw, Sliders } from 'lucide-react';
+import { Compass, Play, RefreshCw, Sliders } from 'lucide-react';
 
 interface MissionDispatcherProps {
   prompt: string;
@@ -80,6 +80,7 @@ export function MissionDispatcher({
               key={idx}
               disabled={running}
               onClick={() => setPrompt(preset.prompt)}
+              aria-label={`Load preset scenario ${preset.title}`}
               style={{
                 fontSize: '11px',
                 padding: '4px 10px',
@@ -117,6 +118,7 @@ export function MissionDispatcher({
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         disabled={running}
+        aria-label="Mission Trajectory & Telemetry Objectives"
         placeholder="Enter orbital forensic objectives, document queries, telemetry delta equations, or approval requirements..."
         style={{
           width: '100%',
@@ -146,8 +148,10 @@ export function MissionDispatcher({
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           {/* Network Mode */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <span>Perimeter:</span>
+            <label htmlFor="mission-network-mode">Perimeter:</label>
             <select
+              id="mission-network-mode"
+              aria-label="Network Perimeter"
               value={networkMode}
               onChange={(e) => setNetworkMode(e.target.value as NetworkMode)}
               disabled={running}
@@ -170,12 +174,14 @@ export function MissionDispatcher({
           {/* Max Steps Slider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
             <Sliders size={13} color="var(--accent-cyan)" />
-            <span>Step Budget:</span>
+            <label htmlFor="mission-step-budget">Step Budget:</label>
             <input
+              id="mission-step-budget"
               type="range"
               min={1}
               max={10}
               value={maxSteps}
+              aria-label="Step Budget"
               onChange={(e) => setMaxSteps(Number(e.target.value))}
               disabled={running}
               style={{ width: '90px', accentColor: 'var(--accent-cyan)', cursor: 'pointer' }}
@@ -189,6 +195,7 @@ export function MissionDispatcher({
         {/* Launch Button */}
         <button
           onClick={onRunMission}
+          aria-label={running ? 'Recording Blackbox Stream' : 'Engage Mission Trajectory'}
           disabled={running || !prompt.trim()}
           style={{
             display: 'inline-flex',
@@ -212,7 +219,7 @@ export function MissionDispatcher({
         >
           {running ? (
             <>
-              <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              <RefreshCw size={14} className="spin" />
               Recording Blackbox Stream...
             </>
           ) : (

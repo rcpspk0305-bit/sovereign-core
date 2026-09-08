@@ -15,10 +15,8 @@ import {
 import {
   Activity,
   AlertTriangle,
-  Clock,
   Database,
   FileCode,
-  Layers,
   RefreshCw,
   Terminal,
   Wrench,
@@ -211,6 +209,25 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
         };
       });
       fetchRecords();
+    } else if (event_type === 'error') {
+      setRunning(false);
+      const errMsg = (data && (data.message || data.error)) || 'WebSocket telemetry error';
+      setCurrentRecord((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          status: 'failed',
+          approval_status: 'FAILED',
+          errors: [
+            ...prev.errors,
+            {
+              error_message: String(errMsg),
+              severity: 'error',
+              timestamp: flightEvent.timestamp,
+            },
+          ],
+        };
+      });
     }
   }, [fetchRecords, model]);
 
@@ -285,6 +302,7 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
     try {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         // Fast streaming mode via WebSocket
+        // Backend WebSocket handler will stream telemetry events and task_completed
         wsRef.current.send(
           JSON.stringify({
             action: 'run_mission',
@@ -294,7 +312,8 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
             max_steps: maxSteps,
           })
         );
-        // Fallback REST execution
+      } else {
+        // Fallback REST execution when WebSocket is offline or disconnected
         const res = await api.runFlightMission(
           prompt,
           model || undefined,

@@ -1,20 +1,35 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api-client';
 import { SearchResult } from '@/lib/types';
-import { FileUp, FileText, Plus, Search, Tag } from 'lucide-react';
+import { Database, FileUp, FileText, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 
 export default function RagView() {
   const [activeIngestTab, setActiveIngestTab] = useState<'pdf' | 'text'>('pdf');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [docContent, setDocContent] = useState('');
   const [docId, setDocId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<{ total_documents: number; backend: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchStats = async () => {
+    try {
+      const data = await api.getRagStats();
+      setStats(data);
+    } catch {
+      // Fallback silently if offline
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
 
   const handlePdfUpload = async () => {
     if (!selectedFile) return;
@@ -27,6 +42,7 @@ export default function RagView() {
       );
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      fetchStats();
     } catch (e: any) {
       setStatusMessage(`Upload failed: ${e.message}`);
     } finally {
@@ -44,10 +60,53 @@ export default function RagView() {
       setStatusMessage(`Successfully indexed document: ${id}`);
       setDocContent('');
       setDocId('');
+      fetchStats();
     } catch (e: any) {
       setStatusMessage(`Ingest failed: ${e.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClearRag = async () => {
+    if (!window.confirm('Are you sure you want to clear all indexed documents from ChromaDB?')) return;
+    setLoading(true);
+    setStatusMessage(null);
+    try {
+      await api.clearRag();
+      setStatusMessage('Vector store collection successfully cleared.');
+      setResults([]);
+      fetchStats();
+    } catch (e: any) {
+      setStatusMessage(`Clear failed: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        setSelectedFile(file);
+      } else {
+        setStatusMessage('Only .pdf files are supported for upload.');
+      }
     }
   };
 
@@ -68,11 +127,46 @@ export default function RagView() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div>
-        <h2 style={{ fontSize: '18px', fontWeight: 600 }}>RAG Knowledge Engine</h2>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-          Ingest local PDF documentation and text chunks with ChromaDB vector search and citations.
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h2 style={{ fontSize: '18px', fontWeight: 600 }}>RAG Knowledge Engine</h2>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Ingest local PDF documentation and text chunks with ChromaDB vector search and citations.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {stats !== null && (
+            <div
+              className="badge badge-cyan"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              title={`Backend: ${stats.backend}`}
+            >
+              <Database size={12} />
+              <span>{stats.total_documents} Chunks Indexed</span>
+            </div>
+          )}
+          <button
+            className="btn btn-secondary"
+            onClick={fetchStats}
+            title="Refresh index statistics"
+            aria-label="Refresh index statistics"
+            style={{ padding: '6px 10px', fontSize: '12px' }}
+          >
+            <RefreshCw size={13} className={loading ? 'spin' : ''} />
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={handleClearRag}
+            disabled={loading}
+            title="Clear vector store"
+            aria-label="Clear vector store"
+            style={{ padding: '6px 12px', fontSize: '12px', color: 'var(--accent-rose)', borderColor: 'rgba(244, 63, 94, 0.3)' }}
+          >
+            <Trash2 size={13} />
+            <span>Clear Index</span>
+          </button>
+        </div>
       </div>
 
       {statusMessage && (
@@ -114,14 +208,18 @@ export default function RagView() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div
                 style={{
-                  border: '2px dashed var(--border-subtle)',
+                  border: isDragging ? '2px dashed var(--accent-cyan)' : '2px dashed var(--border-subtle)',
                   borderRadius: '8px',
                   padding: '24px 16px',
                   textAlign: 'center',
-                  background: 'var(--bg-tertiary)',
+                  background: isDragging ? 'rgba(0, 240, 255, 0.08)' : 'var(--bg-tertiary)',
                   cursor: 'pointer',
+                  transition: 'all 0.2s ease',
                 }}
                 onClick={() => fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
                 <FileUp size={28} color="var(--accent-cyan)" style={{ margin: '0 auto 8px' }} />
                 <p style={{ fontSize: '13px', fontWeight: 500 }}>
@@ -134,6 +232,7 @@ export default function RagView() {
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf"
+                  aria-label="Upload PDF Document"
                   style={{ display: 'none' }}
                   onChange={(e) => {
                     if (e.target.files && e.target.files[0]) {
@@ -155,6 +254,7 @@ export default function RagView() {
               <input
                 className="input"
                 placeholder="Document ID (optional)"
+                aria-label="Document ID"
                 value={docId}
                 onChange={(e) => setDocId(e.target.value)}
               />
@@ -162,6 +262,7 @@ export default function RagView() {
                 className="textarea"
                 rows={5}
                 placeholder="Enter text or markdown content to index..."
+                aria-label="Document content to index"
                 value={docContent}
                 onChange={(e) => setDocContent(e.target.value)}
               />
@@ -186,6 +287,7 @@ export default function RagView() {
             <input
               className="input"
               placeholder="Query semantic index..."
+              aria-label="Query semantic index"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}

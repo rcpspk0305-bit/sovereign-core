@@ -43,22 +43,30 @@ export default function ModelSelector({
         className="select"
         value={selectedModel}
         onChange={(e) => onSelectModel(e.target.value)}
+        aria-label="Select AI Model"
         style={{ minWidth: '200px', fontSize: '13px' }}
       >
         {models.length === 0 ? (
-          <option value="">No local models detected</option>
+          <option value={selectedModel || ''}>{selectedModel || 'No local models detected'}</option>
         ) : (
-          models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name} {m.size_bytes ? `(${(m.size_bytes / (1024 * 1024 * 1024)).toFixed(1)} GB)` : ''}
-            </option>
-          ))
+          <>
+            {selectedModel && !models.some((m) => m.id === selectedModel) && (
+              <option value={selectedModel}>{selectedModel} (Active)</option>
+            )}
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} {m.size_bytes ? `(${(m.size_bytes / (1024 * 1024 * 1024)).toFixed(1)} GB)` : ''}
+              </option>
+            ))}
+          </>
         )}
       </select>
       <button
         className="btn btn-secondary"
         onClick={loadModels}
+        disabled={loading}
         title="Refresh models"
+        aria-label="Refresh local models"
         style={{ padding: '8px 10px' }}
       >
         <RefreshCw size={14} className={loading ? 'spin' : ''} />

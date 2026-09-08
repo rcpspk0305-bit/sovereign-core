@@ -186,7 +186,8 @@ body {
   box-shadow: 0 0 10px var(--accent-amber-glow);
 }
 
-.badge-error {
+.badge-error,
+.badge-danger {
   background: rgba(244, 63, 94, 0.15);
   color: var(--accent-rose);
   border: 1px solid rgba(244, 63, 94, 0.35);
@@ -218,6 +219,11 @@ body {
   box-shadow: 0 0 0 2px var(--accent-cyan-glow);
 }
 
+:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
 /* Space Theme Animations */
 @keyframes radar-pulse {
   0% { transform: scale(0.95); opacity: 0.8; }
@@ -230,6 +236,16 @@ body {
   50% { filter: drop-shadow(0 0 16px var(--accent-cyan)); }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .pulse-beacon {
   animation: radar-pulse 2s infinite ease-in-out;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+  display: inline-block;
 }

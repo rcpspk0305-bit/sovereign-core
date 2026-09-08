@@ -32,6 +32,50 @@ export default function ToolsView() {
     if (tool.name === 'calculator') {
       return JSON.stringify({ operation: 'add', a: 15, b: 27 }, null, 2);
     }
+    if (tool.name === 'document_retrieval') {
+      return JSON.stringify({ query: 'Apollo99 safety and tolerance limits', top_k: 3 }, null, 2);
+    }
+    if (tool.name === 'document_generation') {
+      return JSON.stringify(
+        {
+          title: 'Apollo99 Telemetry Verification Brief',
+          content: 'Audit report verifying telemetry sensors and delta calculations.',
+          metadata: { classification: 'INTERNAL_AUDIT' },
+        },
+        null,
+        2
+      );
+    }
+    if (tool.name === 'approval_note_generator') {
+      return JSON.stringify(
+        {
+          task_id: 'TASK-APOLLO99',
+          claims: ['Telemetry verified within flight tolerance limits.'],
+          title: 'Apollo99 Flight Authorization Note',
+        },
+        null,
+        2
+      );
+    }
+
+    // Dynamic fallback from schema properties
+    if (tool.parameters && tool.parameters.properties) {
+      const sampleObj: Record<string, any> = {};
+      for (const [key, prop] of Object.entries(tool.parameters.properties)) {
+        if (prop.type === 'string') {
+          sampleObj[key] = prop.default || (prop.enum ? prop.enum[0] : `sample_${key}`);
+        } else if (prop.type === 'number' || prop.type === 'integer') {
+          sampleObj[key] = prop.default !== undefined ? prop.default : 1;
+        } else if (prop.type === 'boolean') {
+          sampleObj[key] = prop.default !== undefined ? prop.default : true;
+        } else if (prop.type === 'array') {
+          sampleObj[key] = prop.default || [];
+        } else {
+          sampleObj[key] = null;
+        }
+      }
+      return JSON.stringify(sampleObj, null, 2);
+    }
     return '{}';
   };
 
@@ -39,6 +83,15 @@ export default function ToolsView() {
     setSelectedTool(tool);
     setArgInput(getDefaultArgs(tool));
     setResult(null);
+  };
+
+  const handleFormatJson = () => {
+    try {
+      const parsed = JSON.parse(argInput);
+      setArgInput(JSON.stringify(parsed, null, 2));
+    } catch {
+      // Keep as-is if invalid JSON
+    }
   };
 
   const handleExecute = async () => {
@@ -75,6 +128,7 @@ export default function ToolsView() {
             <button
               key={t.name}
               onClick={() => handleSelectTool(t)}
+              aria-label={`Select tool ${t.name}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -108,12 +162,26 @@ export default function ToolsView() {
             </div>
 
             <div>
-              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
-                Arguments (JSON)
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label
+                  htmlFor="tool-args-input"
+                  style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}
+                >
+                  Arguments (JSON)
+                </label>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleFormatJson}
+                  style={{ padding: '2px 8px', fontSize: '11px' }}
+                >
+                  Format JSON
+                </button>
+              </div>
               <textarea
+                id="tool-args-input"
+                aria-label="Tool JSON arguments"
                 className="textarea"
-                rows={5}
+                rows={6}
                 style={{ fontFamily: 'monospace', fontSize: '12px', marginTop: '6px' }}
                 value={argInput}
                 onChange={(e) => setArgInput(e.target.value)}
@@ -127,7 +195,7 @@ export default function ToolsView() {
               disabled={loading}
             >
               <Play size={14} />
-              <span>Execute Tool</span>
+              <span>{loading ? 'Executing Subsystem...' : 'Execute Tool'}</span>
             </button>
 
             {result && (
