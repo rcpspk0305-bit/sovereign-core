@@ -5,7 +5,11 @@ import { api } from '@/lib/api-client';
 import { SearchResult } from '@/lib/types';
 import { Database, FileUp, FileText, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 
-export default function RagView() {
+interface RagViewProps {
+  isActive?: boolean;
+}
+
+export default function RagView({ isActive = true }: RagViewProps) {
   const [activeIngestTab, setActiveIngestTab] = useState<'pdf' | 'text'>('pdf');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -30,6 +34,12 @@ export default function RagView() {
   useEffect(() => {
     fetchStats();
   }, []);
+
+  useEffect(() => {
+    if (isActive) {
+      fetchStats();
+    }
+  }, [isActive]);
 
   const handlePdfUpload = async () => {
     if (!selectedFile) return;

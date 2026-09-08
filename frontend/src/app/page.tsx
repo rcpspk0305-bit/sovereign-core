@@ -23,12 +23,79 @@ export default function Home() {
           onSelectModel={setSelectedModel}
         />
         <div className="content-body">
-          {activeTab === 'chat' && <ChatView model={selectedModel} />}
-          {activeTab === 'rag' && <RagView />}
-          {activeTab === 'tools' && <ToolsView />}
-          {activeTab === 'agents' && <AgentView model={selectedModel} />}
-          {activeTab === 'flight-recorder' && <FlightRecorderView model={selectedModel} />}
-          {activeTab === 'audit' && <AuditViewer />}
+          <div
+            id="tab-panel-chat"
+            role="tabpanel"
+            aria-labelledby="tab-chat"
+            style={{
+              display: activeTab === 'chat' ? 'flex' : 'none',
+              flexDirection: 'column',
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            <ChatView model={selectedModel} isActive={activeTab === 'chat'} />
+          </div>
+
+          <div
+            id="tab-panel-rag"
+            role="tabpanel"
+            aria-labelledby="tab-rag"
+            style={{
+              display: activeTab === 'rag' ? 'block' : 'none',
+              minHeight: '100%',
+            }}
+          >
+            <RagView isActive={activeTab === 'rag'} />
+          </div>
+
+          <div
+            id="tab-panel-tools"
+            role="tabpanel"
+            aria-labelledby="tab-tools"
+            style={{
+              display: activeTab === 'tools' ? 'block' : 'none',
+              minHeight: '100%',
+            }}
+          >
+            <ToolsView />
+          </div>
+
+          <div
+            id="tab-panel-agents"
+            role="tabpanel"
+            aria-labelledby="tab-agents"
+            style={{
+              display: activeTab === 'agents' ? 'block' : 'none',
+              minHeight: '100%',
+            }}
+          >
+            <AgentView model={selectedModel} />
+          </div>
+
+          <div
+            id="tab-panel-flight-recorder"
+            role="tabpanel"
+            aria-labelledby="tab-flight-recorder"
+            style={{
+              display: activeTab === 'flight-recorder' ? 'block' : 'none',
+              minHeight: '100%',
+            }}
+          >
+            <FlightRecorderView model={selectedModel} />
+          </div>
+
+          <div
+            id="tab-panel-audit"
+            role="tabpanel"
+            aria-labelledby="tab-audit"
+            style={{
+              display: activeTab === 'audit' ? 'block' : 'none',
+              minHeight: '100%',
+            }}
+          >
+            <AuditViewer isActive={activeTab === 'audit'} />
+          </div>
         </div>
       </main>
     </div>

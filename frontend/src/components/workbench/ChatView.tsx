@@ -7,34 +7,70 @@ import { Send, Bot, User, Zap, Clock, Trash2 } from 'lucide-react';
 
 interface ChatViewProps {
   model: string;
+  isActive?: boolean;
 }
 
-export default function ChatView({ model }: ChatViewProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content: 'Welcome to Sovereign-Core. I am running entirely on your local machine via Ollama. How can I assist you today?',
-    },
-  ]);
+const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
+  role: 'assistant',
+  content: 'Welcome to Sovereign-Core. I am running entirely on your local machine via Ollama. How can I assist you today?',
+};
+
+export default function ChatView({ model, isActive }: ChatViewProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([DEFAULT_WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [streamMode, setStreamMode] = useState(true);
   const [lastMetrics, setLastMetrics] = useState<{ latency_ms?: number; tokens?: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Hydration-safe restore from sessionStorage
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('sovereign_chat_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+    } catch {
+      // sessionStorage unavailable or parse error
+    }
+  }, []);
+
+  // Save to sessionStorage whenever messages change
+  useEffect(() => {
+    try {
+      if (messages.length > 1) {
+        sessionStorage.setItem('sovereign_chat_history', JSON.stringify(messages));
+      } else if (messages.length === 1 && messages[0].role === 'assistant') {
+        sessionStorage.removeItem('sovereign_chat_history');
+      }
+    } catch {
+      // ignore
+    }
+  }, [messages]);
+
   const handleClear = () => {
-    setMessages([
-      {
-        role: 'assistant',
-        content: 'Welcome to Sovereign-Core. I am running entirely on your local machine via Ollama. How can I assist you today?',
-      },
-    ]);
+    setMessages([DEFAULT_WELCOME_MESSAGE]);
     setLastMetrics(null);
+    try {
+      sessionStorage.removeItem('sovereign_chat_history');
+    } catch {
+      // ignore
+    }
   };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  // Scroll to bottom when tab becomes active
+  useEffect(() => {
+    if (isActive) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }
+  }, [isActive]);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;

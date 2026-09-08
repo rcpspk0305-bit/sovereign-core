@@ -288,7 +288,13 @@ export default function FlightRecorderView({ model }: FlightRecorderViewProps) {
       isDisposed = true;
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (socket) {
-        socket.close();
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.close(1000, 'Component unmounted');
+        } else if (socket.readyState === WebSocket.CONNECTING) {
+          socket.onopen = () => {
+            socket?.close(1000, 'Component unmounted');
+          };
+        }
       }
     };
   }, []);

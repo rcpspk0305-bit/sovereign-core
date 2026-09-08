@@ -7,7 +7,11 @@ import { Check, ChevronDown, ChevronRight, Clock, Copy, RefreshCw, Zap } from 'l
 
 type FilterType = 'ALL' | 'LLM' | 'TOOL' | 'AGENT' | 'RAG';
 
-export default function AuditViewer() {
+interface AuditViewerProps {
+  isActive?: boolean;
+}
+
+export default function AuditViewer({ isActive = true }: AuditViewerProps) {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -28,11 +32,12 @@ export default function AuditViewer() {
   };
 
   useEffect(() => {
+    if (!isActive) return;
     fetchLogs();
     if (!autoRefresh) return;
     const interval = setInterval(fetchLogs, 5000);
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [isActive, autoRefresh]);
 
   const handleCopyPayload = (id: string, payload: any) => {
     const text = JSON.stringify(payload, null, 2);

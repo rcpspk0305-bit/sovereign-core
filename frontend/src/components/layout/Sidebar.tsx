@@ -55,12 +55,16 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         Navigation Console
       </div>
 
-      <nav aria-label="Console Navigation" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <nav aria-label="Console Navigation" role="tablist" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
+              id={`tab-${item.id}`}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`tab-panel-${item.id}`}
               onClick={() => onTabChange(item.id)}
               aria-current={isActive ? 'page' : undefined}
               style={{
