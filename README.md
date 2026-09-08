@@ -8,8 +8,6 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
 
 ---
 
--->Foundation Layer for AI Workbench<---
-
 ## Key Features & Architecture
 
 - **Local LLM Execution**: Native, async communication with local Ollama daemon using **Gemma 4 E2B** (`gemma4:e2b`) as default model, supporting streaming, prompt evaluation, and timeout handling.
@@ -34,6 +32,10 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
   - Structured Approval Note generation producing local Microsoft Word (`.docx`) documents with cryptographic SHA-256 verification.
   - **Claim-Evidence Validation Engine**: Unsupported assertions lacking source citations or evidence backing are explicitly flagged as `UNVERIFIED_CLAIM` with caution banners, preventing hallucinations from being silently presented as facts.
   - **Explicit Human Approval Block**: Formal sign-off table with Required Approver Role, Approver Name, Formal Disposition checkboxes (`[ ] APPROVED [ ] CONDITIONAL [ ] REJECTED`), Signature line, Date, and Conditions/Caveats.
+- **Hybrid Audit Logging**:
+  - `FileAndMemoryAuditLogger` providing structured JSONL audit persistence (`backend/data/audit/audit.jsonl`) combined with in-memory caching for zero-latency queries.
+  - Captures event types: `llm_request`, `llm_response`, `llm_error`, `rag_ingest`, `rag_query`, `tool_execution`, `agent_run`, and `system_event`.
+  - Filterable by `event_type` and `session_id`.
 - **Explicit Core Interfaces**:
   - `BaseLLMClient`: Abstract interface for language model providers.
   - `BaseRetriever`: Abstract interface for document indexing and vector search.
@@ -41,7 +43,7 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
   - `BaseTool`: Type-safe tool execution engine with Pydantic JSON schema introspection.
   - `BaseAgent`: Orchestration loop contract with multi-step reasoning traces.
   - `BaseAuditLogger`: Structured JSON audit stream capturing latency, tokens, prompts, and tool invocations.
-- **Modern Evidence-Oriented Frontend**: TypeScript Next.js dark-themed workbench with live model selection, streaming chat, RAG knowledge viewer, tool registry inspector, controlled agent loop runner, AI Flight Recorder telemetry dashboard, and structured audit log viewer.
+- **Modern Evidence-Oriented Frontend**: TypeScript Next.js dark-themed workbench with live model selection, streaming chat, RAG knowledge viewer, tool registry inspector, controlled agent loop runner, AI Flight Recorder telemetry dashboard, and structured audit log viewer. Supports automatic port fallback (defaults to 3000, falls back to 3001 if occupied).
 - **Docker Compose Ready**: One-command containerized spin-up with host-gateway resolution for local GPU-accelerated Ollama.
 
 ---
@@ -60,17 +62,19 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
 │   │   │   ├── tools/       # Tool registry, calculator, doc retrieval, doc generation, approval note
 │   │   │   ├── agents/      # Controlled inspection agent orchestration engine
 │   │   │   ├── flight_recorder/ # Blackbox manager, telemetry event broadcaster, data models
-│   │   │   └── audit/       # Structured JSON audit logger
+│   │   │   └── audit/       # Hybrid in-memory & file-persisted JSONL audit logger
 │   │   ├── config.py        # Settings & absolute path anchoring (all data dirs relative to backend/)
 │   │   └── main.py          # Application entrypoint & WebSocket routes
 │   ├── data/                # Runtime data — always resolved relative to backend/ regardless of CWD
 │   │   ├── artifacts/       # Generated DOCX approval notes
-│   │   ├── audit/           # Structured JSON audit logs
+│   │   ├── audit/           # Structured JSONL audit logs
 │   │   ├── chroma/          # ChromaDB persistent vector index
 │   │   └── flight_records/  # Persisted mission blackbox JSON records
 │   ├── tests/               # Pytest unit & integration test suite (66+ tests)
 │   ├── Dockerfile
-│   └── pyproject.toml
+│   ├── pyproject.toml
+│   ├── requirements.txt
+│   └── requirements-dev.txt
 ├── frontend/
 │   ├── src/
 │   │   ├── app/             # App router pages & global styling
@@ -89,9 +93,9 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
 
 ### Prerequisites
 
-- Python 3.11+
-- Node.js 18+
-- [Ollama](https://ollama.com) installed and running locally (`ollama serve`)
+- **Python 3.11+**
+- **Node.js 18+**
+- **[Ollama](https://ollama.com)** installed and running locally (`ollama serve`)
 - Pull default models:
   ```bash
   ollama run gemma4:e2b
@@ -103,22 +107,28 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
 
 ```bash
 cd backend
-python -m venv .venv
-# Activate virtual environment:
-# Windows: .venv\Scripts\activate
-# Linux/macOS: source .venv/bin/activate
 
+# Create virtual environment
+python -m venv .venv
+
+# Activate virtual environment:
+# Windows (PowerShell):
+.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
 
 # Run test suite
 pytest -v
 
-# Start FastAPI dev server (can be launched from any directory — data paths are absolute)
+# Start FastAPI dev server (anchored to backend data paths)
 uvicorn app.main:app --reload --port 8000
 ```
 
-Interactive API documentation is available at `http://localhost:8000/docs`.
+Interactive API documentation (Swagger UI) is available at `http://localhost:8000/docs`.
 
 ### 2. Local Development (Frontend)
 
@@ -128,7 +138,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` to access the Sovereign-Core workbench.
+Open `http://localhost:3000` (or `http://localhost:3001` if port 3000 is occupied) to access the Sovereign-Core workbench.
 
 ### 3. Docker Compose Spin-up
 
@@ -150,7 +160,15 @@ cd backend
 pytest -v
 ```
 
-The 66+ tests cover interface adherence, mock and live LLM streaming, PyMuPDF parsing, metadata retention, ChromaDB vector indexing and retrieval, tool schema validation, agent reasoning loops, real-time WebSocket telemetry streaming, claim-evidence grounding validation, local DOCX artifact generation, and audit event persistence.
+The test suite covers:
+- Interface contracts and mock LLM stream decoding
+- PyMuPDF extraction and metadata retention
+- ChromaDB vector indexing and hybrid search
+- Tool registry validation and execution bounds
+- Inspection agent multi-step loop execution
+- AI Flight Recorder WebSocket broadcasting and mission persistence
+- Claim-evidence grounding validation and DOCX artifact generation
+- Durable and in-memory audit log persistence and filtering
 
 ---
 
@@ -169,4 +187,3 @@ The 66+ tests cover interface adherence, mock and live LLM streaming, PyMuPDF pa
 ## License
 
 Licensed under the [Apache License, Version 2.0](LICENSE).
-

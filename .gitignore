@@ -23,7 +23,8 @@ share/python-wheels/
 MANIFEST
 .env
 .env.local
-.venv
+.env.*.local
+.venv/
 env/
 venv/
 ENV/
@@ -38,19 +39,24 @@ htmlcov/
 frontend/node_modules/
 node_modules/
 frontend/.next/
+.next/
 frontend/out/
 frontend/build/
+.turbo/
+frontend/.turbo/
 .npm
 .eslintcache
 *.tsbuildinfo
+frontend/*.tsbuildinfo
 next-env.d.ts
+frontend/next-env.d.ts
 
-# Logs, Artifacts & Data storage
+# Logs, Artifacts & Data Storage (anchored to prevent ignoring core source packages)
 *.log
 data/
 backend/data/
 logs/
-audit/
+/audit/
 *.docx
 *.pdf
 
