@@ -1,15 +1,17 @@
 'use client';
 
 import React from 'react';
-import { ArrowUpRight, Bot, Orbit, ShieldCheck, Sparkles, Terminal } from 'lucide-react';
+import { ArrowUpRight, Bot, Orbit, Rocket, ShieldCheck, Sparkles, Terminal } from 'lucide-react';
 
 interface SpaceNavigationProps {
   onLaunchWorkbench?: () => void;
-  currentMode?: 'landing' | 'workbench';
+  onOpenLauncher?: () => void;
+  currentMode?: 'landing' | 'chat' | 'workbench';
 }
 
 export default function SpaceNavigation({
   onLaunchWorkbench,
+  onOpenLauncher,
   currentMode = 'landing',
 }: SpaceNavigationProps) {
   return (
@@ -43,9 +45,16 @@ export default function SpaceNavigation({
           <a href="#audit" className="space-nav-link">
             Milky Way Audit
           </a>
-          <a href="#workbench-preview" className="space-nav-link">
-            Workbench
-          </a>
+          {onOpenLauncher && (
+            <button
+              onClick={onOpenLauncher}
+              className="space-nav-link-btn"
+              aria-label="Open Agent Launcher"
+            >
+              <Rocket size={14} className="text-cyan" />
+              <span>Agent Launcher</span>
+            </button>
+          )}
         </nav>
 
         {/* Right CTA Cluster */}
@@ -55,12 +64,23 @@ export default function SpaceNavigation({
             <span>AIR-GAPPED // NO EGRESS</span>
           </div>
 
+          {onOpenLauncher && (
+            <button
+              onClick={onOpenLauncher}
+              className="space-nav-rocket-btn"
+              aria-label="Launch Agent & Chat"
+            >
+              <Rocket size={14} />
+              <span>Launch Mission</span>
+            </button>
+          )}
+
           <button
             onClick={onLaunchWorkbench}
             className="space-nav-cta-btn"
             aria-label="Launch interactive 3D workbench"
           >
-            <span>{currentMode === 'workbench' ? 'View Journey' : 'Launch Workbench'}</span>
+            <span>{currentMode === 'workbench' ? 'View Journey' : 'Workbench'}</span>
             <ArrowUpRight size={15} />
           </button>
         </div>

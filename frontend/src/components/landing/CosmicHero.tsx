@@ -12,6 +12,7 @@ import {
   Lock,
   Orbit,
   Radio,
+  Rocket,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
@@ -20,11 +21,13 @@ import {
 interface CosmicHeroProps {
   onExploreWorkflow: () => void;
   onLaunchWorkbench: () => void;
+  onOpenLauncher?: () => void;
 }
 
 export default function CosmicHero({
   onExploreWorkflow,
   onLaunchWorkbench,
+  onOpenLauncher,
 }: CosmicHeroProps) {
   return (
     <section className="cosmic-hero-section" id="mission">
@@ -50,12 +53,23 @@ export default function CosmicHero({
 
         {/* Hero Action Buttons */}
         <div className="cosmic-hero-actions">
+          {onOpenLauncher && (
+            <button
+              onClick={onOpenLauncher}
+              className="cosmic-btn-primary"
+              aria-label="Launch 3D Rocket Agent Mission"
+            >
+              <Rocket size={18} />
+              <span>Launch Mission & Chat</span>
+            </button>
+          )}
+
           <button
             onClick={onLaunchWorkbench}
-            className="cosmic-btn-primary"
+            className={onOpenLauncher ? 'cosmic-btn-secondary' : 'cosmic-btn-primary'}
             aria-label="Launch 3D Local AI Workbench"
           >
-            <span>Launch 3D Workbench</span>
+            <span>3D Workbench</span>
             <ArrowUpRight size={18} />
           </button>
 
@@ -125,12 +139,12 @@ export default function CosmicHero({
         <div className="cosmic-hud-divider" />
 
         <button
-          onClick={onLaunchWorkbench}
+          onClick={onOpenLauncher || onLaunchWorkbench}
           className="cosmic-hud-action-btn"
           aria-label="Engage local AI workbench"
         >
-          <span>ENGAGE CORE</span>
-          <ArrowUpRight size={16} />
+          <Rocket size={15} />
+          <span>ENGAGE LAUNCHER</span>
         </button>
       </div>
 

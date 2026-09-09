@@ -10,6 +10,7 @@ import {
   Database,
   Orbit,
   Radar,
+  Rocket,
   ShieldCheck,
   Sparkles,
   Terminal,
@@ -24,6 +25,7 @@ import SpaceNavigation from '@/components/landing/SpaceNavigation';
 import CosmicHero from '@/components/landing/CosmicHero';
 import WorkflowSection from '@/components/landing/WorkflowSection';
 import SpaceFooter from '@/components/landing/SpaceFooter';
+import AgentChatLauncher from '@/components/chat/AgentChatLauncher';
 
 import MissionConsole3D from '@/components/workbench/MissionConsole3D';
 import KnowledgeBay from '@/components/workbench/KnowledgeBay';
@@ -76,7 +78,7 @@ const sections: Array<{
 ];
 
 export default function Home() {
-  const [viewMode, setViewMode] = useState<'landing' | 'workbench'>('landing');
+  const [viewMode, setViewMode] = useState<'landing' | 'chat' | 'workbench'>('landing');
   const [active, setActive] = useState<Section>('mission');
   const [status, setStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [model, setModel] = useState<string>('gemma4:e2b');
@@ -138,6 +140,11 @@ export default function Home() {
     }
   };
 
+  const handleOpenLauncher = () => {
+    setViewMode('chat');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleLaunchWorkbench = () => {
     setViewMode('workbench');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -154,21 +161,22 @@ export default function Home() {
 
   return (
     <main className="constellation-shell">
-      {/* Three.js 3D Cosmic Canvas Engine */}
-      <CosmicCanvas3D />
-
       {/* Background Aurora Lighting Overlays */}
       <div className="aurora aurora-one" aria-hidden="true" />
       <div className="aurora aurora-two" aria-hidden="true" />
 
-      {viewMode === 'landing' ? (
+      {viewMode === 'landing' && (
         /* ============================================================ */
         /* 3D COSMIC LANDING PAGE (SIH WORKFLOW SHOWCASE)               */
         /* ============================================================ */
         <div className="landing-experience-wrapper">
+          {/* Three.js 3D Cosmic Canvas Engine */}
+          <CosmicCanvas3D />
+
           {/* Top Floating Glassmorphic Pill Header */}
           <SpaceNavigation
             onLaunchWorkbench={handleLaunchWorkbench}
+            onOpenLauncher={handleOpenLauncher}
             currentMode={viewMode}
           />
 
@@ -176,6 +184,7 @@ export default function Home() {
           <CosmicHero
             onExploreWorkflow={handleExploreWorkflow}
             onLaunchWorkbench={handleLaunchWorkbench}
+            onOpenLauncher={handleOpenLauncher}
           />
 
           {/* 5-Stage Cosmic Workflow Experience */}
@@ -187,12 +196,30 @@ export default function Home() {
             onLaunchWorkbench={handleLaunchWorkbench}
           />
         </div>
-      ) : (
+      )}
+
+      {viewMode === 'chat' && (
+        /* ============================================================ */
+        /* CHAT INTERFACE & AGENT LAUNCHER WITH 3D ROCKET               */
+        /* ============================================================ */
+        <AgentChatLauncher
+          onBackToLanding={handleBackToLanding}
+          onOpenWorkbench={(tab) => {
+            if (tab) setActive(tab as Section);
+            handleLaunchWorkbench();
+          }}
+          availableModels={availableModels}
+          currentModel={model}
+          onModelChange={(m) => setModel(m)}
+        />
+      )}
+
+      {viewMode === 'workbench' && (
         /* ============================================================ */
         /* INTERACTIVE 3D WORKBENCH (FULL FUNCTIONAL MODE)             */
         /* ============================================================ */
         <div className="workbench-experience-wrapper">
-          {/* Top Bar with Back to Cosmic Journey Toggle */}
+          {/* Top Bar with Navigation Toggles */}
           <header className="topbar">
             <div className="topbar-left-cluster">
               <button
@@ -202,6 +229,15 @@ export default function Home() {
               >
                 <ArrowLeft size={16} />
                 <span>Cosmic Journey</span>
+              </button>
+
+              <button
+                onClick={handleOpenLauncher}
+                className="back-to-landing-btn text-cyan"
+                aria-label="Open Agent Launcher"
+              >
+                <Rocket size={15} />
+                <span>Agent Launcher</span>
               </button>
 
               <a className="wordmark" href="#mission" aria-label="Sovereign Core home">
