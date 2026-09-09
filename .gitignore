@@ -1,17 +1,19 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# C extensions and builds
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -21,40 +23,49 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-.env
-.env.local
-.venv
+
+# Virtual environments
+.venv/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Environment configurations
+.env
+.env.local
+.env.*.local
+
+# Testing & Coverage
 .pytest_cache/
 .ruff_cache/
 .coverage
 htmlcov/
 
 # Node / Next.js
-frontend/node_modules/
 node_modules/
+frontend/node_modules/
+.next/
 frontend/.next/
 frontend/out/
 frontend/build/
-.npm
+.npm/
 .eslintcache
 *.tsbuildinfo
 next-env.d.ts
 
-# Logs, Artifacts & Data storage
+# Runtime logs & data storage
 *.log
-data/
-backend/data/
 logs/
 audit/
-*.docx
-*.pdf
+backend/data/artifacts/*.docx
+backend/data/audit/*.json
+backend/data/chroma/
+backend/data/flight_records/*.json
+!backend/data/**/.gitkeep
 
-# OS & IDE
+# OS & IDE metadata
 .DS_Store
 Thumbs.db
 .idea/
