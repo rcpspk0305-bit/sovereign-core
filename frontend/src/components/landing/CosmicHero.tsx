@@ -57,9 +57,9 @@ export default function CosmicHero({
             <button
               onClick={onOpenLauncher}
               className="cosmic-btn-primary"
-              aria-label="Launch 3D Rocket Agent Mission"
+              aria-label="Launch AI Agent Mission & Chat"
             >
-              <Rocket size={18} />
+              <Radio size={18} />
               <span>Launch Mission & Chat</span>
             </button>
           )}

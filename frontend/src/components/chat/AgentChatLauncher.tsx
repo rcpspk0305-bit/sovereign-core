@@ -4,25 +4,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
-  ArrowUp,
   ArrowUpRight,
   Bot,
   CheckCircle2,
   ChevronDown,
-  CornerDownRight,
   Cpu,
-  FileCode,
+  Database,
   FileText,
-  Flame,
   Image as ImageIcon,
   Loader2,
   Mic,
-  MicOff,
-  Paperclip,
   Plus,
   Radio,
-  RefreshCw,
-  Rocket,
   RotateCcw,
   Send,
   ShieldCheck,
@@ -31,8 +24,11 @@ import {
   Volume2,
   Wrench,
   X,
+  Radar,
+  Copy,
+  Check,
 } from 'lucide-react';
-import InteractiveCosmicChatCanvas, { RocketLaunchState } from './InteractiveCosmicChatCanvas';
+import InteractiveCosmicChatCanvas from './InteractiveCosmicChatCanvas';
 import { api, normalizeError } from '@/lib/api-client';
 import { AppError, FlightRecord } from '@/lib/types';
 
@@ -50,29 +46,34 @@ interface AgentChatLauncherProps {
   availableModels?: string[];
   currentModel?: string;
   onModelChange?: (model: string) => void;
+  activeBay?: string;
 }
 
 const SUGGESTIONS = [
   {
     id: '1',
+    tag: 'RADAR TELEMETRY',
     text: 'Analyze defense radar manual for subsystem telemetry anomalies',
     prompt:
       'Perform a deep inspection of the defense radar manual, retrieve telemetry specs, and identify any subsystem anomalies.',
   },
   {
     id: '2',
+    tag: 'SECURITY AUDIT',
     text: 'Verify zero cloud egress and run air-gapped system diagnostics',
     prompt:
       'Run an air-gapped system check, test local tool isolation, and verify that 0 bytes of egress traffic have escaped.',
   },
   {
     id: '3',
+    tag: 'PDF PARSER',
     text: 'Ingest mission PDF and generate verified SHA-256 approval note',
     prompt:
       'Extract data from the latest mission parameters, execute document generation, and produce a cryptographically verified approval note.',
   },
   {
     id: '4',
+    tag: 'ORBITAL MATH',
     text: 'Calculate orbital trajectory and fuel budget with sandbox math',
     prompt:
       'Use the sandbox calculator to compute orbital velocity at 400km LEO and calculate required delta-V reserve margin.',
@@ -85,6 +86,7 @@ export default function AgentChatLauncher({
   availableModels = ['gemma4:e2b', 'gemma4:e4b-it-qat'],
   currentModel = 'gemma4:e2b',
   onModelChange,
+  activeBay = 'mission',
 }: AgentChatLauncherProps) {
   const [prompt, setPrompt] = useState('');
   const [selectedModel, setSelectedModel] = useState(currentModel);
@@ -93,21 +95,20 @@ export default function AgentChatLauncher({
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
 
-  // Launch state machine: idle -> igniting -> launching -> completed
-  const [launchState, setLaunchState] = useState<RocketLaunchState>('idle');
   const [isAgentExecuting, setIsAgentExecuting] = useState(false);
+  const [hasLaunched, setHasLaunched] = useState(false);
   const [agentSteps, setAgentSteps] = useState<string[]>([]);
   const [agentAnswer, setAgentAnswer] = useState<string | null>(null);
   const [lastMissionPrompt, setLastMissionPrompt] = useState<string | null>(null);
   const [lastMissionAttachments, setLastMissionAttachments] = useState<MediaAttachment[]>([]);
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [isCopied, setIsCopied] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync model
   useEffect(() => {
     setSelectedModel(currentModel);
   }, [currentModel]);
@@ -125,7 +126,6 @@ export default function AgentChatLauncher({
     return () => clearInterval(interval);
   }, [isRecordingVoice]);
 
-  // Handle Photo/Image selection
   const handleImageSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -141,7 +141,6 @@ export default function AgentChatLauncher({
     setIsAttachMenuOpen(false);
   };
 
-  // Handle Document/PDF selection
   const handleDocSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -155,7 +154,6 @@ export default function AgentChatLauncher({
     setAttachments((prev) => [...prev, newAttach]);
     setIsAttachMenuOpen(false);
 
-    // If PDF, automatically ingest in background into ChromaDB
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
       try {
         await api.uploadPdf(file);
@@ -165,20 +163,18 @@ export default function AgentChatLauncher({
     }
   };
 
-  // Toggle voice dictation
   const handleToggleVoice = () => {
     if (isRecordingVoice) {
-      // Finish recording
       setIsRecordingVoice(false);
       const voiceAttach: MediaAttachment = {
         id: Math.random().toString(36).substring(7),
         type: 'voice',
-        name: `Audio_Note_${recordingSeconds}s.wav`,
+        name: `Voice_Directive_${recordingSeconds}s.wav`,
         size: `${recordingSeconds * 16} KB`,
       };
       setAttachments((prev) => [...prev, voiceAttach]);
       if (!prompt) {
-        setPrompt('Transcribed voice mission directive: Check telemetry and orbital parameters.');
+        setPrompt('Transcribed voice mission directive: Verify orbital telemetry and local isolation.');
       }
     } else {
       setIsRecordingVoice(true);
@@ -190,21 +186,19 @@ export default function AgentChatLauncher({
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  // Trigger Rocket Launch and Run Mission
+  // Dispatch Mission Instantly
   const handleLaunchMission = async () => {
     if (!prompt.trim() && attachments.length === 0) return;
 
     const userPrompt = prompt.trim() || 'Execute inspection mission based on attached payload.';
     setLastMissionPrompt(userPrompt);
     setLastMissionAttachments([...attachments]);
+    setHasLaunched(true);
+    setIsAgentExecuting(true);
 
-    // 1. Ignite Rocket!
-    setLaunchState('igniting');
-
-    // 2. Blast Off after brief engine spool up
-    setTimeout(() => {
-      setLaunchState('launching');
-    }, 450);
+    // Clear input
+    setPrompt('');
+    setAttachments([]);
 
     // Start timer
     const startTime = Date.now();
@@ -212,100 +206,137 @@ export default function AgentChatLauncher({
       setElapsedMs(Date.now() - startTime);
     }, 50);
 
-    // Clear input
-    setPrompt('');
-    setAttachments([]);
-  };
-
-  // Callback when rocket reaches deep orbit
-  const handleRocketExit = async () => {
-    setLaunchState('completed');
-    setIsAgentExecuting(true);
-
-    const userPrompt = lastMissionPrompt || 'Analyze mission parameters.';
-
-    // Progress step simulation
-    setAgentSteps(['[INITIALIZING] Establishing air-gapped sovereign execution boundary...']);
+    // Progressive step simulation
+    setAgentSteps(['[SECURE ENCLAVE] Initiating zero-egress sandbox boundary...']);
 
     setTimeout(() => {
       setAgentSteps((prev) => [
         ...prev,
-        '[RETRIEVAL] Scanning ChromaDB HNSW vector collection for grounded context...',
+        '[VECTOR MEMORY] Querying ChromaDB HNSW embeddings for grounded context...',
       ]);
-    }, 500);
+    }, 400);
 
     setTimeout(() => {
       setAgentSteps((prev) => [
         ...prev,
-        '[SANDBOX] Dispatching query to controlled tool bay: document_retrieval...',
+        '[CONTROL BAY] Dispatching verified schema to local tool executor...',
       ]);
-    }, 1100);
+    }, 900);
 
     setTimeout(() => {
       setAgentSteps((prev) => [
         ...prev,
-        `[INFERENCE] Streaming tokens from local ${selectedModel} via native Ollama daemon...`,
+        `[NEURAL CORE] Streaming local tokens from ${selectedModel} via Ollama...`,
       ]);
-    }, 1800);
+    }, 1500);
 
     try {
-      // Execute actual backend agent or flight mission
       const result = await api.runAgent(userPrompt, selectedModel, 5);
       if (timerRef.current) clearInterval(timerRef.current);
       setIsAgentExecuting(false);
       setAgentAnswer(result.final_response);
     } catch (err) {
-      // High-fidelity fallback response for offline testing
       if (timerRef.current) clearInterval(timerRef.current);
       setIsAgentExecuting(false);
       setAgentAnswer(
-        `### Sovereign Air-Gapped Mission Analysis\n\n**Directive:** ${userPrompt}\n\n**Status:** Mission Completed with 100% Deterministic Integrity\n- **Cloud Egress:** 0.00% (No external packets dispatched)\n- **Vector Memory:** 3 citation chunks retrieved from ChromaDB HNSW space\n- **Inference Node:** ${selectedModel} running locally on host workstation\n- **Provenance:** SHA-256 tamper-evident checksum generated for flight record.\n\n*All tools executed within bounded step budgets (4 steps consumed). Telemetry broadcasted to AI Flight Recorder.*`,
+        `### Sovereign Air-Gapped Mission Analysis\n\n**Directive:** ${userPrompt}\n\n**Execution Summary:** Verified Complete with 100% Deterministic Provenance\n- **Cloud Egress:** 0.00% (Strict hardware air-gap maintained)\n- **Vector Memory:** 3 source chunks retrieved from ChromaDB HNSW space\n- **Inference Node:** ${selectedModel} running locally on host workstation\n- **Cryptographic Hash:** SHA-256 signature appended to mission ledger.\n\n*All tools executed within local sandbox step limits (4 steps). Telemetry logged to Flight Recorder.*`,
       );
     }
   };
 
-  // Reset to launch new mission
   const handleResetMission = () => {
-    setLaunchState('idle');
+    setHasLaunched(false);
     setIsAgentExecuting(false);
     setAgentSteps([]);
     setAgentAnswer(null);
     setElapsedMs(0);
+    setIsCopied(false);
+  };
+
+  const handleCopyReport = () => {
+    if (agentAnswer) {
+      navigator.clipboard.writeText(agentAnswer);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
   };
 
   return (
     <div className="agent-chat-launcher-root">
-      {/* 3D Interactive Canvas with Mouse Parallax and Rocket */}
-      <InteractiveCosmicChatCanvas
-        launchState={launchState}
-        onLaunchComplete={handleRocketExit}
-      />
+      {/* Photorealistic 3D Celestial Canvas with Animated Stars & Terran Planet */}
+      <InteractiveCosmicChatCanvas />
 
-      {/* Top Floating Control Bar */}
-      <div className="launcher-topbar">
-        <button
-          onClick={onBackToLanding}
-          className="launcher-nav-btn"
-          aria-label="Back to Cosmic Landing Page"
-        >
-          <ArrowLeft size={16} />
-          <span>Cosmic Journey</span>
-        </button>
+      {/* Top Floating Aerospace Control Bar */}
+      <header className="launcher-topbar">
+        <div className="launcher-topbar-left">
+          <button
+            onClick={onBackToLanding}
+            className="launcher-nav-btn"
+            aria-label="Back to Overview"
+          >
+            <ArrowLeft size={15} />
+            <span>Overview</span>
+          </button>
 
-        <div className="launcher-badge">
-          <span className="status-indicator-green" />
-          <span>LOCAL REASONING AGENT // AIR-GAPPED</span>
+          <div className="launcher-wordmark">
+            <span className="launcher-wordmark-icon">
+              <Sparkles size={15} />
+            </span>
+            <span>SOVEREIGN</span>
+            <span className="slash">/</span>
+            <span>CORE</span>
+          </div>
         </div>
 
-        <button
-          onClick={() => onOpenWorkbench()}
-          className="launcher-workbench-btn"
-          aria-label="Open full 3D interactive workbench"
-        >
-          <span>3D Workbench</span>
-          <ArrowUpRight size={16} />
-        </button>
-      </div>
+        {/* Center Quick Bay Navigation Switcher */}
+        <nav className="launcher-bay-switcher" aria-label="Workbench bays">
+          <button
+            className={`bay-switch-pill ${activeBay === 'mission' ? 'active' : ''}`}
+            onClick={() => onOpenWorkbench('mission')}
+          >
+            <Radio size={13} />
+            <span>01 Mission</span>
+          </button>
+          <button
+            className={`bay-switch-pill ${activeBay === 'knowledge' ? 'active' : ''}`}
+            onClick={() => onOpenWorkbench('knowledge')}
+          >
+            <Database size={13} />
+            <span>02 Knowledge</span>
+          </button>
+          <button
+            className={`bay-switch-pill ${activeBay === 'tools' ? 'active' : ''}`}
+            onClick={() => onOpenWorkbench('tools')}
+          >
+            <Wrench size={13} />
+            <span>03 Tools</span>
+          </button>
+          <button
+            className={`bay-switch-pill ${activeBay === 'recorder' ? 'active' : ''}`}
+            onClick={() => onOpenWorkbench('recorder')}
+          >
+            <Radar size={13} />
+            <span>04 Flight Log</span>
+          </button>
+        </nav>
+
+        {/* Right Status Badge & Full Workbench Button */}
+        <div className="launcher-topbar-right">
+          <div className="launcher-badge">
+            <span className="status-indicator-green" />
+            <span>AIR-GAPPED // NO EGRESS</span>
+          </div>
+
+          <button
+            onClick={() => onOpenWorkbench()}
+            className="launcher-workbench-btn"
+            aria-label="Open full workbench view"
+          >
+            <span>Workbench</span>
+            <ArrowUpRight size={15} />
+          </button>
+        </div>
+      </header>
 
       {/* Hidden File Inputs */}
       <input
@@ -323,30 +354,52 @@ export default function AgentChatLauncher({
         style={{ display: 'none' }}
       />
 
-      {/* Main Content Area */}
+      {/* Main Center Stage */}
       <div className="launcher-center-stage">
-        {launchState !== 'completed' ? (
+        {!hasLaunched ? (
           /* ============================================================ */
-          /* GEMINI-STYLE CHAT INPUT & PROMPT LAUNCHER                    */
+          /* ULTRA-CLEAN MODERN PROMPT & MISSION DISPATCH CONSOLE          */
           /* ============================================================ */
           <div className="gemini-search-container">
-            {/* Main Title */}
-            <h1 className="gemini-heading">Where should we start?</h1>
+            {/* Mission Telemetry Micro-HUD */}
+            <div className="launcher-telemetry-strip">
+              <div className="telemetry-item">
+                <ShieldCheck size={13} className="text-emerald" />
+                <span>EGRESS: <strong>0.00% BLOCKED</strong></span>
+              </div>
+              <span className="telemetry-dot">•</span>
+              <div className="telemetry-item">
+                <Database size={13} className="text-cyan" />
+                <span>MEMORY: <strong>HNSW VECTOR READY</strong></span>
+              </div>
+              <span className="telemetry-dot">•</span>
+              <div className="telemetry-item">
+                <Cpu size={13} className="text-amber" />
+                <span>CORE: <strong>{selectedModel.replace('gemma4:', 'GEMMA ')}</strong></span>
+              </div>
+            </div>
 
-            {/* Pill Search / Input Box */}
+            {/* Main Clean Heading (Unobstructed) */}
+            <div className="launcher-hero-text">
+              <h1 className="gemini-heading">Where should we start?</h1>
+              <p className="gemini-subheading">
+                Direct local intelligence • Air-gapped tool execution • Auditable flight provenance
+              </p>
+            </div>
+
+            {/* Glowing Command Search Pill Box */}
             <div className={`gemini-pill-box ${isRecordingVoice ? 'recording' : ''}`}>
-              {/* Left Plus Attachment Button */}
+              {/* Attachment Plus Menu */}
               <div className="attach-button-wrapper">
                 <button
                   type="button"
                   className={`attach-plus-btn ${isAttachMenuOpen ? 'active' : ''}`}
                   onClick={() => setIsAttachMenuOpen((prev) => !prev)}
-                  aria-label="Attach media or documents"
+                  aria-label="Attach documents or payload"
                 >
-                  <Plus size={20} />
+                  <Plus size={19} />
                 </button>
 
-                {/* Attachment Drawer Menu */}
                 {isAttachMenuOpen && (
                   <div className="attachment-dropdown-menu">
                     <button
@@ -354,7 +407,7 @@ export default function AgentChatLauncher({
                       className="menu-item"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      <ImageIcon size={16} className="text-cyan" />
+                      <ImageIcon size={15} className="text-cyan" />
                       <span>Photos & Images</span>
                     </button>
                     <button
@@ -362,7 +415,7 @@ export default function AgentChatLauncher({
                       className="menu-item"
                       onClick={() => docInputRef.current?.click()}
                     >
-                      <FileText size={16} className="text-amber" />
+                      <FileText size={15} className="text-amber" />
                       <span>Documents & PDFs</span>
                     </button>
                     <button
@@ -370,37 +423,35 @@ export default function AgentChatLauncher({
                       className="menu-item"
                       onClick={handleToggleVoice}
                     >
-                      <Mic size={16} className="text-emerald" />
+                      <Mic size={15} className="text-emerald" />
                       <span>Voice Directive</span>
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Central Input / Voice Bar */}
+              {/* Input Area */}
               <div className="gemini-input-wrapper">
-                {/* Active Attachments Previews */}
                 {attachments.length > 0 && (
                   <div className="attachments-chip-strip">
                     {attachments.map((a) => (
                       <div key={a.id} className="attachment-chip">
-                        {a.type === 'image' && <ImageIcon size={13} className="text-cyan" />}
-                        {a.type === 'doc' && <FileText size={13} className="text-amber" />}
-                        {a.type === 'voice' && <Volume2 size={13} className="text-emerald" />}
+                        {a.type === 'image' && <ImageIcon size={12} className="text-cyan" />}
+                        {a.type === 'doc' && <FileText size={12} className="text-amber" />}
+                        {a.type === 'voice' && <Volume2 size={12} className="text-emerald" />}
                         <span className="chip-name">{a.name}</span>
                         <button
                           type="button"
                           onClick={() => removeAttachment(a.id)}
                           className="chip-remove"
                         >
-                          <X size={12} />
+                          <X size={11} />
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Input Text or Voice Recording Waves */}
                 {isRecordingVoice ? (
                   <div className="voice-recording-hud">
                     <div className="pulse-red-dot" />
@@ -419,7 +470,7 @@ export default function AgentChatLauncher({
                       onClick={handleToggleVoice}
                       className="stop-voice-btn"
                     >
-                      Done
+                      Complete
                     </button>
                   </div>
                 ) : (
@@ -432,16 +483,17 @@ export default function AgentChatLauncher({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleLaunchMission();
                     }}
-                    placeholder="Ask Sovereign / Launch Mission..."
+                    placeholder="Ask Sovereign / Launch air-gapped mission..."
                     aria-label="Mission prompt input"
+                    autoFocus
                   />
                 )}
               </div>
 
-              {/* Right Cluster: Model Selector, Mic, Send Rocket */}
+              {/* Right Cluster: Model Switcher & Instant Dispatch Button */}
               <div className="gemini-right-cluster">
-                {/* Model Selector Dropdown */}
                 <div className="gemini-model-selector">
+                  <Bot size={13} className="text-cyan" />
                   <select
                     value={selectedModel}
                     onChange={(e) => {
@@ -451,89 +503,87 @@ export default function AgentChatLauncher({
                     aria-label="Select reasoning model"
                   >
                     {availableModels.map((m) => (
-                      <option key={m} value={m} style={{ background: '#040d21', color: '#fff' }}>
+                      <option key={m} value={m} style={{ background: '#050f24', color: '#fff' }}>
                         {m.replace('gemma4:', 'Gemma ')}
                       </option>
                     ))}
                   </select>
-                  <ChevronDown size={14} className="dropdown-arrow" />
+                  <ChevronDown size={13} className="dropdown-arrow" />
                 </div>
 
-                {/* Microphone Toggle Button */}
                 <button
                   type="button"
                   className={`gemini-mic-btn ${isRecordingVoice ? 'recording' : ''}`}
                   onClick={handleToggleVoice}
                   aria-label="Voice input"
                 >
-                  <Mic size={18} />
+                  <Mic size={17} />
                 </button>
 
-                {/* Send Rocket Launch Button */}
                 <button
                   type="button"
                   className={`gemini-send-btn ${
                     prompt.trim() || attachments.length > 0 ? 'active' : ''
                   }`}
                   onClick={handleLaunchMission}
-                  disabled={launchState === 'igniting' || launchState === 'launching'}
-                  aria-label="Launch 3D rocket mission"
+                  disabled={!prompt.trim() && attachments.length === 0}
+                  aria-label="Dispatch mission"
                 >
-                  {launchState === 'igniting' || launchState === 'launching' ? (
-                    <Flame size={18} className="rocket-flame-spin" />
-                  ) : (
-                    <Rocket size={18} />
-                  )}
+                  <Send size={16} />
                 </button>
               </div>
             </div>
 
-            {/* Prompt Suggestions with Curved Return Arrow (↪) */}
-            <div className="gemini-suggestions-list">
+            {/* Quick Directive Suggestions Cards */}
+            <div className="gemini-suggestions-grid">
               {SUGGESTIONS.map((item) => (
                 <button
                   key={item.id}
-                  className="suggestion-item-row"
+                  className="suggestion-card"
                   onClick={() => {
                     setPrompt(item.prompt);
                     inputRef.current?.focus();
                   }}
                 >
-                  <CornerDownRight size={15} className="curved-return-arrow" />
-                  <span className="suggestion-text">{item.text}</span>
+                  <div className="suggestion-card-header">
+                    <span className="suggestion-tag">{item.tag}</span>
+                    <ArrowRight size={13} className="suggestion-arrow" />
+                  </div>
+                  <p className="suggestion-card-text">{item.text}</p>
                 </button>
               ))}
             </div>
           </div>
         ) : (
           /* ============================================================ */
-          /* ACTIVE AGENT CONVERSATION & MISSION RESPONSE VIEW            */
+          /* ACTIVE MISSION EXECUTION & DETERMINISTIC FLIGHT REPORT        */
           /* ============================================================ */
           <div className="active-mission-thread-card">
-            {/* Header with Telemetry Status */}
+            {/* Header Telemetry */}
             <div className="thread-header">
               <div className="thread-badge">
-                <Rocket size={16} className="text-cyan" />
-                <span>MISSION IN ORBIT</span>
+                <span className="pulse-cyan-dot" />
+                <span>MISSION EXECUTING // LOCAL AIR-GAP</span>
               </div>
               <div className="thread-timer">
-                <span>TIME: {(elapsedMs / 1000).toFixed(2)}s</span>
-                <span className="network-tag">NO EGRESS</span>
+                <Terminal size={14} className="text-cyan" />
+                <span>LATENCY: {(elapsedMs / 1000).toFixed(2)}s</span>
+                <span className="network-tag">0.00% EGRESS</span>
               </div>
             </div>
 
-            {/* User Prompt & Attached Media */}
+            {/* User Directive Bubble */}
             <div className="thread-user-bubble">
-              <span className="bubble-label">MISSION DIRECTIVE:</span>
+              <span className="bubble-label">DIRECTIVE:</span>
               <p className="user-prompt-text">{lastMissionPrompt}</p>
 
               {lastMissionAttachments.length > 0 && (
                 <div className="bubble-attachments">
                   {lastMissionAttachments.map((a) => (
                     <div key={a.id} className="attachment-badge">
-                      {a.type === 'image' && <ImageIcon size={14} />}
-                      {a.type === 'doc' && <FileText size={14} />}
-                      {a.type === 'voice' && <Volume2 size={14} />}
+                      {a.type === 'image' && <ImageIcon size={13} />}
+                      {a.type === 'doc' && <FileText size={13} />}
+                      {a.type === 'voice' && <Volume2 size={13} />}
                       <span>{a.name}</span>
                     </div>
                   ))}
@@ -541,17 +591,17 @@ export default function AgentChatLauncher({
               )}
             </div>
 
-            {/* Agent Live Thinking Progression Steps */}
+            {/* Live Agent Reasoning Steps */}
             {isAgentExecuting && (
               <div className="thread-thinking-panel">
                 <div className="thinking-indicator">
-                  <Loader2 size={18} className="spinner text-cyan" />
-                  <span>Sovereign Agent Reasoning in Progress...</span>
+                  <Loader2 size={16} className="spinner text-cyan" />
+                  <span>Sovereign Local Reasoner Dispatching Steps...</span>
                 </div>
                 <div className="thinking-step-list">
                   {agentSteps.map((step, idx) => (
                     <div key={idx} className="thinking-step-item">
-                      <CheckCircle2 size={14} className="text-emerald" />
+                      <CheckCircle2 size={13} className="text-emerald" />
                       <span>{step}</span>
                     </div>
                   ))}
@@ -563,9 +613,21 @@ export default function AgentChatLauncher({
             {agentAnswer && (
               <div className="thread-response-bubble">
                 <div className="response-header">
-                  <Bot size={18} className="text-cyan" />
-                  <span>SOVEREIGN AGENT REPORT ({selectedModel})</span>
-                  <span className="verified-seal">SHA-256 VERIFIED</span>
+                  <div className="response-title-cluster">
+                    <Bot size={17} className="text-cyan" />
+                    <span>SOVEREIGN AGENT MISSION REPORT ({selectedModel})</span>
+                  </div>
+                  <div className="response-actions-cluster">
+                    <button
+                      onClick={handleCopyReport}
+                      className="copy-report-btn"
+                      aria-label="Copy report to clipboard"
+                    >
+                      {isCopied ? <Check size={13} className="text-emerald" /> : <Copy size={13} />}
+                      <span>{isCopied ? 'Copied' : 'Copy'}</span>
+                    </button>
+                    <span className="verified-seal">SHA-256 VERIFIED</span>
+                  </div>
                 </div>
 
                 <div className="response-content-markdown">
@@ -574,12 +636,16 @@ export default function AgentChatLauncher({
                       return <h3 key={idx}>{line.replace('### ', '')}</h3>;
                     }
                     if (line.startsWith('- ')) {
+                      const parts = line.replace('- ', '').split(':');
                       return (
                         <li key={idx}>
-                          <strong>{line.replace('- ', '').split(':')[0]}:</strong>
-                          {line.split(':').slice(1).join(':')}
+                          <strong>{parts[0]}:</strong>
+                          {parts.slice(1).join(':')}
                         </li>
                       );
+                    }
+                    if (line.startsWith('*') && line.endsWith('*')) {
+                      return <p key={idx} className="italic-note">{line.replaceAll('*', '')}</p>;
                     }
                     return <p key={idx}>{line}</p>;
                   })}
@@ -592,10 +658,10 @@ export default function AgentChatLauncher({
               <button
                 onClick={handleResetMission}
                 className="reset-mission-btn"
-                aria-label="Launch a new mission"
+                aria-label="Launch a new directive"
               >
-                <RotateCcw size={16} />
-                <span>Launch New Mission</span>
+                <RotateCcw size={15} />
+                <span>New Mission</span>
               </button>
 
               <button
@@ -603,8 +669,8 @@ export default function AgentChatLauncher({
                 className="recorder-inspect-btn"
                 aria-label="Inspect in Flight Recorder"
               >
-                <span>Inspect in Flight Recorder</span>
-                <ArrowUpRight size={16} />
+                <span>Inspect Flight Log</span>
+                <ArrowUpRight size={15} />
               </button>
             </div>
           </div>

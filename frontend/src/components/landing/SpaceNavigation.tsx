@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ArrowUpRight, Bot, Orbit, Rocket, ShieldCheck, Sparkles, Terminal } from 'lucide-react';
+import { ArrowUpRight, Bot, Orbit, Radio, Rocket, ShieldCheck, Sparkles, Terminal } from 'lucide-react';
 
 interface SpaceNavigationProps {
   onLaunchWorkbench?: () => void;
@@ -51,7 +51,7 @@ export default function SpaceNavigation({
               className="space-nav-link-btn"
               aria-label="Open Agent Launcher"
             >
-              <Rocket size={14} className="text-cyan" />
+              <Radio size={14} className="text-cyan" />
               <span>Agent Launcher</span>
             </button>
           )}
@@ -70,7 +70,7 @@ export default function SpaceNavigation({
               className="space-nav-rocket-btn"
               aria-label="Launch Agent & Chat"
             >
-              <Rocket size={14} />
+              <Radio size={14} />
               <span>Launch Mission</span>
             </button>
           )}
