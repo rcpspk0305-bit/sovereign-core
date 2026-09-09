@@ -34,6 +34,12 @@ import {
 import InteractiveCosmicChatCanvas from './InteractiveCosmicChatCanvas';
 import { api, normalizeError } from '@/lib/api-client';
 import { AppError, FlightRecord } from '@/lib/types';
+import KnowledgeBay from '@/components/workbench/KnowledgeBay';
+import MemoryFlowBay from '@/components/workbench/MemoryFlowBay';
+import ToolBay from '@/components/workbench/ToolBay';
+import FlightRecorderBay from '@/components/workbench/FlightRecorderBay';
+
+export type WorkbenchBay = 'mission' | 'knowledge' | 'memory' | 'tools' | 'recorder';
 
 interface MediaAttachment {
   id: string;
@@ -45,11 +51,15 @@ interface MediaAttachment {
 
 interface AgentChatLauncherProps {
   onBackToLanding: () => void;
-  onOpenWorkbench: (tab?: string) => void;
+  onOpenWorkbench?: (tab?: string) => void;
   availableModels?: string[];
   currentModel?: string;
   onModelChange?: (model: string) => void;
-  activeBay?: string;
+  activeBay?: WorkbenchBay;
+  onBayChange?: (bay: WorkbenchBay) => void;
+  onError?: (error: AppError) => void;
+  lastCompletedTask?: string | null;
+  onMissionCompleted?: (record: FlightRecord) => void;
 }
 
 const SUGGESTIONS = [
@@ -90,7 +100,25 @@ export default function AgentChatLauncher({
   currentModel = 'gemma4:e2b',
   onModelChange,
   activeBay = 'mission',
+  onBayChange,
+  onError,
+  lastCompletedTask,
+  onMissionCompleted,
 }: AgentChatLauncherProps) {
+  const [currentBay, setCurrentBay] = useState<WorkbenchBay>(activeBay || 'mission');
+
+  useEffect(() => {
+    if (activeBay) {
+      setCurrentBay(activeBay);
+    }
+  }, [activeBay]);
+
+  const handleSwitchBay = (bay: WorkbenchBay) => {
+    setCurrentBay(bay);
+    if (onBayChange) onBayChange(bay);
+    if (onOpenWorkbench) onOpenWorkbench(bay);
+  };
+
   const [prompt, setPrompt] = useState('');
   const [selectedModel, setSelectedModel] = useState(currentModel);
   const [attachments, setAttachments] = useState<MediaAttachment[]>([]);
@@ -327,57 +355,69 @@ export default function AgentChatLauncher({
         {/* Center Quick Bay Navigation Switcher */}
         <nav className="launcher-bay-switcher" aria-label="Workbench bays">
           <button
-            className={`bay-switch-pill ${activeBay === 'mission' ? 'active' : ''}`}
-            onClick={() => onOpenWorkbench('mission')}
+            className={`bay-switch-pill ${currentBay === 'mission' ? 'active' : ''}`}
+            onClick={() => handleSwitchBay('mission')}
           >
             <Radio size={13} />
             <span>01 Mission</span>
           </button>
           <button
-            className={`bay-switch-pill ${activeBay === 'knowledge' ? 'active' : ''}`}
-            onClick={() => onOpenWorkbench('knowledge')}
+            className={`bay-switch-pill ${currentBay === 'knowledge' ? 'active' : ''}`}
+            onClick={() => handleSwitchBay('knowledge')}
           >
             <Database size={13} />
             <span>02 Knowledge</span>
           </button>
           <button
-            className={`bay-switch-pill ${activeBay === 'memory' ? 'active' : ''}`}
-            onClick={() => onOpenWorkbench('memory')}
+            className={`bay-switch-pill ${currentBay === 'memory' ? 'active' : ''}`}
+            onClick={() => handleSwitchBay('memory')}
           >
             <Cpu size={13} />
             <span>03 Memory Flow</span>
           </button>
           <button
-            className={`bay-switch-pill ${activeBay === 'tools' ? 'active' : ''}`}
-            onClick={() => onOpenWorkbench('tools')}
+            className={`bay-switch-pill ${currentBay === 'tools' ? 'active' : ''}`}
+            onClick={() => handleSwitchBay('tools')}
           >
             <Wrench size={13} />
             <span>04 Tools</span>
           </button>
           <button
-            className={`bay-switch-pill ${activeBay === 'recorder' ? 'active' : ''}`}
-            onClick={() => onOpenWorkbench('recorder')}
+            className={`bay-switch-pill ${currentBay === 'recorder' ? 'active' : ''}`}
+            onClick={() => handleSwitchBay('recorder')}
           >
             <Radar size={13} />
             <span>05 Flight Log</span>
           </button>
         </nav>
 
-        {/* Right Status Badge & Full Workbench Button */}
+        {/* Right Status Badge & Dynamic Model Selector (Exact Image 2) */}
         <div className="launcher-topbar-right">
           <div className="launcher-badge">
             <span className="status-indicator-green" />
             <span>AIR-GAPPED // NO EGRESS</span>
           </div>
 
-          <button
-            onClick={() => onOpenWorkbench()}
-            className="launcher-workbench-btn"
-            aria-label="Open full workbench view"
-          >
-            <span>Workbench</span>
-            <ArrowUpRight size={15} />
-          </button>
+          <div className="model-selector-chip">
+            <Bot size={13} className="text-cyan" />
+            <span>MODEL:</span>
+            <select
+              className="model-select-dropdown"
+              value={selectedModel}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedModel(val);
+                if (onModelChange) onModelChange(val);
+              }}
+              aria-label="Select AI reasoning model"
+            >
+              {availableModels.map((m) => (
+                <option key={m} value={m} style={{ background: '#030d22', color: '#fff' }}>
+                  {m.replace('gemma4:', 'Gemma ')}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </header>
 
@@ -397,8 +437,9 @@ export default function AgentChatLauncher({
         style={{ display: 'none' }}
       />
 
-      {/* Main Center Stage */}
-      <div className="launcher-center-stage">
+      {/* 01 Mission Center Stage */}
+      {currentBay === 'mission' && (
+        <div className="launcher-center-stage">
         {!hasLaunched ? (
           /* ============================================================ */
           /* ULTRA-CLEAN MODERN PROMPT & MISSION DISPATCH CONSOLE          */
@@ -423,7 +464,7 @@ export default function AgentChatLauncher({
               <span className="telemetry-dot">•</span>
               <button
                 type="button"
-                onClick={() => onOpenWorkbench('memory')}
+                onClick={() => handleSwitchBay('memory')}
                 className="memory-flow-quick-link"
                 title="Inspect the 4 Memory Types & Context Builder"
               >
@@ -736,7 +777,7 @@ export default function AgentChatLauncher({
               </button>
 
               <button
-                onClick={() => onOpenWorkbench('recorder')}
+                onClick={() => handleSwitchBay('recorder')}
                 className="recorder-inspect-btn"
                 aria-label="Inspect in Flight Recorder"
               >
@@ -747,6 +788,38 @@ export default function AgentChatLauncher({
           </div>
         )}
       </div>
+      )}
+
+      {/* 02 Knowledge Field Stage (Full Width, Central Milky Way Brain & Attachments) */}
+      {currentBay === 'knowledge' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <KnowledgeBay onError={(err) => (onError ? onError(err) : console.error(err))} />
+        </div>
+      )}
+
+      {/* 03 Memory Flow Stage (Full Width, 4 Memory Types & Session Intelligence) */}
+      {currentBay === 'memory' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <MemoryFlowBay onError={(err) => (onError ? onError(err) : console.error(err))} />
+        </div>
+      )}
+
+      {/* 04 Tools Bay Stage (Full Width, Controlled Execution Sandbox) */}
+      {currentBay === 'tools' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <ToolBay onError={(err) => (onError ? onError(err) : console.error(err))} />
+        </div>
+      )}
+
+      {/* 05 Flight Log Recorder Stage (Full Width, Mission Telemetry & Flight Audit) */}
+      {currentBay === 'recorder' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <FlightRecorderBay
+            onError={(err) => (onError ? onError(err) : console.error(err))}
+            selectedTaskId={lastCompletedTask}
+          />
+        </div>
+      )}
     </div>
   );
 }

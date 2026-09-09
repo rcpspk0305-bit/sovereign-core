@@ -1,96 +1,22 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ArrowLeft,
-  ArrowUpRight,
-  Bot,
-  CircleDot,
-  Database,
-  Orbit,
-  Radar,
-  Radio,
-  Rocket,
-  ShieldCheck,
-  Sparkles,
-  Terminal,
-  Wrench,
-  Cpu,
-} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { api, normalizeError } from '@/lib/api-client';
 import { AppError, FlightRecord } from '@/lib/types';
-import { initOrbitalStage } from '@/lib/animations';
 
 import CosmicCanvas3D from '@/components/landing/CosmicCanvas3D';
 import SpaceNavigation from '@/components/landing/SpaceNavigation';
 import CosmicHero from '@/components/landing/CosmicHero';
 import WorkflowSection from '@/components/landing/WorkflowSection';
 import SpaceFooter from '@/components/landing/SpaceFooter';
-import AgentChatLauncher from '@/components/chat/AgentChatLauncher';
-
-import KnowledgeBay from '@/components/workbench/KnowledgeBay';
-import ToolBay from '@/components/workbench/ToolBay';
-import FlightRecorderBay from '@/components/workbench/FlightRecorderBay';
-import MemoryFlowBay from '@/components/workbench/MemoryFlowBay';
+import AgentChatLauncher, { WorkbenchBay } from '@/components/chat/AgentChatLauncher';
 import ErrorDiagnosticModal from '@/components/workbench/ErrorDiagnosticModal';
 
-type Section = 'mission' | 'knowledge' | 'memory' | 'tools' | 'recorder';
-
-const sections: Array<{
-  id: Section;
-  label: string;
-  icon: typeof Orbit;
-  eyebrow: string;
-  title: string;
-  detail: string;
-}> = [
-  {
-    id: 'mission',
-    label: 'Mission Launcher',
-    icon: Radio,
-    eyebrow: 'ORBITAL COMMAND',
-    title: 'Autonomous Local Agents.\nAuditable Execution.',
-    detail: 'Air-gapped mission launcher with grounded document intelligence, sandbox tools, and cryptographic flight notes.',
-  },
-  {
-    id: 'knowledge',
-    label: 'Knowledge field',
-    icon: Database,
-    eyebrow: 'VECTOR MEMORY',
-    title: 'Turn documents\ninto a navigable field.',
-    detail: 'Index local PDFs, retrieve their context, and retain page-level provenance for every source.',
-  },
-  {
-    id: 'memory',
-    label: 'Memory Flow',
-    icon: Cpu,
-    eyebrow: 'AGENT MEMORY RUNTIME',
-    title: 'The 4 memory tiers.\nDynamic context builder.',
-    detail: 'Inspect short-term session turns, long-term databases, the 8k context window budget, and memory vs state.',
-  },
-  {
-    id: 'tools',
-    label: 'Tool bay',
-    icon: Wrench,
-    eyebrow: 'CONTROLLED ACTIONS',
-    title: 'Every action\nstays inside the boundary.',
-    detail: 'Execute only registered local tools with schema validation, timing, and structured audit events.',
-  },
-  {
-    id: 'recorder',
-    label: 'Flight recorder',
-    icon: Radar,
-    eyebrow: 'MISSION TELEMETRY',
-    title: 'Nothing important\nleaves the black box.',
-    detail: 'Trace decisions, sources, artifacts, errors, and review status in a durable mission record.',
-  },
-];
 
 export default function Home() {
-  // Default to chat/agent launcher as requested: "Replace the mission control page with the chat + agent launcher page"
-  const [viewMode, setViewMode] = useState<'chat' | 'workbench' | 'landing'>('chat');
-  const [active, setActive] = useState<Section>('mission');
-  const [status, setStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  // Universal modern navigation: 'app' (holds all 5 bays with top pill navigation bar) or 'landing' (3D showcase)
+  const [viewMode, setViewMode] = useState<'app' | 'landing'>('app');
+  const [activeBay, setActiveBay] = useState<WorkbenchBay>('mission');
   const [model, setModel] = useState<string>('gemma4:e2b');
   const [availableModels, setAvailableModels] = useState<string[]>([
     'gemma4:e2b',
@@ -98,12 +24,6 @@ export default function Home() {
   ]);
   const [activeError, setActiveError] = useState<AppError | null>(null);
   const [lastCompletedTask, setLastCompletedTask] = useState<string | null>(null);
-
-  const orbitalContainerRef = useRef<HTMLDivElement>(null);
-  const current = useMemo(
-    () => sections.find((section) => section.id === active) ?? sections[0],
-    [active],
-  );
 
   // Check health and available models on mount
   useEffect(() => {
@@ -113,7 +33,6 @@ export default function Home() {
       .getHealth()
       .then((health) => {
         if (!mounted) return;
-        setStatus(health.ollama_connected ? 'online' : 'offline');
         if (health.default_model) {
           setModel(health.default_model);
         }
@@ -123,7 +42,6 @@ export default function Home() {
       })
       .catch((err) => {
         if (!mounted) return;
-        setStatus('offline');
         setActiveError(normalizeError(err, 'NETWORK_OFFLINE'));
       });
 
@@ -144,15 +62,9 @@ export default function Home() {
     }, 100);
   };
 
-  const handleOpenLauncher = () => {
-    setViewMode('chat');
-    setActive('mission');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleLaunchWorkbench = (bay: Section = 'knowledge') => {
-    setActive(bay);
-    setViewMode('workbench');
+  const handleOpenBay = (bay: WorkbenchBay = 'mission') => {
+    setActiveBay(bay);
+    setViewMode('app');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -171,207 +83,23 @@ export default function Home() {
       <div className="aurora aurora-one" aria-hidden="true" />
       <div className="aurora aurora-two" aria-hidden="true" />
 
-      {viewMode === 'chat' && (
+      {viewMode === 'app' && (
         /* ============================================================ */
-        /* PRIMARY VIEW: CHAT INTERFACE & AGENT MISSION LAUNCHER       */
-        /* (Photorealistic Planet & Stars, Clean Modern Design)         */
+        /* PRIMARY UNIVERSAL INTERFACE: TOP PILL SWITCHER & FULL BAYS  */
+        /* (01 Mission, 02 Knowledge, 03 Memory Flow, 04 Tools, 05 Log) */
         /* ============================================================ */
         <AgentChatLauncher
           onBackToLanding={handleBackToLanding}
-          onOpenWorkbench={(tab) => {
-            if (tab === 'mission' || !tab) {
-              setViewMode('chat');
-            } else {
-              handleLaunchWorkbench(tab as Section);
-            }
-          }}
+          activeBay={activeBay}
+          onBayChange={(bay) => setActiveBay(bay)}
+          onOpenWorkbench={(bay) => handleOpenBay((bay as WorkbenchBay) || 'mission')}
           availableModels={availableModels}
           currentModel={model}
           onModelChange={(m) => setModel(m)}
-          activeBay="mission"
+          onError={(err) => setActiveError(err)}
+          lastCompletedTask={lastCompletedTask}
+          onMissionCompleted={handleMissionCompleted}
         />
-      )}
-
-      {viewMode === 'workbench' && (
-        /* ============================================================ */
-        /* INTERACTIVE WORKBENCH BAYS (KNOWLEDGE, TOOLS, RECORDER)      */
-        /* ============================================================ */
-        <div className="workbench-experience-wrapper">
-          {/* Top Bar with Navigation Toggles */}
-          <header className="topbar">
-            <div className="topbar-left-cluster">
-              <button
-                onClick={handleBackToLanding}
-                className="back-to-landing-btn"
-                aria-label="Return to Cosmic Landing Page"
-              >
-                <ArrowLeft size={16} />
-                <span>Overview</span>
-              </button>
-
-              <button
-                onClick={handleOpenLauncher}
-                className="back-to-landing-btn text-cyan"
-                aria-label="Open Agent Launcher"
-              >
-                <Radio size={15} />
-                <span>Chat & Launcher</span>
-              </button>
-
-              <a className="wordmark" href="#mission" aria-label="Sovereign Core home">
-                <span className="wordmark-mark">
-                  <Sparkles size={16} />
-                </span>
-                SOVEREIGN<span>/</span>CORE
-              </a>
-            </div>
-
-            <div className="topbar-right-cluster">
-              {/* Node Health Chip */}
-              <div className="system-chip">
-                <span className={`status-pulse ${status}`} />
-                {status === 'checking'
-                  ? 'Checking local node'
-                  : status === 'online'
-                  ? 'Local node online'
-                  : 'Offline simulation'}
-              </div>
-
-              {/* Dynamic Model Selector */}
-              <div className="model-selector-chip">
-                <Bot size={14} />
-                <span>MODEL:</span>
-                <select
-                  className="model-select-dropdown"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  aria-label="Select AI reasoning model"
-                >
-                  {availableModels.map((m) => (
-                    <option key={m} value={m} style={{ background: '#030d22', color: '#fff' }}>
-                      {m.replace('gemma4:', 'Gemma ')}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </header>
-
-          {/* If the user is on the mission tab inside workbench, render the modern launcher */}
-          {active === 'mission' ? (
-            <div className="workbench-launcher-frame">
-              <AgentChatLauncher
-                onBackToLanding={handleBackToLanding}
-                onOpenWorkbench={(tab) => {
-                  if (tab && tab !== 'mission') {
-                    setActive(tab as Section);
-                  }
-                }}
-                availableModels={availableModels}
-                currentModel={model}
-                onModelChange={(m) => setModel(m)}
-                activeBay="mission"
-              />
-            </div>
-          ) : (
-            <div className="orbital-layout">
-              {/* Left Navigation Sidebar */}
-              <aside className="navigation-panel">
-                <p className="panel-label">WORKBENCH BAYS</p>
-                <nav role="tablist" aria-label="Workbench Pillars">
-                  {sections.map((section, index) => {
-                    const Icon = section.icon;
-                    const isSelected = active === section.id;
-                    return (
-                      <button
-                        key={section.id}
-                        role="tab"
-                        id={`tab-${section.id}`}
-                        aria-selected={isSelected}
-                        aria-controls={`panel-${section.id}`}
-                        className={`nav-item ${isSelected ? 'active' : ''}`}
-                        onClick={() => {
-                          if (section.id === 'mission') {
-                            handleOpenLauncher();
-                          } else {
-                            setActive(section.id);
-                          }
-                        }}
-                      >
-                        <span className="nav-index">0{index + 1}</span>
-                        <Icon size={17} />
-                        <span>{section.label}</span>
-                      </button>
-                    );
-                  })}
-                </nav>
-                <div className="nav-footnote">
-                  <ShieldCheck size={16} />
-                  <span>
-                    Air-gapped by design
-                    <br />
-                    Local-first execution
-                  </span>
-                </div>
-              </aside>
-
-              {/* Center Bay View */}
-              <div className="workbench-bay-center">
-                <section
-                  id={`panel-${active}`}
-                  className="active-workbench-view"
-                  role="tabpanel"
-                  aria-labelledby={`tab-${active}`}
-                >
-                  {active === 'knowledge' && (
-                    <KnowledgeBay onError={(err) => setActiveError(err)} />
-                  )}
-                  {active === 'memory' && (
-                    <MemoryFlowBay onError={(err) => setActiveError(err)} />
-                  )}
-                  {active === 'tools' && (
-                    <ToolBay onError={(err) => setActiveError(err)} />
-                  )}
-                  {active === 'recorder' && (
-                    <FlightRecorderBay
-                      onError={(err) => setActiveError(err)}
-                      selectedTaskId={lastCompletedTask}
-                    />
-                  )}
-                </section>
-              </div>
-
-              {/* Right Readout Panel */}
-              <aside className="readout-panel">
-                <p className="panel-label">LIVE READOUT</p>
-                <div className="metric">
-                  <span>NETWORK MODE</span>
-                  <strong>NO EGRESS</strong>
-                  <i />
-                </div>
-                <div className="metric">
-                  <span>VECTOR STORE</span>
-                  <strong>READY</strong>
-                  <i />
-                </div>
-                <div className="metric">
-                  <span>MISSION LOG</span>
-                  <strong>ARMED</strong>
-                  <i />
-                </div>
-                <div className="coordinate-card">
-                  <span>COORDINATES</span>
-                  <strong>
-                    19.0760° N
-                    <br />
-                    72.8777° E
-                  </strong>
-                  <small>LOCAL EXECUTION NODE</small>
-                </div>
-              </aside>
-            </div>
-          )}
-        </div>
       )}
 
       {viewMode === 'landing' && (
@@ -382,22 +110,22 @@ export default function Home() {
           <CosmicCanvas3D />
 
           <SpaceNavigation
-            onLaunchWorkbench={() => handleLaunchWorkbench('knowledge')}
-            onOpenLauncher={handleOpenLauncher}
-            currentMode={viewMode}
+            onLaunchWorkbench={(bay) => handleOpenBay((bay as WorkbenchBay) || 'knowledge')}
+            onOpenLauncher={() => handleOpenBay('mission')}
+            currentMode="landing"
           />
 
           <CosmicHero
             onExploreWorkflow={handleExploreWorkflow}
-            onLaunchWorkbench={() => handleLaunchWorkbench('knowledge')}
-            onOpenLauncher={handleOpenLauncher}
+            onLaunchWorkbench={() => handleOpenBay('knowledge')}
+            onOpenLauncher={() => handleOpenBay('mission')}
           />
 
-          <WorkflowSection onLaunchWorkbench={() => handleLaunchWorkbench('knowledge')} />
+          <WorkflowSection onLaunchWorkbench={() => handleOpenBay('knowledge')} />
 
           <SpaceFooter
             onBackToTop={handleBackToTop}
-            onLaunchWorkbench={() => handleLaunchWorkbench('knowledge')}
+            onLaunchWorkbench={() => handleOpenBay('knowledge')}
           />
         </div>
       )}
