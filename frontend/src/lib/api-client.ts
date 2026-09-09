@@ -228,6 +228,32 @@ class ApiClient {
     return res.json();
   }
 
+  async listDocuments(): Promise<Array<{
+    id: string;
+    filename: string;
+    total_chunks: number;
+    total_pages: number;
+    total_tokens?: number;
+    uploaded_at?: string;
+    document_ids?: string[];
+  }>> {
+    try {
+      const res = await fetch(`${this.base}/api/v1/rag/documents`);
+      if (!res.ok) return [];
+      return await res.json();
+    } catch {
+      return [];
+    }
+  }
+
+  async deleteDocument(filename: string): Promise<{ status: string; chunks_deleted: number }> {
+    const res = await fetch(`${this.base}/api/v1/rag/documents/${encodeURIComponent(filename)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error(`Failed to delete document ${filename}`);
+    return res.json();
+  }
+
   async clearRag(): Promise<{ status: string }> {
     const res = await fetch(`${this.base}/api/v1/rag/clear`, {
       method: 'DELETE',

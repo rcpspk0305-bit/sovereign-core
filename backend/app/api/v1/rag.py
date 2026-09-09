@@ -155,6 +155,75 @@ async def get_rag_stats(
     return {"total_documents": count, "backend": retriever.__class__.__name__}
 
 
+@router.get("/documents")
+async def list_documents(
+    retriever: BaseRetriever = Depends(get_retriever),
+) -> List[Dict[str, Any]]:
+    """List all indexed documents/attachments with metadata."""
+    if hasattr(retriever, "_collection"):
+        try:
+            data = retriever._collection.get(include=["metadatas"])
+            metas = data.get("metadatas", []) or []
+            ids = data.get("ids", []) or []
+            doc_map: Dict[str, Dict[str, Any]] = {}
+            for doc_id, meta in zip(ids, metas):
+                meta = meta or {}
+                fname = meta.get("filename") or f"Document_{doc_id[:8]}"
+                if fname not in doc_map:
+                    doc_map[fname] = {
+                        "id": doc_id,
+                        "filename": fname,
+                        "total_chunks": 0,
+                        "total_pages": meta.get("total_pages", 1),
+                        "total_tokens": 0,
+                        "uploaded_at": meta.get("timestamp") or datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M"),
+                        "document_ids": [],
+                    }
+                doc_map[fname]["total_chunks"] += 1
+                doc_map[fname]["document_ids"].append(doc_id)
+                doc_map[fname]["total_tokens"] += int(meta.get("token_count", 120))
+            return list(doc_map.values())
+        except Exception:
+            pass
+    return []
+
+
+@router.delete("/documents/{filename}")
+async def delete_document(
+    filename: str,
+    retriever: BaseRetriever = Depends(get_retriever),
+    audit_logger: BaseAuditLogger = Depends(get_audit_logger),
+) -> Dict[str, Any]:
+    """Delete all chunks for a specific document."""
+    deleted_count = 0
+    if hasattr(retriever, "_collection"):
+        try:
+            data = retriever._collection.get(where={"filename": filename})
+            ids = data.get("ids", []) or []
+            if ids:
+                retriever._collection.delete(ids=ids)
+                deleted_count = len(ids)
+        except Exception:
+            # Fallback if where filter is not supported by backend version
+            data = retriever._collection.get(include=["metadatas"])
+            metas = data.get("metadatas", []) or []
+            ids = data.get("ids", []) or []
+            matched = [doc_id for doc_id, meta in zip(ids, metas) if meta and meta.get("filename") == filename]
+            if matched:
+                retriever._collection.delete(ids=matched)
+                deleted_count = len(matched)
+
+    await audit_logger.log(
+        AuditEvent(
+            id=str(uuid.uuid4()),
+            timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            event_type=AuditEventType.RAG_INGEST,
+            payload={"action": "delete", "filename": filename, "chunks_deleted": deleted_count},
+        )
+    )
+    return {"status": "deleted", "filename": filename, "chunks_deleted": deleted_count}
+
+
 @router.delete("/clear")
 async def clear_rag(
     retriever: BaseRetriever = Depends(get_retriever),
@@ -162,3 +231,4 @@ async def clear_rag(
     """Clear all indexed documents."""
     await retriever.clear()
     return {"status": "cleared"}
+
