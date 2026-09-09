@@ -2,12 +2,12 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   ArrowUpRight,
   Bot,
   ChevronRight,
   CircleDot,
   Database,
-  FileSearch,
   Orbit,
   Radar,
   ShieldCheck,
@@ -18,6 +18,12 @@ import {
 import { api, normalizeError } from '@/lib/api-client';
 import { AppError, FlightRecord } from '@/lib/types';
 import { initOrbitalStage } from '@/lib/animations';
+
+import CosmicCanvas3D from '@/components/landing/CosmicCanvas3D';
+import SpaceNavigation from '@/components/landing/SpaceNavigation';
+import CosmicHero from '@/components/landing/CosmicHero';
+import WorkflowSection from '@/components/landing/WorkflowSection';
+import SpaceFooter from '@/components/landing/SpaceFooter';
 
 import MissionConsole3D from '@/components/workbench/MissionConsole3D';
 import KnowledgeBay from '@/components/workbench/KnowledgeBay';
@@ -70,10 +76,14 @@ const sections: Array<{
 ];
 
 export default function Home() {
+  const [viewMode, setViewMode] = useState<'landing' | 'workbench'>('landing');
   const [active, setActive] = useState<Section>('mission');
   const [status, setStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [model, setModel] = useState<string>('gemma4:e2b');
-  const [availableModels, setAvailableModels] = useState<string[]>(['gemma4:e2b', 'gemma4:e4b-it-qat']);
+  const [availableModels, setAvailableModels] = useState<string[]>([
+    'gemma4:e2b',
+    'gemma4:e4b-it-qat',
+  ]);
   const [activeError, setActiveError] = useState<AppError | null>(null);
   const [lastCompletedTask, setLastCompletedTask] = useState<string | null>(null);
 
@@ -83,14 +93,14 @@ export default function Home() {
     [active],
   );
 
-  // Initialize continuous Anime.js 3D orbital physics
+  // Initialize continuous Anime.js 3D orbital physics when in workbench mode
   useEffect(() => {
-    if (orbitalContainerRef.current) {
+    if (viewMode === 'workbench' && orbitalContainerRef.current) {
       initOrbitalStage(orbitalContainerRef.current);
     }
-  }, []);
+  }, [viewMode]);
 
-  // Check health and available models
+  // Check health and available models on mount
   useEffect(() => {
     let mounted = true;
 
@@ -121,197 +131,273 @@ export default function Home() {
     setLastCompletedTask(record.task_id);
   };
 
+  const handleExploreWorkflow = () => {
+    const el = document.getElementById('ingestion');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleLaunchWorkbench = () => {
+    setViewMode('workbench');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackToLanding = () => {
+    setViewMode('landing');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <main className="constellation-shell">
-      {/* 3D Star Canvas & Aurora Backdrops */}
-      <div className="star-canvas" aria-hidden="true" />
+      {/* Three.js 3D Cosmic Canvas Engine */}
+      <CosmicCanvas3D />
+
+      {/* Background Aurora Lighting Overlays */}
       <div className="aurora aurora-one" aria-hidden="true" />
       <div className="aurora aurora-two" aria-hidden="true" />
 
-      {/* Top Navigation Bar */}
-      <header className="topbar">
-        <a className="wordmark" href="#mission" aria-label="Sovereign Core home">
-          <span className="wordmark-mark">
-            <Sparkles size={16} />
-          </span>
-          SOVEREIGN<span>/</span>CORE
-        </a>
+      {viewMode === 'landing' ? (
+        /* ============================================================ */
+        /* 3D COSMIC LANDING PAGE (SIH WORKFLOW SHOWCASE)               */
+        /* ============================================================ */
+        <div className="landing-experience-wrapper">
+          {/* Top Floating Glassmorphic Pill Header */}
+          <SpaceNavigation
+            onLaunchWorkbench={handleLaunchWorkbench}
+            currentMode={viewMode}
+          />
 
-        <div className="topbar-right-cluster">
-          {/* Node Health Chip */}
-          <div className="system-chip">
-            <span className={`status-pulse ${status}`} />
-            {status === 'checking'
-              ? 'Checking local node'
-              : status === 'online'
-              ? 'Local node online'
-              : 'Offline simulation'}
-          </div>
+          {/* Hero Section */}
+          <CosmicHero
+            onExploreWorkflow={handleExploreWorkflow}
+            onLaunchWorkbench={handleLaunchWorkbench}
+          />
 
-          {/* Dynamic Model Selector */}
-          <div className="model-selector-chip">
-            <Bot size={14} />
-            <span>MODEL:</span>
-            <select
-              className="model-select-dropdown"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              aria-label="Select AI reasoning model"
-            >
-              {availableModels.map((m) => (
-                <option key={m} value={m} style={{ background: '#030d22', color: '#fff' }}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* 5-Stage Cosmic Workflow Experience */}
+          <WorkflowSection onLaunchWorkbench={handleLaunchWorkbench} />
+
+          {/* Footer */}
+          <SpaceFooter
+            onBackToTop={handleBackToTop}
+            onLaunchWorkbench={handleLaunchWorkbench}
+          />
         </div>
-      </header>
+      ) : (
+        /* ============================================================ */
+        /* INTERACTIVE 3D WORKBENCH (FULL FUNCTIONAL MODE)             */
+        /* ============================================================ */
+        <div className="workbench-experience-wrapper">
+          {/* Top Bar with Back to Cosmic Journey Toggle */}
+          <header className="topbar">
+            <div className="topbar-left-cluster">
+              <button
+                onClick={handleBackToLanding}
+                className="back-to-landing-btn"
+                aria-label="Return to Cosmic Landing Page"
+              >
+                <ArrowLeft size={16} />
+                <span>Cosmic Journey</span>
+              </button>
 
-      {/* Orbital Layout Grid */}
-      <div className="orbital-layout">
-        {/* Left Navigation Sidebar */}
-        <aside className="navigation-panel">
-          <p className="panel-label">WORKBENCH</p>
-          <nav role="tablist" aria-label="Workbench Pillars">
-            {sections.map((section, index) => {
-              const Icon = section.icon;
-              const isSelected = active === section.id;
-              return (
-                <button
-                  key={section.id}
-                  role="tab"
-                  id={`tab-${section.id}`}
-                  aria-selected={isSelected}
-                  aria-controls={`panel-${section.id}`}
-                  className={`nav-item ${isSelected ? 'active' : ''}`}
-                  onClick={() => setActive(section.id)}
+              <a className="wordmark" href="#mission" aria-label="Sovereign Core home">
+                <span className="wordmark-mark">
+                  <Sparkles size={16} />
+                </span>
+                SOVEREIGN<span>/</span>CORE
+              </a>
+            </div>
+
+            <div className="topbar-right-cluster">
+              {/* Node Health Chip */}
+              <div className="system-chip">
+                <span className={`status-pulse ${status}`} />
+                {status === 'checking'
+                  ? 'Checking local node'
+                  : status === 'online'
+                  ? 'Local node online'
+                  : 'Offline simulation'}
+              </div>
+
+              {/* Dynamic Model Selector */}
+              <div className="model-selector-chip">
+                <Bot size={14} />
+                <span>MODEL:</span>
+                <select
+                  className="model-select-dropdown"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  aria-label="Select AI reasoning model"
                 >
-                  <span className="nav-index">0{index + 1}</span>
-                  <Icon size={17} />
-                  <span>{section.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-          <div className="nav-footnote">
-            <ShieldCheck size={16} />
-            <span>
-              Air-gapped by design
-              <br />
-              Local-first execution
-            </span>
-          </div>
-        </aside>
-
-        {/* Center Hero Stage with 3D Anime.js Orbit Graphic */}
-        <section className="hero-stage" id="mission">
-          <div className="hero-copy">
-            <p className="eyebrow">
-              <CircleDot size={13} /> {current.eyebrow}
-            </p>
-            <h1>
-              {current.title.split('\n').map((line) => (
-                <span key={line}>{line}</span>
-              ))}
-            </h1>
-            <p className="hero-detail">{current.detail}</p>
-            <div className="hero-actions">
-              <button
-                className="primary-action"
-                onClick={() => {
-                  setActive('mission');
-                  document.querySelector('.active-workbench-view')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
-                Start a mission <ArrowUpRight size={17} />
-              </button>
-              <button
-                className="quiet-action"
-                onClick={() => {
-                  setActive('recorder');
-                  document.querySelector('.active-workbench-view')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
-                Explore telemetry <ChevronRight size={17} />
-              </button>
+                  {availableModels.map((m) => (
+                    <option key={m} value={m} style={{ background: '#030d22', color: '#fff' }}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
+          </header>
+
+          {/* Orbital Layout Grid */}
+          <div className="orbital-layout">
+            {/* Left Navigation Sidebar */}
+            <aside className="navigation-panel">
+              <p className="panel-label">WORKBENCH</p>
+              <nav role="tablist" aria-label="Workbench Pillars">
+                {sections.map((section, index) => {
+                  const Icon = section.icon;
+                  const isSelected = active === section.id;
+                  return (
+                    <button
+                      key={section.id}
+                      role="tab"
+                      id={`tab-${section.id}`}
+                      aria-selected={isSelected}
+                      aria-controls={`panel-${section.id}`}
+                      className={`nav-item ${isSelected ? 'active' : ''}`}
+                      onClick={() => setActive(section.id)}
+                    >
+                      <span className="nav-index">0{index + 1}</span>
+                      <Icon size={17} />
+                      <span>{section.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+              <div className="nav-footnote">
+                <ShieldCheck size={16} />
+                <span>
+                  Air-gapped by design
+                  <br />
+                  Local-first execution
+                </span>
+              </div>
+            </aside>
+
+            {/* Center Hero Stage with 3D Anime.js Orbit Graphic */}
+            <section className="hero-stage" id="mission">
+              <div className="hero-copy">
+                <p className="eyebrow">
+                  <CircleDot size={13} /> {current.eyebrow}
+                </p>
+                <h1>
+                  {current.title.split('\n').map((line) => (
+                    <span key={line}>{line}</span>
+                  ))}
+                </h1>
+                <p className="hero-detail">{current.detail}</p>
+                <div className="hero-actions">
+                  <button
+                    className="primary-action"
+                    onClick={() => {
+                      setActive('mission');
+                      document
+                        .querySelector('.active-workbench-view')
+                        ?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    Start a mission <ArrowUpRight size={17} />
+                  </button>
+                  <button
+                    className="quiet-action"
+                    onClick={() => {
+                      setActive('recorder');
+                      document
+                        .querySelector('.active-workbench-view')
+                        ?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                  >
+                    Explore telemetry <ChevronRight size={17} />
+                  </button>
+                </div>
+              </div>
+
+              {/* 3D Animated Orbital Stage */}
+              <div
+                className="orbital-visual"
+                ref={orbitalContainerRef}
+                aria-label="Animated local intelligence orbital graphic"
+              >
+                <div className="orbit orbit-a orbit-ring" />
+                <div className="orbit orbit-b orbit-ring-reverse" />
+                <div className="orbit orbit-c orbit-ring" />
+                <div className="orbital-node node-one" />
+                <div className="orbital-node node-two" />
+                <div className="orbital-node node-three" />
+                <div className="core-sphere">
+                  <div className="sphere-glint" />
+                  <span>SC</span>
+                </div>
+                <div className="signal-tag">
+                  <span className="status-pulse online" /> PRIVATE INFERENCE
+                </div>
+              </div>
+            </section>
+
+            {/* Right Readout Panel */}
+            <aside className="readout-panel">
+              <p className="panel-label">LIVE READOUT</p>
+              <div className="metric">
+                <span>NETWORK MODE</span>
+                <strong>NO EGRESS</strong>
+                <i />
+              </div>
+              <div className="metric">
+                <span>VECTOR STORE</span>
+                <strong>READY</strong>
+                <i />
+              </div>
+              <div className="metric">
+                <span>MISSION LOG</span>
+                <strong>ARMED</strong>
+                <i />
+              </div>
+              <div className="coordinate-card">
+                <span>COORDINATES</span>
+                <strong>
+                  19.0760° N
+                  <br />
+                  72.8777° E
+                </strong>
+                <small>LOCAL EXECUTION NODE</small>
+              </div>
+            </aside>
           </div>
 
-          {/* 3D Animated Orbital Stage */}
-          <div
-            className="orbital-visual"
-            ref={orbitalContainerRef}
-            aria-label="Animated local intelligence orbital graphic"
+          {/* Active Workbench Pillar Bay View */}
+          <section
+            id={`panel-${active}`}
+            className="active-workbench-view"
+            role="tabpanel"
+            aria-labelledby={`tab-${active}`}
           >
-            <div className="orbit orbit-a orbit-ring" />
-            <div className="orbit orbit-b orbit-ring-reverse" />
-            <div className="orbit orbit-c orbit-ring" />
-            <div className="orbital-node node-one" />
-            <div className="orbital-node node-two" />
-            <div className="orbital-node node-three" />
-            <div className="core-sphere">
-              <div className="sphere-glint" />
-              <span>SC</span>
-            </div>
-            <div className="signal-tag">
-              <span className="status-pulse online" /> PRIVATE INFERENCE
-            </div>
-          </div>
-        </section>
-
-        {/* Right Readout Panel */}
-        <aside className="readout-panel">
-          <p className="panel-label">LIVE READOUT</p>
-          <div className="metric">
-            <span>NETWORK MODE</span>
-            <strong>NO EGRESS</strong>
-            <i />
-          </div>
-          <div className="metric">
-            <span>VECTOR STORE</span>
-            <strong>READY</strong>
-            <i />
-          </div>
-          <div className="metric">
-            <span>MISSION LOG</span>
-            <strong>ARMED</strong>
-            <i />
-          </div>
-          <div className="coordinate-card">
-            <span>COORDINATES</span>
-            <strong>
-              19.0760° N
-              <br />
-              72.8777° E
-            </strong>
-            <small>LOCAL EXECUTION NODE</small>
-          </div>
-        </aside>
-      </div>
-
-      {/* Active Workbench Pillar Bay View */}
-      <section id={`panel-${active}`} className="active-workbench-view" role="tabpanel" aria-labelledby={`tab-${active}`}>
-        {active === 'mission' && (
-          <MissionConsole3D
-            model={model}
-            onError={(err) => setActiveError(err)}
-            onMissionCompleted={handleMissionCompleted}
-          />
-        )}
-        {active === 'knowledge' && (
-          <KnowledgeBay onError={(err) => setActiveError(err)} />
-        )}
-        {active === 'tools' && (
-          <ToolBay onError={(err) => setActiveError(err)} />
-        )}
-        {active === 'recorder' && (
-          <FlightRecorderBay
-            onError={(err) => setActiveError(err)}
-            selectedTaskId={lastCompletedTask}
-          />
-        )}
-      </section>
+            {active === 'mission' && (
+              <MissionConsole3D
+                model={model}
+                onError={(err) => setActiveError(err)}
+                onMissionCompleted={handleMissionCompleted}
+              />
+            )}
+            {active === 'knowledge' && (
+              <KnowledgeBay onError={(err) => setActiveError(err)} />
+            )}
+            {active === 'tools' && (
+              <ToolBay onError={(err) => setActiveError(err)} />
+            )}
+            {active === 'recorder' && (
+              <FlightRecorderBay
+                onError={(err) => setActiveError(err)}
+                selectedTaskId={lastCompletedTask}
+              />
+            )}
+          </section>
+        </div>
+      )}
 
       {/* 3D Holographic Error Diagnostic Modal */}
       <ErrorDiagnosticModal
@@ -319,7 +405,6 @@ export default function Home() {
         onDismiss={() => setActiveError(null)}
         onRetry={() => {
           setActiveError(null);
-          // re-trigger active view or health check
           api.getHealth().catch((e) => setActiveError(normalizeError(e)));
         }}
       />
