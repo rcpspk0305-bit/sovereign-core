@@ -1,6 +1,7 @@
 """Unit and integration tests for Approval-Note Artifact Generator."""
 
 from pathlib import Path
+
 import pytest
 from docx import Document
 

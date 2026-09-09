@@ -23,8 +23,6 @@ from app.core.flight_recorder.manager import (
 )
 from app.core.flight_recorder.models import (
     ApprovalStatus,
-    FlightEvent,
-    FlightEventType,
     FlightRecord,
     NetworkMode,
 )

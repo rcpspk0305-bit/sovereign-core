@@ -70,6 +70,7 @@ async def execute_tool(
 async def download_approval_note(path: str):
     """Securely download a locally generated DOCX approval note."""
     from pathlib import Path
+
     from fastapi.responses import FileResponse
 
     from app.config import settings

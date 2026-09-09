@@ -1,12 +1,9 @@
 """Unit and integration tests for AI Flight Recorder backend and WebSocket stream."""
 
-import json
 import pytest
 from fastapi.testclient import TestClient
 
 from app.api.v1.agents import get_agent
-from app.core.flight_recorder.manager import get_flight_recorder_manager
-from app.core.flight_recorder.models import ApprovalStatus, NetworkMode
 from app.main import create_application
 from tests.conftest import MockLLMClient
 

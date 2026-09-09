@@ -1,6 +1,7 @@
 """Unit tests for ChromaVectorStore ingestion, metadata retention, and semantic retrieval."""
 
 from pathlib import Path
+
 import pytest
 
 from app.core.interfaces.rag import Document

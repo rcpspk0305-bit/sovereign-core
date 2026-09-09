@@ -2,7 +2,7 @@
 
 import datetime
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, List
 
 from app.core.interfaces.tools import BaseTool, ToolDefinition, ToolResult
 

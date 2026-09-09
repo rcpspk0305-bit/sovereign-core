@@ -1,15 +1,12 @@
 """Tests for the controlled InspectionAnalysisAgent, bounded tools, validation, and audit logging."""
 
+from typing import Any, List, Optional
+
 import pytest
-from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock
 
 from app.core.agents.inspection_agent import InspectionAnalysisAgent
-from app.core.interfaces.agents import AgentResult
 from app.core.interfaces.audit import AuditEvent, AuditEventType, BaseAuditLogger
 from app.core.interfaces.llm import (
-    BaseLLMClient,
-    ChatMessage,
     LLMConnectionError,
     LLMResponse,
 )

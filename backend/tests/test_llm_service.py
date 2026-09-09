@@ -6,7 +6,6 @@ from app.core.interfaces.llm import (
     ChatMessage,
     ChatRole,
     LLMValidationError,
-    ModelInfo,
 )
 from app.core.llm.service import LLMService
 from tests.conftest import MockLLMClient

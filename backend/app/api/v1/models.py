@@ -2,7 +2,7 @@
 
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
 from app.config import settings
 from app.core.interfaces.llm import LLMConnectionError, LLMError, ModelInfo

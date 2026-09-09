@@ -7,14 +7,12 @@ import re
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     import docx
-    from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+    from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml import OxmlElement
-    from docx.oxml.ns import qn
     from docx.shared import Inches, Pt, RGBColor
     HAS_DOCX = True
 except ImportError:
@@ -464,7 +462,7 @@ class ApprovalNoteGeneratorTool(BaseTool):
             f"# {title.strip()}",
             "",
             f"> **Generated**: {now_utc}  ",
-            f"> **Classification**: Controlled Sovereign Approval Note  ",
+            "> **Classification**: Controlled Sovereign Approval Note  ",
             f"> **Preliminary Recommendation**: {decision}  ",
             f"> **Grounding Validation Status**: {validation_status}",
             "",

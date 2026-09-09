@@ -1,6 +1,5 @@
 """Agent orchestration router with controlled Inspection-Analysis Agent."""
 
-import datetime
 import uuid
 from typing import List, Optional
 
@@ -11,7 +10,7 @@ from app.api.v1.chat import get_audit_logger
 from app.api.v1.rag import get_retriever
 from app.core.agents.inspection_agent import InspectionAnalysisAgent
 from app.core.interfaces.agents import AgentResult, BaseAgent
-from app.core.interfaces.audit import AuditEvent, AuditEventType, BaseAuditLogger
+from app.core.interfaces.audit import BaseAuditLogger
 from app.core.interfaces.llm import BaseLLMClient
 from app.core.interfaces.rag import BaseRetriever
 from app.core.interfaces.tools import ToolDefinition

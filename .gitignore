@@ -58,11 +58,12 @@ next-env.d.ts
 # Runtime logs & data storage
 *.log
 logs/
-audit/
-backend/data/artifacts/*.docx
-backend/data/audit/*.json
+/audit/
+!backend/app/core/audit/
+backend/data/artifacts/*
+backend/data/audit/*
 backend/data/chroma/
-backend/data/flight_records/*.json
+backend/data/flight_records/*
 !backend/data/**/.gitkeep
 
 # OS & IDE metadata

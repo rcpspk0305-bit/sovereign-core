@@ -1,7 +1,6 @@
 """Unit tests for PyMuPDF PDF parsing and text chunking with citation metadata."""
 
 import pymupdf
-import pytest
 
 from app.core.rag.chunker import TextChunker
 from app.core.rag.pdf_parser import PyMuPDFParser

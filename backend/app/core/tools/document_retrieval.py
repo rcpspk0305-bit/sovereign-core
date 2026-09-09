@@ -1,7 +1,7 @@
 """Document Retrieval Tool for semantic vector search across indexed documents."""
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from app.core.interfaces.rag import BaseRetriever
 from app.core.interfaces.tools import BaseTool, ToolDefinition, ToolResult
