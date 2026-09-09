@@ -75,7 +75,13 @@ async def download_approval_note(path: str):
     from app.config import settings
     file_path = Path(path).resolve()
     artifacts_dir = settings.ARTIFACTS_DIR.resolve()
-    if not file_path.exists() or not (str(file_path).startswith(str(artifacts_dir)) or file_path.suffix == ".docx"):
+    try:
+        file_path.relative_to(artifacts_dir)
+        is_authorized_artifact = file_path.suffix.lower() == ".docx"
+    except ValueError:
+        is_authorized_artifact = False
+
+    if not file_path.is_file() or not is_authorized_artifact:
         raise HTTPException(status_code=404, detail="Requested file not found or unauthorized.")
     return FileResponse(
         path=file_path,

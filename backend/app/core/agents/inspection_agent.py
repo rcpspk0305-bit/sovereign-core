@@ -190,11 +190,16 @@ class InspectionAnalysisAgent(BaseAgent):
             and any(w in p_lower for w in self._CALCULATION_KEYWORDS)
         ):
             nums = re.findall(r"\b\d+(?:\.\d+)?\b", prompt)
-            expr = f"{nums[0]} - {nums[1]}" if len(nums) >= 2 else "450 - 400"
+            first_operand = float(nums[0]) if len(nums) >= 1 else 450.0
+            second_operand = float(nums[1]) if len(nums) >= 2 else 400.0
             return json.dumps({
-                "thought": f"Step 2: Calculating delta telemetry with expression: {expr}.",
+                "thought": f"Step 2: Calculating delta telemetry: {first_operand} - {second_operand}.",
                 "tool": "calculator",
-                "arguments": {"expression": expr},
+                "arguments": {
+                    "operation": "subtract",
+                    "a": first_operand,
+                    "b": second_operand,
+                },
             })
 
         # 3. Approval Note Generator
