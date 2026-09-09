@@ -259,3 +259,42 @@ export interface FlightRecord {
   metadata: Record<string, any>;
 }
 
+export interface MemoryBreakdown {
+  user_input_tokens: number;
+  tools_tokens: number;
+  user_facts_tokens: number;
+  internal_chatter_tokens: number;
+  retrieved_facts_tokens: number;
+  total_tokens: number;
+  max_context_window: number;
+}
+
+export interface SessionTurn {
+  turn_id: string;
+  role: 'user' | 'assistant' | 'tool' | 'system';
+  type: 'user_input' | 'tool_schema' | 'user_fact' | 'internal_chatter' | 'retrieved_fact';
+  content: string;
+  timestamp: string;
+  tokens: number;
+}
+
+export interface SessionItem {
+  session_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  date_formatted: string;
+  time_formatted: string;
+  status: 'active' | 'archived' | 'completed';
+  model: string;
+  turns_count: number;
+  memory_breakdown: MemoryBreakdown;
+  recent_turns: SessionTurn[];
+}
+
+export interface CreateSessionRequest {
+  title?: string;
+  model?: string;
+}
+
+

@@ -15,6 +15,7 @@ import {
   Sparkles,
   Terminal,
   Wrench,
+  Cpu,
 } from 'lucide-react';
 import { api, normalizeError } from '@/lib/api-client';
 import { AppError, FlightRecord } from '@/lib/types';
@@ -30,9 +31,10 @@ import AgentChatLauncher from '@/components/chat/AgentChatLauncher';
 import KnowledgeBay from '@/components/workbench/KnowledgeBay';
 import ToolBay from '@/components/workbench/ToolBay';
 import FlightRecorderBay from '@/components/workbench/FlightRecorderBay';
+import MemoryFlowBay from '@/components/workbench/MemoryFlowBay';
 import ErrorDiagnosticModal from '@/components/workbench/ErrorDiagnosticModal';
 
-type Section = 'mission' | 'knowledge' | 'tools' | 'recorder';
+type Section = 'mission' | 'knowledge' | 'memory' | 'tools' | 'recorder';
 
 const sections: Array<{
   id: Section;
@@ -57,6 +59,14 @@ const sections: Array<{
     eyebrow: 'VECTOR MEMORY',
     title: 'Turn documents\ninto a navigable field.',
     detail: 'Index local PDFs, retrieve their context, and retain page-level provenance for every source.',
+  },
+  {
+    id: 'memory',
+    label: 'Memory Flow',
+    icon: Cpu,
+    eyebrow: 'AGENT MEMORY RUNTIME',
+    title: 'The 4 memory tiers.\nDynamic context builder.',
+    detail: 'Inspect short-term session turns, long-term databases, the 8k context window budget, and memory vs state.',
   },
   {
     id: 'tools',
@@ -315,6 +325,9 @@ export default function Home() {
                 >
                   {active === 'knowledge' && (
                     <KnowledgeBay onError={(err) => setActiveError(err)} />
+                  )}
+                  {active === 'memory' && (
+                    <MemoryFlowBay onError={(err) => setActiveError(err)} />
                   )}
                   {active === 'tools' && (
                     <ToolBay onError={(err) => setActiveError(err)} />

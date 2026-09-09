@@ -22,6 +22,8 @@ import {
   AppError,
   ErrorCode,
   ErrorSeverity,
+  SessionItem,
+  CreateSessionRequest,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -291,6 +293,46 @@ class ApiClient {
   async getAuditLogs(limit: number = 50): Promise<AuditEvent[]> {
     const res = await fetch(`${this.base}/api/v1/audit?limit=${limit}`);
     if (!res.ok) throw new Error('Audit fetch failed');
+    return res.json();
+  }
+
+  async listSessions(): Promise<SessionItem[]> {
+    try {
+      const res = await fetch(`${this.base}/api/v1/sessions`);
+      if (!res.ok) return [];
+      return await res.json();
+    } catch {
+      return [];
+    }
+  }
+
+  async getCurrentSession(): Promise<SessionItem> {
+    const res = await fetch(`${this.base}/api/v1/sessions/current`);
+    if (!res.ok) throw new Error('Failed to fetch current session');
+    return res.json();
+  }
+
+  async createSession(data?: CreateSessionRequest): Promise<SessionItem> {
+    const res = await fetch(`${this.base}/api/v1/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data || {}),
+    });
+    if (!res.ok) throw new Error('Failed to create session');
+    return res.json();
+  }
+
+  async getSession(sessionId: string): Promise<SessionItem> {
+    const res = await fetch(`${this.base}/api/v1/sessions/${encodeURIComponent(sessionId)}`);
+    if (!res.ok) throw new Error(`Session ${sessionId} not found`);
+    return res.json();
+  }
+
+  async deleteSession(sessionId: string): Promise<{ status: string; session_id: string }> {
+    const res = await fetch(`${this.base}/api/v1/sessions/${encodeURIComponent(sessionId)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error(`Failed to delete session ${sessionId}`);
     return res.json();
   }
 

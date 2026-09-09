@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { ArrowUpRight, Bot, Orbit, Radio, Rocket, ShieldCheck, Sparkles, Terminal } from 'lucide-react';
+import { ArrowUpRight, Bot, Cpu, Orbit, Radio, Rocket, ShieldCheck, Sparkles, Terminal } from 'lucide-react';
 
 interface SpaceNavigationProps {
-  onLaunchWorkbench?: () => void;
+  onLaunchWorkbench?: (bay?: string) => void;
   onOpenLauncher?: () => void;
   currentMode?: 'landing' | 'chat' | 'workbench';
 }
@@ -45,6 +45,16 @@ export default function SpaceNavigation({
           <a href="#audit" className="space-nav-link">
             Milky Way Audit
           </a>
+          {onLaunchWorkbench && (
+            <button
+              onClick={() => onLaunchWorkbench('memory')}
+              className="space-nav-link-btn"
+              aria-label="Open Memory Flow"
+            >
+              <Cpu size={14} className="text-amber" />
+              <span>Memory Flow</span>
+            </button>
+          )}
           {onOpenLauncher && (
             <button
               onClick={onOpenLauncher}
@@ -76,7 +86,7 @@ export default function SpaceNavigation({
           )}
 
           <button
-            onClick={onLaunchWorkbench}
+            onClick={() => onLaunchWorkbench?.()}
             className="space-nav-cta-btn"
             aria-label="Launch interactive 3D workbench"
           >

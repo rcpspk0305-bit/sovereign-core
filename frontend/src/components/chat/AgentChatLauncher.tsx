@@ -27,6 +27,9 @@ import {
   Radar,
   Copy,
   Check,
+  Calendar,
+  Clock,
+  GitBranch,
 } from 'lucide-react';
 import InteractiveCosmicChatCanvas from './InteractiveCosmicChatCanvas';
 import { api, normalizeError } from '@/lib/api-client';
@@ -104,6 +107,11 @@ export default function AgentChatLauncher({
   const [elapsedMs, setElapsedMs] = useState(0);
   const [isCopied, setIsCopied] = useState(false);
 
+  // Live Session Information State (Date, Time, Session ID)
+  const [currentSessionId, setCurrentSessionId] = useState('SES-20260909-001');
+  const [liveDateStr, setLiveDateStr] = useState('2026-09-09');
+  const [liveTimeStr, setLiveTimeStr] = useState('18:15:00 IST');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -112,6 +120,34 @@ export default function AgentChatLauncher({
   useEffect(() => {
     setSelectedModel(currentModel);
   }, [currentModel]);
+
+  // Live Date and Time ticker
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setLiveDateStr(now.toISOString().split('T')[0]);
+      setLiveTimeStr(
+        now.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+        }) + ' IST',
+      );
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+
+    // Also fetch active session from backend
+    api
+      .getCurrentSession()
+      .then((s) => {
+        if (s && s.session_id) setCurrentSessionId(s.session_id);
+      })
+      .catch(() => {});
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Voice recording simulation timer
   useEffect(() => {
@@ -305,18 +341,25 @@ export default function AgentChatLauncher({
             <span>02 Knowledge</span>
           </button>
           <button
+            className={`bay-switch-pill ${activeBay === 'memory' ? 'active' : ''}`}
+            onClick={() => onOpenWorkbench('memory')}
+          >
+            <Cpu size={13} />
+            <span>03 Memory Flow</span>
+          </button>
+          <button
             className={`bay-switch-pill ${activeBay === 'tools' ? 'active' : ''}`}
             onClick={() => onOpenWorkbench('tools')}
           >
             <Wrench size={13} />
-            <span>03 Tools</span>
+            <span>04 Tools</span>
           </button>
           <button
             className={`bay-switch-pill ${activeBay === 'recorder' ? 'active' : ''}`}
             onClick={() => onOpenWorkbench('recorder')}
           >
             <Radar size={13} />
-            <span>04 Flight Log</span>
+            <span>05 Flight Log</span>
           </button>
         </nav>
 
@@ -361,6 +404,34 @@ export default function AgentChatLauncher({
           /* ULTRA-CLEAN MODERN PROMPT & MISSION DISPATCH CONSOLE          */
           /* ============================================================ */
           <div className="gemini-search-container">
+            {/* Live Session Temporal HUD (Session ID, Date, Time, Memory Flow) */}
+            <div className="session-temporal-hud-strip">
+              <div className="session-hud-item">
+                <span className="session-status-dot" />
+                <span className="session-id-tag">SESSION: <strong>{currentSessionId}</strong></span>
+              </div>
+              <span className="telemetry-dot">•</span>
+              <div className="session-hud-item">
+                <Calendar size={12} className="text-cyan" />
+                <span>DATE: <strong>{liveDateStr}</strong></span>
+              </div>
+              <span className="telemetry-dot">•</span>
+              <div className="session-hud-item">
+                <Clock size={12} className="text-emerald" />
+                <span>TIME: <strong className="font-mono">{liveTimeStr}</strong></span>
+              </div>
+              <span className="telemetry-dot">•</span>
+              <button
+                type="button"
+                onClick={() => onOpenWorkbench('memory')}
+                className="memory-flow-quick-link"
+                title="Inspect the 4 Memory Types & Context Builder"
+              >
+                <GitBranch size={12} className="text-cyan" />
+                <span>Memory Flow &rarr;</span>
+              </button>
+            </div>
+
             {/* Mission Telemetry Micro-HUD */}
             <div className="launcher-telemetry-strip">
               <div className="telemetry-item">
