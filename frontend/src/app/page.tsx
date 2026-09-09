@@ -79,10 +79,6 @@ export default function Home() {
 
   return (
     <main className="constellation-shell">
-      {/* Background Aurora Lighting Overlays */}
-      <div className="aurora aurora-one" aria-hidden="true" />
-      <div className="aurora aurora-two" aria-hidden="true" />
-
       {viewMode === 'app' && (
         /* ============================================================ */
         /* PRIMARY UNIVERSAL INTERFACE: TOP PILL SWITCHER & FULL BAYS  */

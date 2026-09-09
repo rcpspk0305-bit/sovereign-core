@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ArrowUpRight, Bot, Cpu, Orbit, Radio, Rocket, ShieldCheck, Sparkles, Terminal } from 'lucide-react';
+import { ArrowUpRight, Cpu, Radio, Sparkles } from 'lucide-react';
 
 interface SpaceNavigationProps {
   onLaunchWorkbench?: (bay?: string) => void;
@@ -17,12 +17,11 @@ export default function SpaceNavigation({
   return (
     <header className="space-nav-header">
       <div className="space-nav-pill">
-        {/* Brand Logo */}
+        {/* Brand Logo - Astra Minimal */}
         <a href="#mission" className="space-nav-brand">
-          <div className="space-nav-logo-icon">
-            <Orbit size={18} className="space-nav-spin" />
-            <span className="space-nav-pulse-dot" />
-          </div>
+          <span className="space-nav-logo-icon">
+            <Sparkles size={14} />
+          </span>
           <div className="space-nav-brand-text">
             SOVEREIGN<span>/</span>CORE
           </div>
@@ -37,13 +36,13 @@ export default function SpaceNavigation({
             Ingestion
           </a>
           <a href="#engine" className="space-nav-link">
-            Solar Core
+            Reasoning Core
           </a>
           <a href="#tools" className="space-nav-link">
-            Tool Belt
+            Tool Sandbox
           </a>
           <a href="#audit" className="space-nav-link">
-            Milky Way Audit
+            Provenance Audit
           </a>
           {onLaunchWorkbench && (
             <button
@@ -51,18 +50,8 @@ export default function SpaceNavigation({
               className="space-nav-link-btn"
               aria-label="Open Memory Flow"
             >
-              <Cpu size={14} className="text-amber" />
+              <Cpu size={13} />
               <span>Memory Flow</span>
-            </button>
-          )}
-          {onOpenLauncher && (
-            <button
-              onClick={onOpenLauncher}
-              className="space-nav-link-btn"
-              aria-label="Open Agent Launcher"
-            >
-              <Radio size={14} className="text-cyan" />
-              <span>Agent Launcher</span>
             </button>
           )}
         </nav>
@@ -71,7 +60,7 @@ export default function SpaceNavigation({
         <div className="space-nav-right">
           <div className="space-nav-badge">
             <span className="space-nav-status-indicator" />
-            <span>AIR-GAPPED // NO EGRESS</span>
+            <span>AIR-GAPPED // 0% EGRESS</span>
           </div>
 
           {onOpenLauncher && (
@@ -80,7 +69,7 @@ export default function SpaceNavigation({
               className="space-nav-rocket-btn"
               aria-label="Launch Agent & Chat"
             >
-              <Radio size={14} />
+              <Radio size={13} />
               <span>Launch Mission</span>
             </button>
           )}
@@ -90,8 +79,8 @@ export default function SpaceNavigation({
             className="space-nav-cta-btn"
             aria-label="Launch interactive 3D workbench"
           >
-            <span>{currentMode === 'workbench' ? 'View Journey' : 'Workbench'}</span>
-            <ArrowUpRight size={15} />
+            <span>{currentMode === 'workbench' ? 'Overview' : 'Workbench'}</span>
+            <ArrowUpRight size={14} />
           </button>
         </div>
       </div>

@@ -445,7 +445,7 @@ export default function AgentChatLauncher({
           /* ULTRA-CLEAN MODERN PROMPT & MISSION DISPATCH CONSOLE          */
           /* ============================================================ */
           <div className="gemini-search-container">
-            {/* Live Session Temporal HUD (Session ID, Date, Time, Memory Flow) */}
+            {/* Sleek Astra-Style Session & Status Pill */}
             <div className="session-temporal-hud-strip">
               <div className="session-hud-item">
                 <span className="session-status-dot" />
@@ -453,42 +453,29 @@ export default function AgentChatLauncher({
               </div>
               <span className="telemetry-dot">•</span>
               <div className="session-hud-item">
-                <Calendar size={12} className="text-cyan" />
-                <span>DATE: <strong>{liveDateStr}</strong></span>
+                <Clock size={12} className="text-emerald" />
+                <span><strong className="font-mono">{liveTimeStr}</strong></span>
               </div>
               <span className="telemetry-dot">•</span>
               <div className="session-hud-item">
-                <Clock size={12} className="text-emerald" />
-                <span>TIME: <strong className="font-mono">{liveTimeStr}</strong></span>
+                <ShieldCheck size={12} className="text-emerald" />
+                <span><strong>0% EGRESS</strong></span>
+              </div>
+              <span className="telemetry-dot">•</span>
+              <div className="session-hud-item">
+                <Cpu size={12} className="text-gold" />
+                <span><strong>{selectedModel.replace('gemma4:', 'GEMMA ')}</strong></span>
               </div>
               <span className="telemetry-dot">•</span>
               <button
                 type="button"
                 onClick={() => handleSwitchBay('memory')}
                 className="memory-flow-quick-link"
-                title="Inspect the 4 Memory Types & Context Builder"
+                title="Inspect Memory Flow"
               >
-                <GitBranch size={12} className="text-cyan" />
+                <GitBranch size={12} />
                 <span>Memory Flow &rarr;</span>
               </button>
-            </div>
-
-            {/* Mission Telemetry Micro-HUD */}
-            <div className="launcher-telemetry-strip">
-              <div className="telemetry-item">
-                <ShieldCheck size={13} className="text-emerald" />
-                <span>EGRESS: <strong>0.00% BLOCKED</strong></span>
-              </div>
-              <span className="telemetry-dot">•</span>
-              <div className="telemetry-item">
-                <Database size={13} className="text-cyan" />
-                <span>MEMORY: <strong>HNSW VECTOR READY</strong></span>
-              </div>
-              <span className="telemetry-dot">•</span>
-              <div className="telemetry-item">
-                <Cpu size={13} className="text-amber" />
-                <span>CORE: <strong>{selectedModel.replace('gemma4:', 'GEMMA ')}</strong></span>
-              </div>
             </div>
 
             {/* Main Clean Heading (Unobstructed) */}
