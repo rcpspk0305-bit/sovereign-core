@@ -2,18 +2,40 @@
 
 :root {
   color-scheme: dark;
-  --bg-space: #030712;
-  --panel-bg: rgba(6, 18, 38, 0.72);
-  --panel-border: rgba(140, 219, 255, 0.22);
-  --panel-border-hover: rgba(140, 219, 255, 0.45);
-  --accent-cyan: #68ddff;
-  --accent-blue: #3b82f6;
-  --accent-emerald: #10b981;
+  /* ── Premium Sovereign Color System ───────────────── */
+  --bg-space: #04020e;
+  --panel-bg: rgba(10, 6, 28, 0.78);
+  --panel-border: rgba(180, 140, 255, 0.18);
+  --panel-border-hover: rgba(200, 168, 255, 0.42);
+
+  /* Gold — primary luxury accent */
+  --accent-gold: #d4a843;
+  --accent-gold-bright: #f0c84a;
+  --accent-gold-glow: rgba(212, 168, 67, 0.35);
+
+  /* Indigo — secondary cosmic accent */
+  --accent-indigo: #8b72ff;
+  --accent-indigo-bright: #a78bfa;
+  --accent-indigo-glow: rgba(139, 114, 255, 0.35);
+
+  /* Teal — tertiary data accent (replaces old cyan) */
+  --accent-cyan: #00d2ff;
+  --accent-teal: #00d2ff;
+  --accent-teal-bright: #5ee7ff;
+  --accent-teal-glow: rgba(0, 210, 255, 0.3);
+
+  /* System states */
+  --accent-blue: #5b7fff;
+  --accent-emerald: #00c896;
   --accent-rose: #f43f5e;
-  --accent-amber: #f59e0b;
-  --text-primary: #f6fbff;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --accent-amber: #e8a820;
+
+  /* Text */
+  --text-primary: #f4f0ff;
+  --text-secondary: #a89bc4;
+  --text-muted: #6b5f8a;
+
+  /* Fonts */
   --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'DM Mono', monospace;
 }
@@ -69,11 +91,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   position: absolute;
   inset: 0;
   z-index: -2;
-  background-image: radial-gradient(#d9f6ff 1px, transparent 1px),
-                    radial-gradient(#a6c8ff 1px, transparent 1px);
+  background-image: radial-gradient(#e8d5ff 1px, transparent 1px),
+                    radial-gradient(#c4a0ff 1px, transparent 1px);
   background-size: 93px 93px, 137px 137px;
   background-position: 12px 21px, 62px 78px;
-  opacity: 0.28;
+  opacity: 0.22;
   pointer-events: none;
 }
 
@@ -88,7 +110,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .aurora-one {
   width: 34rem;
   height: 24rem;
-  background: rgba(14, 129, 255, 0.2);
+  background: rgba(100, 60, 255, 0.18);
   top: 15%;
   left: 28%;
 }
@@ -96,7 +118,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .aurora-two {
   width: 24rem;
   height: 26rem;
-  background: rgba(125, 47, 255, 0.15);
+  background: rgba(180, 100, 255, 0.13);
   right: -5%;
   bottom: 8%;
 }
@@ -111,7 +133,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-bottom: 1px solid rgba(173, 222, 255, 0.18);
+  border-bottom: 1px solid rgba(180, 140, 255, 0.2);
   padding-bottom: 18px;
 }
 
@@ -127,7 +149,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .wordmark > span:not(.wordmark-mark) {
-  color: var(--accent-cyan);
+  color: var(--accent-gold);
 }
 
 .wordmark-mark {
@@ -135,10 +157,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   width: 30px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(143, 222, 255, 0.6);
+  border: 1px solid rgba(212, 168, 67, 0.65);
   border-radius: 50%;
-  color: #84e8ff;
-  background: rgba(6, 24, 48, 0.45);
+  color: var(--accent-gold-bright);
+  background: rgba(20, 10, 40, 0.55);
 }
 
 .topbar-right-cluster {
@@ -154,11 +176,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 8px;
   font: 11px var(--font-mono);
   letter-spacing: 0.08em;
-  color: #aac0d3;
+  color: #c4b4e8;
   padding: 6px 12px;
-  border: 1px solid rgba(140, 219, 255, 0.2);
+  border: 1px solid rgba(180, 140, 255, 0.22);
   border-radius: 999px;
-  background: rgba(3, 14, 32, 0.6);
+  background: rgba(12, 6, 30, 0.65);
 }
 
 .model-selector-chip {
@@ -166,11 +188,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   align-items: center;
   gap: 8px;
   font: 11px var(--font-mono);
-  color: #aac0d3;
+  color: #c4b4e8;
   padding: 6px 12px;
-  border: 1px solid rgba(140, 219, 255, 0.2);
+  border: 1px solid rgba(180, 140, 255, 0.22);
   border-radius: 999px;
-  background: rgba(3, 14, 32, 0.6);
+  background: rgba(12, 6, 30, 0.65);
 }
 
 .model-select-dropdown {
@@ -327,29 +349,29 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .primary-action {
-  border: 1px solid rgba(172, 234, 255, 0.7);
-  color: #03111c;
+  border: 1px solid rgba(240, 200, 74, 0.7);
+  color: #0a0618;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #d8f9ff, #56c9ff);
+  background: linear-gradient(135deg, #f5d060, #d4a843);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 0 24px rgba(81, 205, 255, 0.28);
+  box-shadow: 0 0 28px rgba(212, 168, 67, 0.32);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .primary-action:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 32px rgba(81, 205, 255, 0.45);
+  box-shadow: 0 0 40px rgba(212, 168, 67, 0.55);
 }
 
 .quiet-action {
-  color: #cce5f3;
-  border: 1px solid rgba(181, 222, 246, 0.3);
-  background: rgba(2, 12, 26, 0.4);
+  color: #d4c4f0;
+  border: 1px solid rgba(180, 140, 255, 0.3);
+  background: rgba(10, 5, 25, 0.45);
   border-radius: 999px;
   padding: 12px 18px;
   display: inline-flex;
@@ -360,8 +382,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .quiet-action:hover {
-  background: rgba(14, 38, 70, 0.45);
-  border-color: rgba(181, 222, 246, 0.55);
+  background: rgba(25, 12, 60, 0.5);
+  border-color: rgba(180, 140, 255, 0.55);
 }
 
 /* 3D Orbital Graphic */
@@ -518,9 +540,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .workbench-bay-card {
   padding: clamp(24px, 4vw, 38px);
   border: 1px solid var(--panel-border);
-  background: linear-gradient(115deg, rgba(7, 28, 55, 0.85), rgba(7, 14, 36, 0.8));
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(215, 250, 255, 0.1);
-  backdrop-filter: blur(20px);
+  background: linear-gradient(135deg, rgba(16, 8, 40, 0.9), rgba(8, 5, 22, 0.85));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(200, 170, 255, 0.12);
+  backdrop-filter: blur(22px);
   border-radius: 12px;
   transform-style: preserve-3d;
   transition: border-color 0.3s ease;
@@ -636,9 +658,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   margin: 48px auto 0;
   padding: clamp(24px, 4vw, 38px);
   border: 1px solid var(--panel-border);
-  background: linear-gradient(115deg, rgba(7, 28, 55, 0.85), rgba(7, 14, 36, 0.8));
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(215, 250, 255, 0.1);
-  backdrop-filter: blur(20px);
+  background: linear-gradient(135deg, rgba(18, 8, 44, 0.9), rgba(8, 5, 22, 0.88));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(200, 170, 255, 0.12);
+  backdrop-filter: blur(22px);
   border-radius: 12px;
   transform-style: preserve-3d;
 }
@@ -667,19 +689,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border: 1px solid rgba(100, 220, 255, 0.3);
+  border: 1px solid rgba(139, 114, 255, 0.35);
   border-radius: 4px;
   font: 11px var(--font-mono);
-  color: var(--accent-cyan);
-  background: rgba(3, 16, 35, 0.6);
+  color: var(--accent-indigo-bright);
+  background: rgba(8, 4, 20, 0.65);
 }
 
 .console-phase-badge {
   font: 11px var(--font-mono);
   padding: 6px 12px;
-  border: 1px solid rgba(88, 239, 186, 0.3);
+  border: 1px solid rgba(0, 200, 150, 0.3);
   border-radius: 4px;
-  color: #66efc3;
+  color: #00e8b0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -701,24 +723,24 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 
 .preset-label {
   font: 10px var(--font-mono);
-  color: #7390a9;
+  color: var(--text-muted);
   letter-spacing: 0.1em;
 }
 
 .preset-pill {
   font: 11px var(--font-mono);
   padding: 5px 10px;
-  border: 1px solid rgba(140, 219, 255, 0.18);
+  border: 1px solid rgba(180, 140, 255, 0.18);
   border-radius: 4px;
-  background: rgba(2, 10, 24, 0.5);
-  color: #94a3b8;
+  background: rgba(10, 5, 24, 0.55);
+  color: var(--text-secondary);
   transition: all 0.2s ease;
 }
 
 .preset-pill:hover:not(:disabled) {
   color: #fff;
-  border-color: var(--accent-cyan);
-  background: rgba(14, 40, 75, 0.5);
+  border-color: var(--accent-indigo);
+  background: rgba(30, 15, 70, 0.55);
 }
 
 .mission-form-3d {
@@ -731,18 +753,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .mission-form-3d textarea {
   resize: vertical;
   min-height: 96px;
-  color: #eaffff;
+  color: #f0ebff;
   padding: 16px;
-  border: 1px solid rgba(155, 219, 255, 0.27);
+  border: 1px solid rgba(180, 140, 255, 0.25);
   outline: none;
-  background: rgba(0, 7, 20, 0.6);
+  background: rgba(6, 3, 18, 0.65);
   line-height: 1.6;
   border-radius: 6px;
 }
 
 .mission-form-3d textarea:focus {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(71, 207, 255, 0.15);
+  border-color: var(--accent-indigo);
+  box-shadow: 0 0 0 3px rgba(139, 114, 255, 0.18);
 }
 
 .mission-actions-bar {
@@ -758,11 +780,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   align-items: center;
   gap: 8px;
   font: 12px var(--font-mono);
-  color: #88a3ba;
+  color: var(--text-muted);
 }
 
 .model-indicator strong {
-  color: #e2f4ff;
+  color: #e8e0ff;
 }
 
 .action-buttons-group {
@@ -771,34 +793,34 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .launch-button-3d {
-  border: 1px solid rgba(172, 234, 255, 0.7);
-  color: #03111c;
+  border: 1px solid rgba(240, 200, 74, 0.75);
+  color: #0a0618;
   padding: 12px 24px;
-  background: linear-gradient(135deg, #d8f9ff, #56c9ff);
+  background: linear-gradient(135deg, #f5d060, #c9901e);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 0 24px rgba(81, 205, 255, 0.3);
+  box-shadow: 0 0 28px rgba(212, 168, 67, 0.38);
   transition: all 0.2s ease;
 }
 
 .launch-button-3d:hover:not(:disabled) {
-  box-shadow: 0 0 32px rgba(81, 205, 255, 0.5);
+  box-shadow: 0 0 42px rgba(212, 168, 67, 0.62);
   transform: translateY(-1px);
 }
 
 .launch-button-3d:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
 .abort-mission-btn {
   border: 1px solid rgba(244, 63, 94, 0.5);
   color: #fca5a5;
-  background: rgba(50, 10, 20, 0.6);
+  background: rgba(40, 8, 18, 0.65);
   padding: 12px 20px;
   border-radius: 6px;
   font-size: 13px;
@@ -810,7 +832,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .abort-mission-btn:hover {
-  background: rgba(80, 15, 30, 0.8);
+  background: rgba(70, 12, 28, 0.85);
   border-color: #f43f5e;
 }
 
@@ -1844,11 +1866,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   max-width: 1080px;
   padding: 10px 18px;
   border-radius: 9999px;
-  background: rgba(4, 13, 30, 0.82);
-  border: 1px solid rgba(140, 219, 255, 0.24);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(8, 4, 20, 0.86);
+  border: 1px solid rgba(180, 140, 255, 0.22);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(200, 170, 255, 0.14);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
 }
 
 .space-nav-brand {
@@ -1867,9 +1889,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #0070f3, #02122c);
-  border: 1px solid rgba(104, 221, 255, 0.4);
-  color: var(--accent-cyan);
+  background: radial-gradient(circle at 35% 35%, #6b52ff, #14062c);
+  border: 1px solid rgba(212, 168, 67, 0.45);
+  color: var(--accent-gold);
 }
 
 .space-nav-spin {
@@ -1886,8 +1908,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--accent-cyan);
-  box-shadow: 0 0 8px var(--accent-cyan);
+  background: var(--accent-gold);
+  box-shadow: 0 0 8px var(--accent-gold);
 }
 
 .space-nav-brand-text {
@@ -1898,7 +1920,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .space-nav-brand-text span {
-  color: var(--accent-cyan);
+  color: var(--accent-gold);
 }
 
 .space-nav-links {
@@ -1920,7 +1942,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .space-nav-link:hover,
 .space-nav-link.active {
   color: var(--text-primary);
-  text-shadow: 0 0 12px rgba(104, 221, 255, 0.4);
+  text-shadow: 0 0 12px rgba(212, 168, 67, 0.5);
 }
 
 .space-nav-right {
@@ -1935,9 +1957,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 7px;
   padding: 5px 11px;
   border-radius: 9999px;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #34d399;
+  background: rgba(0, 200, 150, 0.1);
+  border: 1px solid rgba(0, 200, 150, 0.28);
+  color: #00e8b0;
   font-family: var(--font-mono);
   font-size: 0.74rem;
   font-weight: 600;
@@ -1948,8 +1970,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 8px #10b981;
+  background: var(--accent-emerald);
+  box-shadow: 0 0 8px var(--accent-emerald);
   animation: pulseGreen 2s infinite ease-in-out;
 }
 
@@ -1964,19 +1986,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 7px;
   padding: 7px 16px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #0070f3 0%, #00b4d8 100%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #6b52ff 0%, #9b72ff 100%);
+  border: 1px solid rgba(200, 180, 255, 0.25);
   color: #ffffff;
   font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.02em;
-  box-shadow: 0 4px 16px rgba(0, 112, 243, 0.4);
+  box-shadow: 0 4px 18px rgba(107, 82, 255, 0.45);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .space-nav-cta-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(0, 180, 216, 0.6);
+  box-shadow: 0 6px 26px rgba(139, 114, 255, 0.65);
   filter: brightness(1.1);
 }
 
@@ -2007,26 +2029,26 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 8px;
   padding: 6px 16px;
   border-radius: 9999px;
-  background: rgba(14, 34, 70, 0.72);
-  border: 1px solid rgba(140, 219, 255, 0.32);
-  color: var(--accent-cyan);
+  background: rgba(20, 10, 50, 0.75);
+  border: 1px solid rgba(212, 168, 67, 0.3);
+  color: var(--accent-gold);
   font-family: var(--font-mono);
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   margin-bottom: 26px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 0 20px rgba(104, 221, 255, 0.15);
+  box-shadow: 0 0 22px rgba(212, 168, 67, 0.18);
 }
 
 .cosmic-sparkle-icon {
-  color: #ffd166;
+  color: var(--accent-gold-bright);
   animation: pulseGlow 2.4s infinite ease-in-out;
 }
 
 @keyframes pulseGlow {
   0%, 100% { transform: scale(1); opacity: 0.9; }
-  50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 6px #ffd166); }
+  50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 6px var(--accent-gold)); }
 }
 
 .cosmic-hero-title {
@@ -2036,20 +2058,20 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   line-height: 1.06;
   letter-spacing: -0.035em;
   color: #ffffff;
-  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.7);
 }
 
 .cosmic-gradient-text {
-  background: linear-gradient(135deg, #ffffff 15%, #7ee0ff 65%, #3b82f6 100%);
+  background: linear-gradient(135deg, #ffffff 10%, #e8d5a8 45%, #d4a843 80%, #a78bfa 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 32px rgba(104, 221, 255, 0.35));
+  filter: drop-shadow(0 0 32px rgba(212, 168, 67, 0.4));
 }
 
 .cosmic-hero-subtitle {
   max-width: 700px;
   margin: 0 0 36px;
-  color: #94a3b8;
+  color: var(--text-secondary);
   font-size: clamp(1.05rem, 1.35vw, 1.25rem);
   line-height: 1.6;
   font-weight: 400;
@@ -2069,19 +2091,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 9px;
   padding: 13px 28px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #0070f3 0%, #00b4d8 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, #d4a843 0%, #f5c030 50%, #c9901e 100%);
+  color: #0a0618;
   font-size: 0.96rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.01em;
-  box-shadow: 0 8px 30px rgba(0, 112, 243, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px rgba(212, 168, 67, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cosmic-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 38px rgba(0, 180, 216, 0.7);
-  filter: brightness(1.1);
+  box-shadow: 0 12px 42px rgba(212, 168, 67, 0.75);
+  filter: brightness(1.08);
 }
 
 .cosmic-btn-secondary {
@@ -2090,8 +2112,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 8px;
   padding: 13px 26px;
   border-radius: 9999px;
-  background: rgba(8, 24, 52, 0.7);
-  border: 1px solid rgba(140, 219, 255, 0.32);
+  background: rgba(14, 7, 38, 0.75);
+  border: 1px solid rgba(180, 140, 255, 0.3);
   color: var(--text-primary);
   font-size: 0.96rem;
   font-weight: 600;
@@ -2100,9 +2122,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .cosmic-btn-secondary:hover {
-  background: rgba(14, 38, 80, 0.85);
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 20px rgba(104, 221, 255, 0.25);
+  background: rgba(28, 12, 70, 0.88);
+  border-color: var(--accent-indigo);
+  box-shadow: 0 0 22px rgba(139, 114, 255, 0.28);
   transform: translateY(-2px);
 }
 
@@ -2115,9 +2137,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   max-width: 1120px;
   padding: 14px 24px;
   border-radius: 20px;
-  background: rgba(3, 11, 26, 0.88);
-  border: 1px solid rgba(140, 219, 255, 0.28);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: rgba(8, 4, 20, 0.92);
+  border: 1px solid rgba(180, 140, 255, 0.22);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(200, 170, 255, 0.12);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
@@ -2137,7 +2159,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--accent-cyan);
+  color: var(--accent-gold);
   letter-spacing: 0.08em;
 }
 
@@ -2156,14 +2178,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 
 .cosmic-hud-value small {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .cosmic-hud-divider {
   width: 1px;
   height: 38px;
-  background: linear-gradient(180deg, transparent, rgba(140, 219, 255, 0.3), transparent);
+  background: linear-gradient(180deg, transparent, rgba(180, 140, 255, 0.28), transparent);
 }
 
 .cosmic-hud-action-btn {
@@ -2172,19 +2194,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 7px;
   padding: 11px 20px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #0070f3, #00a8e8);
+  background: linear-gradient(135deg, #6b52ff, #9b72ff);
   color: #ffffff;
   font-family: var(--font-mono);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.06em;
-  box-shadow: 0 0 20px rgba(0, 112, 243, 0.4);
+  box-shadow: 0 0 22px rgba(107, 82, 255, 0.45);
   transition: all 0.2s ease;
 }
 
 .cosmic-hud-action-btn:hover {
   filter: brightness(1.15);
-  box-shadow: 0 0 28px rgba(0, 180, 216, 0.6);
+  box-shadow: 0 0 32px rgba(139, 114, 255, 0.65);
   transform: scale(1.02);
 }
 
@@ -3269,9 +3291,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .launcher-nav-btn:hover {
-  background: rgba(14, 38, 86, 0.95);
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 16px rgba(104, 221, 255, 0.35);
+  background: rgba(28, 14, 68, 0.98);
+  border-color: var(--accent-indigo);
+  box-shadow: 0 0 18px rgba(139, 114, 255, 0.4);
   transform: translateX(-2px);
 }
 
@@ -3286,7 +3308,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .launcher-wordmark .slash {
-  color: var(--accent-cyan);
+  color: var(--accent-gold);
 }
 
 .launcher-wordmark-icon {
@@ -3295,9 +3317,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(6, 24, 48, 0.6);
-  border: 1px solid rgba(140, 219, 255, 0.4);
-  color: var(--accent-cyan);
+  background: rgba(20, 10, 40, 0.65);
+  border: 1px solid rgba(212, 168, 67, 0.45);
+  color: var(--accent-gold);
 }
 
 /* --- Center Bay Quick Switcher --- */
@@ -3307,10 +3329,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 6px;
   padding: 4px 6px;
   border-radius: 9999px;
-  background: rgba(4, 14, 34, 0.85);
-  border: 1px solid rgba(140, 219, 255, 0.22);
+  background: rgba(8, 4, 22, 0.88);
+  border: 1px solid rgba(180, 140, 255, 0.2);
   backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
 .bay-switch-pill {
@@ -3321,7 +3343,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   border-radius: 9999px;
   background: transparent;
   border: 1px solid transparent;
-  color: #94a3b8;
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.76rem;
   font-weight: 600;
@@ -3336,10 +3358,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .bay-switch-pill.active {
-  background: rgba(14, 38, 86, 0.95);
-  border-color: rgba(140, 219, 255, 0.45);
-  color: var(--accent-cyan);
-  box-shadow: 0 0 14px rgba(104, 221, 255, 0.25);
+  background: rgba(28, 14, 65, 0.98);
+  border-color: rgba(139, 114, 255, 0.5);
+  color: var(--accent-indigo-bright);
+  box-shadow: 0 0 16px rgba(139, 114, 255, 0.3);
 }
 
 .launcher-topbar-right {
@@ -3354,9 +3376,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 8px;
   padding: 6px 14px;
   border-radius: 9999px;
-  background: rgba(6, 18, 42, 0.85);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  color: #34d399;
+  background: rgba(8, 4, 22, 0.88);
+  border: 1px solid rgba(0, 200, 150, 0.3);
+  color: #00e8b0;
   font-family: var(--font-mono);
   font-size: 0.74rem;
   font-weight: 600;
@@ -3368,8 +3390,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 10px #10b981;
+  background: var(--accent-emerald);
+  box-shadow: 0 0 10px var(--accent-emerald);
   animation: pulseGreen 2s infinite ease-in-out;
 }
 
@@ -3379,18 +3401,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 8px;
   padding: 8px 16px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #0070f3, #00b4d8);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #6b52ff, #9b72ff);
+  border: 1px solid rgba(200, 180, 255, 0.25);
   color: #ffffff;
   font-size: 0.85rem;
   font-weight: 600;
-  box-shadow: 0 4px 16px rgba(0, 112, 243, 0.4);
+  box-shadow: 0 4px 20px rgba(107, 82, 255, 0.45);
   transition: all 0.2s ease;
 }
 
 .launcher-workbench-btn:hover {
-  filter: brightness(1.1);
-  box-shadow: 0 6px 24px rgba(0, 180, 216, 0.6);
+  filter: brightness(1.12);
+  box-shadow: 0 6px 28px rgba(139, 114, 255, 0.65);
   transform: translateY(-1px);
 }
 
@@ -3400,15 +3422,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 8px;
   padding: 6px 14px;
   border-radius: 9999px;
-  background: rgba(6, 18, 42, 0.85);
-  border: 1px solid rgba(140, 219, 255, 0.28);
-  color: #aac0d3;
+  background: rgba(8, 4, 22, 0.88);
+  border: 1px solid rgba(180, 140, 255, 0.26);
+  color: #c4b4e8;
   font-family: var(--font-mono);
   font-size: 0.74rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   backdrop-filter: blur(14px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 .launcher-bay-fullwidth-stage {
@@ -3509,18 +3531,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 14px;
   padding: 10px 18px;
   border-radius: 9999px;
-  background: rgba(5, 16, 38, 0.88);
-  border: 1px solid rgba(140, 219, 255, 0.32);
-  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(10, 5, 28, 0.92);
+  border: 1px solid rgba(180, 140, 255, 0.28);
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(200, 170, 255, 0.14);
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .gemini-pill-box:focus-within {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 22px 60px rgba(0, 112, 243, 0.38), 0 0 28px rgba(104, 221, 255, 0.25);
-  background: rgba(6, 20, 48, 0.94);
+  border-color: var(--accent-gold);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.85), 0 0 32px rgba(212, 168, 67, 0.28);
+  background: rgba(14, 8, 35, 0.96);
 }
 
 .gemini-pill-box.recording {
@@ -3802,15 +3824,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .gemini-send-btn.active {
-  background: linear-gradient(135deg, #0070f3, #00c6ff);
-  color: #ffffff;
-  box-shadow: 0 0 18px rgba(0, 198, 255, 0.6);
+  background: linear-gradient(135deg, #d4a843, #f5c842);
+  color: #0a0618;
+  box-shadow: 0 0 20px rgba(212, 168, 67, 0.65);
   transform: scale(1.04);
 }
 
 .gemini-send-btn.active:hover {
-  filter: brightness(1.15);
-  box-shadow: 0 0 24px rgba(0, 198, 255, 0.8);
+  filter: brightness(1.12);
+  box-shadow: 0 0 28px rgba(212, 168, 67, 0.85);
   transform: scale(1.08);
 }
 
@@ -3834,9 +3856,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 8px;
   padding: 14px 18px;
   border-radius: 14px;
-  background: rgba(6, 18, 42, 0.65);
-  border: 1px solid rgba(140, 219, 255, 0.18);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  background: rgba(12, 6, 32, 0.7);
+  border: 1px solid rgba(180, 140, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(16px);
   text-align: left;
   cursor: pointer;
@@ -3844,9 +3866,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 .suggestion-card:hover {
-  background: rgba(10, 28, 64, 0.85);
-  border-color: rgba(104, 221, 255, 0.45);
-  box-shadow: 0 12px 32px rgba(0, 112, 243, 0.25), 0 0 16px rgba(104, 221, 255, 0.2);
+  background: rgba(22, 10, 55, 0.88);
+  border-color: rgba(139, 114, 255, 0.42);
+  box-shadow: 0 12px 32px rgba(107, 82, 255, 0.2), 0 0 18px rgba(139, 114, 255, 0.18);
   transform: translateY(-2px);
 }
 
@@ -3861,11 +3883,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: var(--accent-cyan);
+  color: var(--accent-gold);
 }
 
 .suggestion-arrow {
-  color: #64748b;
+  color: var(--text-muted);
   transition: transform 0.2s ease, color 0.2s ease;
 }
 
@@ -3877,7 +3899,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .suggestion-card-text {
   margin: 0;
   font-size: 0.86rem;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   line-height: 1.45;
 }
 
@@ -3889,9 +3911,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   gap: 24px;
   padding: 32px;
   border-radius: 24px;
-  background: rgba(5, 16, 38, 0.88);
-  border: 1px solid rgba(140, 219, 255, 0.28);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: rgba(10, 5, 28, 0.92);
+  border: 1px solid rgba(180, 140, 255, 0.24);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(200, 170, 255, 0.12);
   backdrop-filter: blur(28px);
   animation: fadeIn 0.4s ease;
 }
@@ -3901,7 +3923,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(140, 219, 255, 0.16);
+  border-bottom: 1px solid rgba(180, 140, 255, 0.14);
 }
 
 .thread-badge {
@@ -3911,7 +3933,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   font-family: var(--font-mono);
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--accent-cyan);
+  color: var(--accent-gold);
   letter-spacing: 0.08em;
 }
 
@@ -3919,8 +3941,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #00f0ff;
-  box-shadow: 0 0 12px #00f0ff;
+  background: var(--accent-gold-bright);
+  box-shadow: 0 0 12px var(--accent-gold);
   animation: pulseGlow 1.5s infinite ease-in-out;
 }
 
@@ -4181,12 +4203,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background: rgba(5, 16, 38, 0.82);
-  border: 1px solid rgba(140, 219, 255, 0.25);
+  background: rgba(10, 5, 28, 0.88);
+  border: 1px solid rgba(180, 140, 255, 0.22);
   border-radius: 20px;
   padding: 24px;
   backdrop-filter: blur(28px);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(200, 170, 255, 0.12);
   animation: fadeIn 0.3s ease;
 }
 
@@ -4197,7 +4219,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 20px;
-  border-bottom: 1px solid rgba(140, 219, 255, 0.16);
+  border-bottom: 1px solid rgba(180, 140, 255, 0.14);
   flex-wrap: wrap;
 }
 

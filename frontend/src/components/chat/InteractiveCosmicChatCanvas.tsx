@@ -287,7 +287,7 @@ export default function InteractiveCosmicChatCanvas({
 
     // --- Three.js Scene, Camera, High-Precision WebGL Renderer ---
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x020510, 0.001);
+    scene.fog = new THREE.FogExp2(0x04020e, 0.001);
 
     const camera = new THREE.PerspectiveCamera(
       48,
@@ -311,7 +311,7 @@ export default function InteractiveCosmicChatCanvas({
     // =============================================================
     // 1. CINEMATIC SOLAR & CELESTIAL LIGHTING
     // =============================================================
-    const ambientLight = new THREE.AmbientLight(0x061226, 1.1);
+    const ambientLight = new THREE.AmbientLight(0x140a2e, 1.2);
     scene.add(ambientLight);
 
     // Distant Sun Directional Light (crisp realistic terminator)
@@ -319,8 +319,8 @@ export default function InteractiveCosmicChatCanvas({
     sunLight.position.set(-140, 75, 120);
     scene.add(sunLight);
 
-    // Subtle atmospheric back-bounce light from deep space
-    const rimFillLight = new THREE.DirectionalLight(0x1a3d6e, 0.8);
+    // Subtle atmospheric back-bounce light from deep space (violet-indigo tint)
+    const rimFillLight = new THREE.DirectionalLight(0x3a1a8e, 0.9);
     rimFillLight.position.set(120, -50, -80);
     scene.add(rimFillLight);
 
@@ -334,12 +334,12 @@ export default function InteractiveCosmicChatCanvas({
     const starSizes = new Float32Array(starCount);
 
     const spectralColors = [
-      new THREE.Color(0xc9e4ff), // Class O/B: Blue-white
+      new THREE.Color(0xd4d0ff), // Class O/B: Cool lavender-white
       new THREE.Color(0xffffff), // Class A: Pure diamond white
-      new THREE.Color(0xfbf8e6), // Class F: Warm white
-      new THREE.Color(0xffe89e), // Class G: Solar yellow
-      new THREE.Color(0xffc585), // Class K: Soft amber
-      new THREE.Color(0xff9e7a), // Class M: Radiant red giant
+      new THREE.Color(0xfff5e6), // Class F: Warm champagne white
+      new THREE.Color(0xf0c842), // Class G: Gold (premium)
+      new THREE.Color(0xc9a0ff), // Class K: Soft violet
+      new THREE.Color(0xff9e7a), // Class M: Radiant coral giant
     ];
 
     for (let i = 0; i < starCount; i++) {
@@ -373,9 +373,9 @@ export default function InteractiveCosmicChatCanvas({
       if (ctx) {
         const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
         grad.addColorStop(0, 'rgba(255,255,255,1)');
-        grad.addColorStop(0.18, 'rgba(235,245,255,0.9)');
-        grad.addColorStop(0.45, 'rgba(140,205,255,0.35)');
-        grad.addColorStop(0.85, 'rgba(40,120,255,0.06)');
+        grad.addColorStop(0.18, 'rgba(240,235,255,0.9)');
+        grad.addColorStop(0.45, 'rgba(180,140,255,0.35)');
+        grad.addColorStop(0.85, 'rgba(100,60,255,0.06)');
         grad.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, 64, 64);
@@ -412,9 +412,24 @@ export default function InteractiveCosmicChatCanvas({
       nebulaPos[i3 + 1] = (Math.random() - 0.5) * 800;
       nebulaPos[i3 + 2] = -400 - Math.random() * 800;
 
-      nebulaCols[i3] = 0.08 + Math.random() * 0.15;
-      nebulaCols[i3 + 1] = 0.25 + Math.random() * 0.35;
-      nebulaCols[i3 + 2] = 0.65 + Math.random() * 0.35;
+      // Premium: violet/indigo/gold nebula hues
+      const hue = Math.random();
+      if (hue < 0.4) {
+        // Deep violet nebula
+        nebulaCols[i3] = 0.25 + Math.random() * 0.2;
+        nebulaCols[i3 + 1] = 0.08 + Math.random() * 0.12;
+        nebulaCols[i3 + 2] = 0.65 + Math.random() * 0.35;
+      } else if (hue < 0.7) {
+        // Rich indigo/purple
+        nebulaCols[i3] = 0.35 + Math.random() * 0.25;
+        nebulaCols[i3 + 1] = 0.15 + Math.random() * 0.2;
+        nebulaCols[i3 + 2] = 0.75 + Math.random() * 0.25;
+      } else {
+        // Gold/champagne shimmer
+        nebulaCols[i3] = 0.7 + Math.random() * 0.3;
+        nebulaCols[i3 + 1] = 0.5 + Math.random() * 0.3;
+        nebulaCols[i3 + 2] = 0.1 + Math.random() * 0.2;
+      }
     }
 
     nebulaGeo.setAttribute('position', new THREE.BufferAttribute(nebulaPos, 3));
