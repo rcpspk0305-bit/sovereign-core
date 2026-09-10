@@ -103,6 +103,34 @@ export interface UploadResponse {
   status: string;
 }
 
+export interface VectorStoreHealth {
+  status: 'healthy' | 'degraded' | 'unavailable' | string;
+  backend: 'chroma' | 'qdrant' | string;
+  collection: string;
+  total_documents: number;
+  total_vectors: number;
+  dimension?: number | null;
+  endpoint?: string | null;
+  error?: string | null;
+}
+
+export interface MigrationResult {
+  success: boolean;
+  source_backend: string;
+  target_backend: string;
+  source_count: number;
+  migrated_count: number;
+  target_count: number;
+  dimension: number;
+  sample_retrieved: boolean;
+  sample_score?: number | null;
+  sample_document_name?: string | null;
+  duration_seconds: number;
+  original_collection_preserved: boolean;
+  error?: string | null;
+}
+
+
 export interface ToolDefinition {
   name: string;
   description: string;

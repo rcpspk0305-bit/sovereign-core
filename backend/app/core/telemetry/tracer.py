@@ -4,8 +4,10 @@ import contextlib
 import time
 from typing import Any, AsyncIterator, Dict, Iterator, Optional
 
+from app.config import settings
 from app.core.telemetry.otel import get_tracer, is_telemetry_enabled
 from app.core.telemetry.redaction import sanitize_attributes
+
 
 
 class SpanContextWrapper:
@@ -144,13 +146,21 @@ def trace_rag(
     collection: str = "default",
     top_k: Optional[int] = None,
     query: Optional[str] = None,
+    backend: str = "chroma",
     **kwargs: Any,
 ):
-    attrs: Dict[str, Any] = {"rag.collection": collection, **kwargs}
+    attrs: Dict[str, Any] = {
+        "rag.collection": collection,
+        "rag.backend": backend,
+        **kwargs,
+    }
     if top_k is not None:
         attrs["rag.top_k"] = top_k
     if query:
-        attrs["rag.query"] = query
+        if getattr(settings, "STORE_RAG_QUERY_TEXT", False):
+            attrs["rag.query"] = query
+        else:
+            attrs["rag.query_length"] = len(query)
     return trace_span("rag.retrieve", attrs)
 
 
@@ -168,12 +178,15 @@ def trace_embedding(
     })
 
 
-def trace_vector_search(collection: str = "default", top_k: int = 4, **kwargs: Any):
-    return trace_span("vector.search", {
+def trace_vector_search(collection: str = "default", top_k: int = 4, backend: Optional[str] = None, **kwargs: Any):
+    attrs: Dict[str, Any] = {
         "rag.collection": collection,
         "rag.top_k": top_k,
         **kwargs,
-    })
+    }
+    if backend:
+        attrs["rag.backend"] = backend
+    return trace_span("vector.search", attrs)
 
 
 def trace_tool(tool_name: str, arguments: Optional[Dict[str, Any]] = None, **kwargs: Any):

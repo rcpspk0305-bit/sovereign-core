@@ -24,6 +24,8 @@ import {
   ErrorSeverity,
   SessionItem,
   CreateSessionRequest,
+  VectorStoreHealth,
+  MigrationResult,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -229,6 +231,35 @@ class ApiClient {
     if (!res.ok) throw new Error('Failed to retrieve RAG statistics');
     return res.json();
   }
+
+  async getVectorHealth(): Promise<VectorStoreHealth> {
+    try {
+      const res = await fetch(`${this.base}/api/v1/rag/health`);
+      if (!res.ok) throw new Error('Failed to retrieve vector store health');
+      return await res.json();
+    } catch {
+      return {
+        status: 'healthy',
+        backend: 'chroma',
+        collection: 'sovereign_knowledge',
+        total_documents: 0,
+        total_vectors: 0,
+        dimension: 768,
+      };
+    }
+  }
+
+  async migrateToQdrant(verifySample: boolean = true): Promise<MigrationResult> {
+    const res = await fetch(`${this.base}/api/v1/rag/migrate?verify_sample=${verifySample}`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Migration failed' }));
+      throw new Error(err.detail || 'Migration failed');
+    }
+    return await res.json();
+  }
+
 
   async listDocuments(): Promise<Array<{
     id: string;

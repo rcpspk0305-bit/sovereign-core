@@ -42,7 +42,9 @@ class Settings(BaseSettings):
     AUDIT_LOG_DIR: Path = _BACKEND_DIR / "data" / "audit"
     AUDIT_LOG_FILE: str = "audit.jsonl"
 
-    # RAG & Chroma settings
+    # RAG & Vector Store settings
+    VECTOR_BACKEND: str = "chroma"  # "chroma" (default local) or "qdrant"
+    STORE_RAG_QUERY_TEXT: bool = False
     CHROMA_PERSIST_DIR: Path = _BACKEND_DIR / "data" / "chroma"
     CHROMA_COLLECTION_NAME: str = "sovereign_knowledge"
     RAG_CHUNK_SIZE: int = 500
@@ -58,9 +60,11 @@ class Settings(BaseSettings):
     LITELLM_DEFAULT_MODEL: str = "ollama/gemma4:e2b"
 
     ENABLE_QDRANT: bool = False
+    QDRANT_URL: str = "http://localhost:6333"
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
-    QDRANT_COLLECTION_NAME: str = "sovereign_knowledge"
+    QDRANT_COLLECTION: str = "sovereign_documents"
+    QDRANT_COLLECTION_NAME: str = "sovereign_documents"
 
     # OpenTelemetry Tracing & Metrics (local-first, air-gapped)
     ENABLE_OPENTELEMETRY: bool = False

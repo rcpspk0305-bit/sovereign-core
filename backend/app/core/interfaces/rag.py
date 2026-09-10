@@ -34,8 +34,29 @@ class BaseEmbeddingProvider(ABC):
         pass
 
 
+class DimensionalityMismatchError(ValueError):
+    """Raised when embedding vector dimensionality does not match the target collection."""
+    pass
+
+
+class VectorStoreHealth(BaseModel):
+    """Strongly-typed health and status representation of a vector store backend."""
+    status: str = "healthy"  # "healthy", "degraded", "unavailable"
+    backend: str = "chroma"  # "chroma" or "qdrant"
+    collection: str = "default"
+    total_documents: int = 0
+    total_vectors: int = 0
+    dimension: Optional[int] = None
+    endpoint: Optional[str] = None
+    error: Optional[str] = None
+
+
 class BaseRetriever(ABC):
     """Abstract interface for document indexing and similarity retrieval."""
+
+    async def add(self, documents: List[Document]) -> List[str]:
+        """Index a list of documents and return their assigned IDs."""
+        return await self.add_documents(documents)
 
     @abstractmethod
     async def add_documents(self, documents: List[Document]) -> List[str]:
@@ -48,8 +69,10 @@ class BaseRetriever(ABC):
         query: str,
         top_k: int = 4,
         score_threshold: Optional[float] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        collection: Optional[str] = None,
     ) -> List[SearchResult]:
-        """Retrieve the top-k most relevant documents for a query."""
+        """Retrieve the top-k most relevant documents for a query with optional filters."""
         pass
 
     @abstractmethod
@@ -58,7 +81,7 @@ class BaseRetriever(ABC):
         pass
 
     @abstractmethod
-    async def count(self) -> int:
+    async def count(self, collection: Optional[str] = None) -> int:
         """Return the total number of indexed documents."""
         pass
 
@@ -66,3 +89,23 @@ class BaseRetriever(ABC):
     async def clear(self) -> bool:
         """Wipe all documents from the store."""
         pass
+
+    async def health(self) -> VectorStoreHealth:
+        """Return vector store health status and metadata."""
+        count = await self.count()
+        return VectorStoreHealth(
+            status="healthy",
+            backend=getattr(self, "backend_name", self.__class__.__name__),
+            collection=getattr(self, "collection_name", "default"),
+            total_documents=count,
+            total_vectors=count,
+        )
+
+    async def list_documents(self) -> List[Dict[str, Any]]:
+        """List distinct documents and aggregated chunks."""
+        return []
+
+    async def delete_document(self, filename: str) -> Dict[str, Any]:
+        """Delete all chunks for a document filename."""
+        return {"status": "deleted", "filename": filename, "chunks_deleted": 0}
+

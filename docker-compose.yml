@@ -51,6 +51,20 @@ services:
     networks:
       - sovereign-net
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: sovereign-core-qdrant
+    profiles:
+      - qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - sovereign-net
+
 networks:
   sovereign-net:
     driver: bridge
@@ -58,3 +72,6 @@ networks:
 volumes:
   backend_data:
     name: sovereign-core-data
+  qdrant_data:
+    name: sovereign-core-qdrant-data
+

@@ -4,9 +4,9 @@ import logging
 from typing import Any, Optional
 
 from app.config import settings
-from app.integrations.base import validate_local_endpoint
 
 logger = logging.getLogger("sovereign.telemetry.otel")
+
 
 _tracer_provider: Any = None
 _meter_provider: Any = None
@@ -72,6 +72,7 @@ def init_telemetry(
         elif exp_type == "console":
             provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
         elif exp_type == "otlp":
+            from app.integrations.base import validate_local_endpoint
             endpoint = getattr(settings, "OTEL_ENDPOINT", None) or getattr(
                 settings, "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
             )

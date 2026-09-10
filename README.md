@@ -14,7 +14,7 @@ Sovereign-Core is an extensible, **local-first** AI workbench built for develope
 | **Agent Graph Engine** | LangGraph StateGraph (Adapter-pattern bounded orchestration) |
 | **Telemetry & Tracing** | OpenTelemetry + Sovereign Flight Recorder (air-gapped, redacted) |
 | **LLM Runtime** | Ollama (`gemma4:e2b` default) |
-| **Vector Store** | ChromaDB (HNSW cosine) |
+| **Vector Store** | ChromaDB (HNSW cosine default) · Qdrant (optional high-performance backend) |
 | **Document Parsing** | PyMuPDF |
 | **Frontend** | Next.js 16 · React · TypeScript |
 | **Styling** | Tailwind CSS · Vanilla CSS |
@@ -33,7 +33,7 @@ The UI is a single-page AI operating system with eight switchable workspaces:
 |---|---|
 | **Overview** | Sovereign Command Center — system health, model status, telemetry at a glance |
 | **Chat** | Mission Intelligence Cockpit — streaming LLM chat with context injection |
-| **Knowledge Base** | ChromaDB semantic memory — search, stats, PDF ingestion |
+| **Knowledge Base** | Multi-backend semantic memory (Chroma/Qdrant) — search, stats, PDF ingestion, live backend switcher |
 | **Documents** | Deterministic Knowledge Ingestion — PDF drag-and-drop pipeline |
 | **Agent Squad** | Controlled multi-agent orchestration with step-budget enforcement |
 | **Workflows** | Node-canvas visual workflow builder |
@@ -54,12 +54,17 @@ The shell also includes two immersive 3D landing screens:
 - Live model discovery, dynamic selection, and health fallback
 - Typed `LLMService` abstraction with structured exception hierarchy
 
-### Document Ingestion & RAG
+### Document Ingestion & Vector Stores (ChromaDB & Qdrant)
 - PyMuPDF page-by-page extraction with layout preservation
 - Smart overlapping chunker (chunk=500, overlap=50, sentence-boundary-aware)
-- ChromaDB persistent HNSW vector index with auto-recovering dimensionality migration
+- Unified `VectorStore` interface (`add`, `search`, `delete`, `count`, `health`, `metadata filtering`)
+- ChromaDB persistent HNSW vector index as default lightweight local store
+- Optional Qdrant vector store (`VECTOR_BACKEND=qdrant`, `QDRANT_URL=http://localhost:6333`)
+- Safe, non-destructive migration utility (`POST /api/v1/rag/migrate` with Chroma retention guarantee)
+- Fail-safe dimensionality mismatch validation (`DimensionalityMismatchError`, prevents collection corruption)
 - `nomic-embed-text:latest` neural embeddings via Ollama
-- Source citation retention: `document_name`, `page_number`, `chunk_index`
+- Full provenance and source citation retention: `document_name`, `document_id`, `page_number`, `chunk_index`, `source`
+- Telemetry span attribution (`rag.retrieve`, `vector.search`) with backend tracking and raw query redaction
 
 ### Agent Orchestration & LangGraph
 - Bounded single-agent & multi-agent reasoning loop (1–10 configurable steps)
@@ -197,9 +202,12 @@ Open `http://localhost:3000`
 ```bash
 cp .env.example .env
 docker compose up --build
+
+# Optional: Spin up with Qdrant vector store service enabled
+docker compose --profile qdrant up --build
 ```
 
-The backend connects to Ollama on the host via `host.docker.internal:11434`.
+The backend connects to Ollama on the host via `host.docker.internal:11434` and Qdrant at `http://qdrant:6333` when enabled.
 
 ---
 
@@ -210,10 +218,12 @@ cd backend
 pytest -v
 ```
 
-102+ tests covering:
+124+ tests covering:
 - LLM interface adherence, mock & live streaming
 - PyMuPDF parsing and source metadata retention
-- ChromaDB indexing, cosine similarity, and migration
+- VectorStore contract compliance across ChromaDB & Qdrant
+- Fail-safe dimensionality mismatch validation (`DimensionalityMismatchError`)
+- Chroma-to-Qdrant non-destructive migration & citation preservation
 - Tool schema validation and sandbox execution
 - Agent reasoning loops and step-budget enforcement
 - LangGraph StateGraph adapter, routing, approval checkpoints, and cycle limits

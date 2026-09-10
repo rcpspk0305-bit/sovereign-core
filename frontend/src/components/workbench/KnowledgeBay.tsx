@@ -26,7 +26,7 @@ import {
   X,
 } from 'lucide-react';
 import { api, normalizeError } from '@/lib/api-client';
-import { AppError, SearchResult } from '@/lib/types';
+import { AppError, SearchResult, VectorStoreHealth } from '@/lib/types';
 import CosmicBrainGraph3D from './CosmicBrainGraph3D';
 import RealisticKnowledgeGraph from './RealisticKnowledgeGraph';
 import VectorSpaceCanvas from '@/components/visualizations/VectorSpaceCanvas';
@@ -82,6 +82,7 @@ const DEFAULT_SAMPLE_DOCS: DocumentItem[] = [
 export default function KnowledgeBay({ onError }: KnowledgeBayProps) {
   const [activeTab, setActiveTab] = useState<'network' | 'vector' | 'attachments' | 'brain' | 'graphs' | 'search'>('network');
   const [stats, setStats] = useState<{ total_documents: number; backend: string } | null>(null);
+  const [vectorHealth, setVectorHealth] = useState<VectorStoreHealth | null>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>(DEFAULT_SAMPLE_DOCS);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -92,14 +93,18 @@ export default function KnowledgeBay({ onError }: KnowledgeBayProps) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch stats & documents
+  // Fetch stats & documents & vector health
   const loadKnowledgeData = async () => {
     try {
-      const [statsData, docsData] = await Promise.all([
+      const [statsData, docsData, healthData] = await Promise.all([
         api.getRagStats().catch(() => ({ total_documents: 69, backend: 'ChromaDB' })),
         api.listDocuments().catch(() => []),
+        api.getVectorHealth().catch(() => null),
       ]);
       setStats(statsData);
+      if (healthData) {
+        setVectorHealth(healthData);
+      }
       if (docsData && docsData.length > 0) {
         setDocuments(docsData);
       } else if (documents.length === 0) {
@@ -345,6 +350,114 @@ export default function KnowledgeBay({ onError }: KnowledgeBayProps) {
         accept=".pdf"
         style={{ display: 'none' }}
       />
+
+      {/* VECTOR BACKEND STATUS CONSOLE */}
+      <div
+        style={{
+          margin: '0 24px 20px 24px',
+          padding: '16px 20px',
+          borderRadius: '10px',
+          border: '1px solid rgba(0, 210, 255, 0.2)',
+          background: 'linear-gradient(135deg, rgba(8, 14, 30, 0.9), rgba(15, 23, 42, 0.95))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '16px',
+        }}
+      >
+        <div>
+          <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#94a3b8', fontWeight: 700, marginBottom: '4px' }}>
+            VECTOR BACKEND
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '13px',
+                fontWeight: (vectorHealth?.backend || 'chroma').toLowerCase() === 'chroma' ? 700 : 500,
+                color: (vectorHealth?.backend || 'chroma').toLowerCase() === 'chroma' ? '#38bdf8' : '#64748b',
+              }}
+            >
+              <span style={{ fontSize: '15px', color: (vectorHealth?.backend || 'chroma').toLowerCase() === 'chroma' ? '#38bdf8' : '#475569' }}>
+                {(vectorHealth?.backend || 'chroma').toLowerCase() === 'chroma' ? '●' : '○'}
+              </span>
+              <span>Chroma</span>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '13px',
+                fontWeight: (vectorHealth?.backend || '').toLowerCase() === 'qdrant' ? 700 : 500,
+                color: (vectorHealth?.backend || '').toLowerCase() === 'qdrant' ? '#00e5ff' : '#64748b',
+              }}
+            >
+              <span style={{ fontSize: '15px', color: (vectorHealth?.backend || '').toLowerCase() === 'qdrant' ? '#00e5ff' : '#475569' }}>
+                {(vectorHealth?.backend || '').toLowerCase() === 'qdrant' ? '●' : '○'}
+              </span>
+              <span>Qdrant</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tiles */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ fontSize: '9px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>COLLECTION</div>
+            <div style={{ fontSize: '12px', color: '#e2e8f0', fontFamily: 'monospace', fontWeight: 600 }}>
+              {vectorHealth?.collection || 'sovereign_knowledge'}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '9px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>DOCUMENTS</div>
+            <div style={{ fontSize: '13px', color: '#38bdf8', fontWeight: 700 }}>
+              {vectorHealth?.total_documents ?? documents.length}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '9px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>VECTORS</div>
+            <div style={{ fontSize: '13px', color: '#818cf8', fontWeight: 700 }}>
+              {vectorHealth?.total_vectors ?? totalChunksCount}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '9px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>DIMENSION</div>
+            <div style={{ fontSize: '12px', color: '#a78bfa', fontFamily: 'monospace', fontWeight: 600 }}>
+              {vectorHealth?.dimension ? `${vectorHealth.dimension}d` : '768d'}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '9px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>STATUS</div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: (vectorHealth?.status || 'healthy') === 'healthy' ? '#10b981' : '#f59e0b',
+                  boxShadow: (vectorHealth?.status || 'healthy') === 'healthy' ? '0 0 8px #10b981' : 'none',
+                }}
+              />
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: (vectorHealth?.status || 'healthy') === 'healthy' ? '#34d399' : '#fbbf24',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {vectorHealth?.status || 'HEALTHY'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
 
       {/* Status banner */}
       {uploadStatus && (

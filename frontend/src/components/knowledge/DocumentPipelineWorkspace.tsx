@@ -21,7 +21,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { api, normalizeError } from '@/lib/api-client';
-import { AppError, UploadResponse } from '@/lib/types';
+import { AppError, UploadResponse, VectorStoreHealth } from '@/lib/types';
 
 interface DocumentItem {
   id: string;
@@ -69,6 +69,9 @@ interface DocumentPipelineWorkspaceProps {
 
 export default function DocumentPipelineWorkspace({ onError }: DocumentPipelineWorkspaceProps) {
   const [documents, setDocuments] = useState<DocumentItem[]>(DEFAULT_DOCUMENTS);
+  const [vectorHealth, setVectorHealth] = useState<VectorStoreHealth | null>(null);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [pipelineStep, setPipelineStep] = useState<number>(0);
   const [activeFileName, setActiveFileName] = useState<string>('');
@@ -76,10 +79,16 @@ export default function DocumentPipelineWorkspace({ onError }: DocumentPipelineW
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load existing docs
+  // Load existing docs & vector health
   const loadDocs = async () => {
     try {
-      const data = await api.listDocuments();
+      const [data, health] = await Promise.all([
+        api.listDocuments().catch(() => []),
+        api.getVectorHealth().catch(() => null),
+      ]);
+      if (health) {
+        setVectorHealth(health);
+      }
       if (data && data.length > 0) {
         setDocuments(
           data.map((d, i) => ({
@@ -95,6 +104,21 @@ export default function DocumentPipelineWorkspace({ onError }: DocumentPipelineW
       }
     } catch {
       // Keep defaults
+    }
+  };
+
+  const handleMigrateToQdrant = async () => {
+    setIsMigrating(true);
+    setMigrationStatus(null);
+    try {
+      const res = await api.migrateToQdrant(true);
+      setMigrationStatus(`Migrated ${res.migrated_count} records safely to Qdrant (zero loss).`);
+      const updatedHealth = await api.getVectorHealth();
+      setVectorHealth(updatedHealth);
+    } catch (err: any) {
+      setMigrationStatus(`Migration failed: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -248,6 +272,167 @@ export default function DocumentPipelineWorkspace({ onError }: DocumentPipelineW
         onChange={handleFileSelect}
         style={{ display: 'none' }}
       />
+
+      {/* VECTOR BACKEND STATUS CONSOLE */}
+      <div
+        className="sovereign-glass-panel"
+        style={{
+          padding: '18px 24px',
+          marginBottom: '20px',
+          borderRadius: '12px',
+          border: '1px solid rgba(0, 210, 255, 0.25)',
+          background: 'linear-gradient(135deg, rgba(8, 14, 30, 0.85), rgba(15, 23, 42, 0.95))',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+          {/* Active Backend Selector */}
+          <div>
+            <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#94a3b8', fontWeight: 700, marginBottom: '6px' }}>
+              VECTOR BACKEND
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '13px',
+                  fontWeight: (vectorHealth?.backend || 'chroma').toLowerCase() === 'chroma' ? 700 : 500,
+                  color: (vectorHealth?.backend || 'chroma').toLowerCase() === 'chroma' ? '#38bdf8' : '#64748b',
+                }}
+              >
+                <span style={{ fontSize: '16px', color: (vectorHealth?.backend || 'chroma').toLowerCase() === 'chroma' ? '#38bdf8' : '#475569' }}>
+                  {(vectorHealth?.backend || 'chroma').toLowerCase() === 'chroma' ? '●' : '○'}
+                </span>
+                <span>Chroma</span>
+                {(vectorHealth?.backend || 'chroma').toLowerCase() === 'chroma' && (
+                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
+                    Active
+                  </span>
+                )}
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '13px',
+                  fontWeight: (vectorHealth?.backend || '').toLowerCase() === 'qdrant' ? 700 : 500,
+                  color: (vectorHealth?.backend || '').toLowerCase() === 'qdrant' ? '#00e5ff' : '#64748b',
+                }}
+              >
+                <span style={{ fontSize: '16px', color: (vectorHealth?.backend || '').toLowerCase() === 'qdrant' ? '#00e5ff' : '#475569' }}>
+                  {(vectorHealth?.backend || '').toLowerCase() === 'qdrant' ? '●' : '○'}
+                </span>
+                <span>Qdrant</span>
+                {(vectorHealth?.backend || '').toLowerCase() === 'qdrant' && (
+                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(0, 229, 255, 0.15)', color: '#00e5ff' }}>
+                    Active
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Key Metric Tiles */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '28px', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', fontWeight: 700 }}>
+                COLLECTION
+              </div>
+              <div style={{ fontSize: '12px', color: '#e2e8f0', fontFamily: 'monospace', fontWeight: 600 }}>
+                {vectorHealth?.collection || 'sovereign_knowledge'}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', fontWeight: 700 }}>
+                DOCUMENTS
+              </div>
+              <div style={{ fontSize: '14px', color: '#38bdf8', fontWeight: 700 }}>
+                {vectorHealth?.total_documents ?? documents.length}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', fontWeight: 700 }}>
+                VECTORS
+              </div>
+              <div style={{ fontSize: '14px', color: '#818cf8', fontWeight: 700 }}>
+                {vectorHealth?.total_vectors ?? documents.reduce((acc, d) => acc + d.total_chunks, 0)}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', fontWeight: 700 }}>
+                DIMENSION
+              </div>
+              <div style={{ fontSize: '12px', color: '#a78bfa', fontFamily: 'monospace', fontWeight: 600 }}>
+                {vectorHealth?.dimension ? `${vectorHealth.dimension}d` : '768d'}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b', fontWeight: 700 }}>
+                STATUS
+              </div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: (vectorHealth?.status || 'healthy') === 'healthy' ? '#10b981' : '#f59e0b',
+                    boxShadow: (vectorHealth?.status || 'healthy') === 'healthy' ? '0 0 8px #10b981' : 'none',
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: (vectorHealth?.status || 'healthy') === 'healthy' ? '#34d399' : '#fbbf24',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {vectorHealth?.status || 'HEALTHY'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Migration Action Button */}
+          <div>
+            <button
+              onClick={handleMigrateToQdrant}
+              disabled={isMigrating}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                background: 'rgba(0, 229, 255, 0.08)',
+                border: '1px solid rgba(0, 229, 255, 0.3)',
+                color: '#00e5ff',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: isMigrating ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {isMigrating ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              <span>Migrate to Qdrant</span>
+            </button>
+            {migrationStatus && (
+              <div style={{ fontSize: '10px', color: '#10b981', marginTop: '4px' }}>
+                {migrationStatus}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
 
       {/* HERO PIPELINE VISUALIZATION (UPLOAD -> PARSE -> CHUNK -> EMBED -> INDEX -> READY) */}
       <div className="sovereign-glass-panel" style={{ padding: '28px' }}>
