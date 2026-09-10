@@ -388,4 +388,110 @@ export interface GraphExecutionState {
   final_output: string;
 }
 
+// Canonical Sovereign-Core Workflow & Dify Interoperability Schema
+export type CanonicalNodeType =
+  | 'START'
+  | 'LLM'
+  | 'AGENT'
+  | 'TOOL'
+  | 'RAG'
+  | 'CONDITION'
+  | 'APPROVAL'
+  | 'END';
+
+export type CanonicalWorkflowState =
+  | 'DRAFT'
+  | 'VALID'
+  | 'INVALID'
+  | 'APPROVAL REQUIRED'
+  | 'READY'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'FAILED';
+
+export interface CanonicalWorkflowNode {
+  id: string;
+  name: string;
+  type: CanonicalNodeType;
+  config: Record<string, any>;
+  inputs?: string[] | Record<string, any>;
+  outputs?: string[] | Record<string, any>;
+  position?: { x: number; y: number };
+  status?: 'idle' | 'running' | 'completed' | 'failed' | 'skipped';
+}
+
+export interface CanonicalWorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+  condition?: string;
+  label?: string;
+}
+
+export interface CanonicalWorkflowPolicy {
+  no_egress: boolean;
+  tool_allowlist: string[];
+  max_steps: number;
+  requires_approval: boolean;
+  resource_limits?: Record<string, any>;
+  allowed_providers?: string[];
+}
+
+export interface SecurityFinding {
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  message: string;
+  rule_violated: string;
+  node_id?: string;
+  field_path?: string;
+}
+
+export interface SecurityAnalysisReport {
+  is_safe: boolean;
+  state: CanonicalWorkflowState;
+  risk_score: number;
+  requires_approval: boolean;
+  findings: SecurityFinding[];
+  analyzed_at: string;
+}
+
+export interface CanonicalWorkflow {
+  id: string;
+  name: string;
+  version: string;
+  description?: string;
+  nodes: CanonicalWorkflowNode[];
+  edges: CanonicalWorkflowEdge[];
+  inputs?: Record<string, any>;
+  outputs?: Record<string, any>;
+  policy: CanonicalWorkflowPolicy;
+  state: CanonicalWorkflowState;
+  approval_status?: string;
+  approved_by?: string;
+  approved_at?: string;
+  security_analysis?: SecurityAnalysisReport;
+  metadata?: Record<string, any>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CanonicalWorkflowExecutionResponse {
+  workflow_id: string;
+  execution_id: string;
+  success: boolean;
+  state: CanonicalWorkflowState;
+  final_output: Record<string, any>;
+  step_results: Array<{
+    node_id: string;
+    status: string;
+    inputs: Record<string, any>;
+    outputs: Record<string, any>;
+    latency_ms: number;
+    error?: string;
+  }>;
+  total_latency_ms: number;
+  error?: string;
+  flight_record_id?: string;
+}
+
+
 

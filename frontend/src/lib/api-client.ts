@@ -26,6 +26,9 @@ import {
   CreateSessionRequest,
   VectorStoreHealth,
   MigrationResult,
+  CanonicalWorkflow,
+  SecurityAnalysisReport,
+  CanonicalWorkflowExecutionResponse,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -518,6 +521,97 @@ class ApiClient {
   getApprovalNoteDownloadUrl(filePath: string): string {
     return `${this.base}/api/v1/tools/approval-note/download?path=${encodeURIComponent(filePath)}`;
   }
+
+  // Workflows & Dify Interoperability
+  async listWorkflows(): Promise<CanonicalWorkflow[]> {
+    const res = await fetch(`${this.base}/api/v1/workflows`);
+    if (!res.ok) throw new Error('Failed to fetch workflows');
+    return res.json();
+  }
+
+  async getWorkflow(workflowId: string): Promise<CanonicalWorkflow> {
+    const res = await fetch(`${this.base}/api/v1/workflows/${encodeURIComponent(workflowId)}`);
+    if (!res.ok) throw new Error(`Failed to fetch workflow ${workflowId}`);
+    return res.json();
+  }
+
+  async saveWorkflow(workflow: CanonicalWorkflow, bumpVersion?: string): Promise<CanonicalWorkflow> {
+    const res = await fetch(`${this.base}/api/v1/workflows`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workflow, bump_version: bumpVersion }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to save workflow');
+    }
+    return res.json();
+  }
+
+  async validateWorkflow(workflow: CanonicalWorkflow): Promise<SecurityAnalysisReport> {
+    const res = await fetch(`${this.base}/api/v1/workflows/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(workflow),
+    });
+    if (!res.ok) throw new Error('Workflow validation failed');
+    return res.json();
+  }
+
+  async approveWorkflow(
+    workflowId: string,
+    operatorName = 'sovereign-operator',
+    notes?: string
+  ): Promise<CanonicalWorkflow> {
+    const res = await fetch(`${this.base}/api/v1/workflows/${encodeURIComponent(workflowId)}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operator_name: operatorName, notes }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to approve workflow ${workflowId}`);
+    }
+    return res.json();
+  }
+
+  async runWorkflow(
+    workflowId: string,
+    inputs: Record<string, any> = {}
+  ): Promise<CanonicalWorkflowExecutionResponse> {
+    const res = await fetch(`${this.base}/api/v1/workflows/${encodeURIComponent(workflowId)}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inputs }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Workflow execution failed`);
+    }
+    return res.json();
+  }
+
+  async importWorkflow(content: any, format = 'auto'): Promise<CanonicalWorkflow> {
+    const res = await fetch(`${this.base}/api/v1/workflows/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, format }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Workflow import rejected by security policy');
+    }
+    return res.json();
+  }
+
+  async exportWorkflow(workflowId: string, format: 'sovereign' | 'dify' = 'sovereign'): Promise<any> {
+    const res = await fetch(
+      `${this.base}/api/v1/workflows/${encodeURIComponent(workflowId)}/export?format=${format}`
+    );
+    if (!res.ok) throw new Error(`Failed to export workflow as ${format}`);
+    return res.json();
+  }
 }
 
 export const api = new ApiClient();
+

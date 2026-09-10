@@ -11,6 +11,7 @@ from app.api.v1.models import router as models_router
 from app.api.v1.rag import router as rag_router
 from app.api.v1.sessions import router as sessions_router
 from app.api.v1.tools import router as tools_router
+from app.api.v1.workflows import router as workflows_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
@@ -23,3 +24,4 @@ api_v1_router.include_router(tools_router)
 api_v1_router.include_router(agents_router)
 api_v1_router.include_router(audit_router)
 api_v1_router.include_router(flight_recorder_router)
+api_v1_router.include_router(workflows_router)
