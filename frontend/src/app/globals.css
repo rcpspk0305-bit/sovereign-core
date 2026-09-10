@@ -3385,6 +3385,26 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 
 /* --- Contextual Workspace Subnav Bar --- */
+/* These elements use utility-style class names, but this app does not load
+   Tailwind. Define the missing vertical flex behavior explicitly so every tab
+   stacks its sub-navigation above its centered content. */
+.agent-chat-launcher-root .flex.flex-col {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.mission-stage-shell {
+  align-items: center;
+}
+
+.mission-stage-shell > .workspace-subnav-bar,
+.mission-stage-shell > div {
+  width: 100%;
+  max-width: 1080px;
+  margin-inline: auto;
+}
+
 .workspace-subnav-bar {
   display: flex;
   justify-content: center;
@@ -3584,15 +3604,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: auto 0;
-  padding: 20px 0;
+  justify-content: center;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+  min-height: calc(100vh - 120px);
   position: relative;
   z-index: 20;
+  box-sizing: border-box;
 }
 
 /* --- Search & Command Container --- */
 .gemini-search-container {
   width: 100%;
+  max-width: 760px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -7203,3 +7227,70 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   stroke-dasharray: 8, 8;
   animation: sovPulseFlow 2.5s linear infinite;
 }
+
+/* ============================================================ */
+/* BACKGROUND LAYER OVERLAYS — Readability over 3D Globe       */
+/* Adds a semi-transparent dark panel behind every heading and  */
+/* content block so text is legible over the cosmic canvas.    */
+/* ============================================================ */
+
+/* Mission page — wrap the entire prompt + heading + cards in a
+   glassmorphism panel so the 3D globe doesn't bleed through.  */
+.gemini-search-container {
+  background: rgba(4, 8, 24, 0.62);
+  border-radius: 24px;
+  padding: 32px 28px 28px;
+  border: 1px solid rgba(140, 219, 255, 0.10);
+  box-shadow:
+    0 32px 80px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* Hero heading area — extra gradient vignette behind "Where should we start?" */
+.launcher-hero-text {
+  position: relative;
+}
+.launcher-hero-text::before {
+  content: '';
+  position: absolute;
+  inset: -18px -40px;
+  border-radius: 18px;
+  background: radial-gradient(ellipse at center, rgba(4, 8, 28, 0.70) 0%, transparent 75%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Suggestion cards — increase opacity so they read clearly */
+.suggestion-card {
+  background: rgba(8, 4, 28, 0.88) !important;
+  border: 1px solid rgba(180, 140, 255, 0.22) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+}
+.suggestion-card:hover {
+  background: rgba(18, 8, 52, 0.94) !important;
+  border-color: rgba(139, 114, 255, 0.50) !important;
+}
+
+/* Session HUD strip & telemetry strip — more opaque background */
+.session-temporal-hud-strip,
+.launcher-telemetry-strip {
+  background: rgba(4, 10, 30, 0.80) !important;
+  border-color: rgba(140, 219, 255, 0.22) !important;
+}
+
+/* Full-width bay stages (Workflows, Flight Log, Models, etc.) —
+   add a dark semi-transparent backdrop for all heading blocks  */
+.launcher-bay-fullwidth-stage {
+  position: relative;
+  z-index: 20;
+  background: rgba(4, 8, 22, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  min-height: calc(100vh - 64px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* ============================================================ */
