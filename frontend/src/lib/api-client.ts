@@ -419,6 +419,14 @@ class ApiClient {
     return res.json();
   }
 
+  async clearFlightRecords(): Promise<{ status: string; cleared_count: number }> {
+    const res = await fetch(`${this.base}/api/v1/flight-recorder/records`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to clear flight records');
+    return res.json();
+  }
+
   async getFlightRecord(taskId: string): Promise<FlightRecord> {
     const res = await fetch(`${this.base}/api/v1/flight-recorder/records/${encodeURIComponent(taskId)}`);
     if (!res.ok) throw new Error(`Failed to fetch flight record: ${taskId}`);

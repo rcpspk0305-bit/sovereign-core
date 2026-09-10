@@ -84,6 +84,18 @@ class FlightRecorderManager:
         except Exception as ex:
             logger.warning("Failed to persist flight record %s: %s", record.task_id, ex)
 
+    def clear_records(self) -> int:
+        """Clear all in-memory and persisted flight records."""
+        count = len(self.records)
+        self.records.clear()
+        if self.storage_dir.exists():
+            for file in self.storage_dir.glob("*.json"):
+                try:
+                    file.unlink()
+                except Exception as ex:
+                    logger.warning("Failed to delete flight record %s: %s", file, ex)
+        return count
+
     async def connect(self, websocket: WebSocket, task_id: Optional[str] = None) -> None:
         """Register a WebSocket client for real-time telemetry streaming."""
         await websocket.accept()

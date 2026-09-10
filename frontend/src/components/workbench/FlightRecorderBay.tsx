@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Shield,
   ShieldCheck,
+  Trash2,
   XCircle,
 } from 'lucide-react';
 import { api, normalizeError } from '@/lib/api-client';
@@ -108,9 +109,28 @@ export default function FlightRecorderBay({ onError, selectedTaskId }: FlightRec
             className="stat-refresh-btn"
             onClick={fetchRecords}
             disabled={loading}
+            title="Refresh flight records"
             aria-label="Refresh flight records"
           >
             <RefreshCw size={14} className={loading ? 'spin-icon' : ''} />
+          </button>
+          <button
+            type="button"
+            className="stat-refresh-btn"
+            onClick={async () => {
+              try {
+                await api.clearFlightRecords();
+                setRecords([]);
+                setActiveRecord(null);
+              } catch (err) {
+                onError(normalizeError(err));
+              }
+            }}
+            disabled={loading}
+            title="Reset / Clear all recorded sessions"
+            aria-label="Reset all recorded sessions"
+          >
+            <Trash2 size={14} />
           </button>
         </div>
       </div>

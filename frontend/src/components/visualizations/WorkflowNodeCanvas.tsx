@@ -71,8 +71,8 @@ const INITIAL_NODES: WorkflowNode[] = [
     icon: <Radio size={16} />,
     color: '#00d2ff',
     glow: 'rgba(0, 210, 255, 0.4)',
-    status: 'completed',
-    latencyMs: 12,
+    status: 'idle',
+    latencyMs: 0,
     schema: 'directive: string, priority: "CRITICAL" | "ROUTINE"',
   },
   {
@@ -88,8 +88,8 @@ const INITIAL_NODES: WorkflowNode[] = [
     icon: <Compass size={16} />,
     color: '#8b72ff',
     glow: 'rgba(139, 114, 255, 0.4)',
-    status: 'completed',
-    latencyMs: 45,
+    status: 'idle',
+    latencyMs: 0,
     schema: 'target_module: "RAG" | "MATH" | "AUDIT"',
   },
   {
@@ -105,8 +105,8 @@ const INITIAL_NODES: WorkflowNode[] = [
     icon: <Bot size={16} />,
     color: '#d4a843',
     glow: 'rgba(212, 168, 67, 0.4)',
-    status: 'running',
-    latencyMs: 180,
+    status: 'idle',
+    latencyMs: 0,
     schema: 'action_plan: Array<{ tool: string, query: string }>',
   },
   {
@@ -262,6 +262,32 @@ export default function WorkflowNodeCanvas() {
           >
             {isRunningPipeline ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
             <span>{isRunningPipeline ? 'Signal Propagating...' : 'Run Pipeline Simulation'}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setNodes(INITIAL_NODES.map((n) => ({ ...n, status: 'idle', latencyMs: 0 })));
+              setIsRunningPipeline(false);
+            }}
+            disabled={isRunningPipeline}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '9999px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: 'var(--sov-text-secondary, #94a3b8)',
+              fontWeight: 700,
+              fontSize: '12px',
+              cursor: isRunningPipeline ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            title="Reset workflow simulation state to idle"
+          >
+            <RotateCcw size={13} />
+            <span>Reset</span>
           </button>
         </div>
       </header>

@@ -174,6 +174,15 @@ async def list_flight_records(
     return records[:limit]
 
 
+@router.delete("/records")
+async def clear_flight_records(
+    manager: FlightRecorderManager = Depends(get_flight_recorder_manager),
+) -> dict:
+    """Clear all historical flight recordings."""
+    count = manager.clear_records()
+    return {"status": "success", "cleared_count": count}
+
+
 @router.get("/records/{task_id}", response_model=FlightRecord)
 async def get_flight_record(
     task_id: str,

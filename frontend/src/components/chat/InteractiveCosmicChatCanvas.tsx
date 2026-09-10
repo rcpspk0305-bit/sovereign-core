@@ -11,264 +11,7 @@ interface InteractiveCosmicChatCanvasProps {
 }
 
 // -------------------------------------------------------------
-// Fast Procedural 2D Simplex/Perlin Noise & fBm for Textures
-// -------------------------------------------------------------
-function createNoise2D() {
-  const perm = new Uint8Array(512);
-  const p = new Uint8Array(256);
-  for (let i = 0; i < 256; i++) p[i] = i;
-  for (let i = 255; i > 0; i--) {
-    const r = Math.floor(Math.random() * (i + 1));
-    const t = p[i];
-    p[i] = p[r];
-    p[r] = t;
-  }
-  for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
-
-  function grad(hash: number, x: number, y: number) {
-    const h = hash & 7;
-    const u = h < 4 ? x : y;
-    const v = h < 4 ? y : x;
-    return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
-  }
-
-  return function noise(x: number, y: number) {
-    const X = Math.floor(x) & 255;
-    const Y = Math.floor(y) & 255;
-    const xf = x - Math.floor(x);
-    const yf = y - Math.floor(y);
-    const u = xf * xf * xf * (xf * (xf * 6 - 15) + 10);
-    const v = yf * yf * yf * (yf * (yf * 6 - 15) + 10);
-    const a = perm[X] + Y;
-    const aa = perm[a];
-    const ab = perm[a + 1];
-    const b = perm[X + 1] + Y;
-    const ba = perm[b];
-    const bb = perm[b + 1];
-    const g1 = grad(perm[aa], xf, yf);
-    const g2 = grad(perm[ba], xf - 1, yf);
-    const g3 = grad(perm[ab], xf, yf - 1);
-    const g4 = grad(perm[bb], xf - 1, yf - 1);
-    const x1 = g1 + u * (g2 - g1);
-    const x2 = g3 + u * (g4 - g3);
-    return (x1 + v * (x2 - x1)) * 0.707;
-  };
-}
-
-// -------------------------------------------------------------
-// Texture Generator: Photorealistic Terran Surface & Night Lights
-// -------------------------------------------------------------
-function generatePlanetTextures(width = 1024, height = 512) {
-  const noise = createNoise2D();
-
-  function fbm(x: number, y: number, octaves = 5) {
-    let val = 0;
-    let amp = 0.5;
-    let freq = 1.0;
-    for (let i = 0; i < octaves; i++) {
-      val += amp * noise(x * freq, y * freq);
-      freq *= 2.0;
-      amp *= 0.5;
-    }
-    return val;
-  }
-
-  // 1. Surface Texture Canvas
-  const surfaceCanvas = document.createElement('canvas');
-  surfaceCanvas.width = width;
-  surfaceCanvas.height = height;
-  const surfaceCtx = surfaceCanvas.getContext('2d')!;
-  const surfaceImg = surfaceCtx.createImageData(width, height);
-  const sData = surfaceImg.data;
-
-  // 2. Specular / Roughness Canvas
-  const roughCanvas = document.createElement('canvas');
-  roughCanvas.width = width;
-  roughCanvas.height = height;
-  const roughCtx = roughCanvas.getContext('2d')!;
-  const roughImg = roughCtx.createImageData(width, height);
-  const rData = roughImg.data;
-
-  // 3. City Lights Canvas (Night side)
-  const lightsCanvas = document.createElement('canvas');
-  lightsCanvas.width = width;
-  lightsCanvas.height = height;
-  const lightsCtx = lightsCanvas.getContext('2d')!;
-  const lightsImg = lightsCtx.createImageData(width, height);
-  const lData = lightsImg.data;
-
-  // 4. Atmospheric Clouds Canvas
-  const cloudCanvas = document.createElement('canvas');
-  cloudCanvas.width = width;
-  cloudCanvas.height = height;
-  const cloudCtx = cloudCanvas.getContext('2d')!;
-  const cloudImg = cloudCtx.createImageData(width, height);
-  const cData = cloudImg.data;
-
-  for (let y = 0; y < height; y++) {
-    const lat = (y / height - 0.5) * Math.PI; // -pi/2 to pi/2
-    const absLat = Math.abs(lat) / (Math.PI * 0.5); // 0 (equator) to 1 (poles)
-
-    for (let x = 0; x < width; x++) {
-      const lon = (x / width) * Math.PI * 2; // 0 to 2pi
-      const idx = (y * width + x) * 4;
-
-      // Spherical coordinate sampling to avoid polar pinch
-      const nx = Math.cos(lat) * Math.sin(lon);
-      const ny = Math.sin(lat);
-      const nz = Math.cos(lat) * Math.cos(lon);
-
-      // Elevation noise with 5 octaves
-      const elev = fbm(nx * 2.2 + 10, ny * 2.2 + 10, 5) * 0.5 + 0.5;
-      const detail = fbm(nx * 8.0 + 30, nz * 8.0 + 30, 3) * 0.5 + 0.5;
-
-      const seaLevel = 0.48;
-
-      let r = 0, g = 0, b = 0;
-      let roughness = 220; // 0-255
-
-      // Ice caps at extreme poles
-      const isPolarIce = absLat > 0.82 + (noise(nx * 4, nz * 4) * 0.08);
-
-      if (isPolarIce) {
-        // Gleaming arctic glacier ice
-        r = 230 + Math.floor(detail * 25);
-        g = 242 + Math.floor(detail * 13);
-        b = 255;
-        roughness = 70; // icy sheen
-      } else if (elev < seaLevel) {
-        // Oceans
-        const depth = elev / seaLevel;
-        if (depth < 0.6) {
-          // Deep abyssal navy
-          r = Math.floor(6 + depth * 14);
-          g = Math.floor(22 + depth * 35);
-          b = Math.floor(68 + depth * 55);
-        } else if (depth < 0.92) {
-          // Continental shelf sapphire
-          r = Math.floor(12 + depth * 22);
-          g = Math.floor(45 + depth * 65);
-          b = Math.floor(105 + depth * 80);
-        } else {
-          // Coastal shallow turquoise
-          r = Math.floor(24 + (depth - 0.92) * 200);
-          g = Math.floor(95 + (depth - 0.92) * 350);
-          b = Math.floor(155 + (depth - 0.92) * 400);
-        }
-        roughness = 25; // extremely low roughness = sharp glossy specular sunlight reflection!
-      } else {
-        // Continents / Landmasses
-        const altitude = (elev - seaLevel) / (1 - seaLevel);
-        roughness = 210;
-
-        if (altitude < 0.04) {
-          // Sandy coastline & beaches
-          r = 194; g = 178; b = 138;
-        } else if (absLat > 0.55) {
-          // Subpolar taiga & tundra
-          r = Math.floor(55 + altitude * 50);
-          g = Math.floor(75 + altitude * 50);
-          b = Math.floor(60 + altitude * 40);
-        } else if (absLat < 0.35 && altitude < 0.45 && (nx > 0.1 || detail > 0.65)) {
-          // Arid desert & savannah belts
-          r = Math.floor(175 + detail * 55);
-          g = Math.floor(138 + detail * 45);
-          b = Math.floor(88 + detail * 35);
-        } else if (altitude < 0.6) {
-          // Lush temperate forest & river basins
-          r = Math.floor(34 + detail * 30);
-          g = Math.floor(88 + detail * 45);
-          b = Math.floor(40 + detail * 25);
-        } else if (altitude < 0.82) {
-          // High mountain rock ridges
-          r = Math.floor(105 + detail * 40);
-          g = Math.floor(98 + detail * 35);
-          b = Math.floor(90 + detail * 30);
-        } else {
-          // Snow-capped alpine mountain peaks
-          r = 240; g = 244; b = 250;
-          roughness = 90;
-        }
-      }
-
-      sData[idx] = Math.min(255, r);
-      sData[idx + 1] = Math.min(255, g);
-      sData[idx + 2] = Math.min(255, b);
-      sData[idx + 3] = 255;
-
-      rData[idx] = roughness;
-      rData[idx + 1] = roughness;
-      rData[idx + 2] = roughness;
-      rData[idx + 3] = 255;
-
-      // -------------------------------------------------------------
-      // Nocturnal City Lights (Glowing clusters on landmasses)
-      // -------------------------------------------------------------
-      if (elev >= seaLevel && !isPolarIce) {
-        const cityDensity = fbm(nx * 14.0 + 80, nz * 14.0 + 80, 4);
-        const roadWebs = noise(nx * 32.0, ny * 32.0);
-
-        if (cityDensity > 0.62 && roadWebs > -0.1) {
-          const intensity = Math.pow((cityDensity - 0.62) / 0.38, 2.2);
-          lData[idx] = Math.floor(255 * intensity);
-          lData[idx + 1] = Math.floor(210 * intensity);
-          lData[idx + 2] = Math.floor(130 * intensity);
-          lData[idx + 3] = 255;
-        } else {
-          lData[idx + 3] = 0;
-        }
-      } else {
-        lData[idx + 3] = 0;
-      }
-
-      // -------------------------------------------------------------
-      // Atmospheric Cloud System (Wispy swirls & cyclones)
-      // -------------------------------------------------------------
-      const warpX = nx + noise(nx * 3.5, ny * 3.5) * 0.45;
-      const warpZ = nz + noise(nz * 3.5, ny * 3.5) * 0.45;
-      const cloudVal = fbm(warpX * 3.2 + 50, warpZ * 3.2 + 50, 5) * 0.5 + 0.5;
-
-      const stormBelt = Math.sin(lat * 3.0) * 0.12;
-      const cloudThreshold = 0.52 - stormBelt;
-
-      if (cloudVal > cloudThreshold) {
-        const density = Math.min(1.0, (cloudVal - cloudThreshold) / 0.32);
-        cData[idx] = 255;
-        cData[idx + 1] = 255;
-        cData[idx + 2] = 255;
-        cData[idx + 3] = Math.floor(density * 220);
-      } else {
-        cData[idx + 3] = 0;
-      }
-    }
-  }
-
-  surfaceCtx.putImageData(surfaceImg, 0, 0);
-  roughCtx.putImageData(roughImg, 0, 0);
-  lightsCtx.putImageData(lightsImg, 0, 0);
-  cloudCtx.putImageData(cloudImg, 0, 0);
-
-  const surfaceTexture = new THREE.CanvasTexture(surfaceCanvas);
-  surfaceTexture.wrapS = THREE.RepeatWrapping;
-  surfaceTexture.wrapT = THREE.ClampToEdgeWrapping;
-
-  const roughnessTexture = new THREE.CanvasTexture(roughCanvas);
-  roughnessTexture.wrapS = THREE.RepeatWrapping;
-  roughnessTexture.wrapT = THREE.ClampToEdgeWrapping;
-
-  const lightsTexture = new THREE.CanvasTexture(lightsCanvas);
-  lightsTexture.wrapS = THREE.RepeatWrapping;
-  lightsTexture.wrapT = THREE.ClampToEdgeWrapping;
-
-  const cloudTexture = new THREE.CanvasTexture(cloudCanvas);
-  cloudTexture.wrapS = THREE.RepeatWrapping;
-  cloudTexture.wrapT = THREE.ClampToEdgeWrapping;
-
-  return { surfaceTexture, roughnessTexture, lightsTexture, cloudTexture };
-}
-
-// -------------------------------------------------------------
-// Main Photorealistic Cosmic Canvas Component
+// Main Photorealistic Cosmic Canvas Component: Real Earth
 // -------------------------------------------------------------
 export default function InteractiveCosmicChatCanvas({
   launchState = 'idle',
@@ -311,17 +54,22 @@ export default function InteractiveCosmicChatCanvas({
     // =============================================================
     // 1. CINEMATIC SOLAR & CELESTIAL LIGHTING
     // =============================================================
-    const ambientLight = new THREE.AmbientLight(0x140a2e, 1.2);
+    const ambientLight = new THREE.AmbientLight(0x3a4c78, 2.6);
     scene.add(ambientLight);
 
-    // Distant Sun Directional Light (crisp realistic terminator)
-    const sunLight = new THREE.DirectionalLight(0xfff8ea, 3.4);
-    sunLight.position.set(-140, 75, 120);
+    // Primary Sun Directional Light (crisp golden-white sunlight)
+    const sunLight = new THREE.DirectionalLight(0xfff8e7, 4.2);
+    sunLight.position.set(-110, 55, 90);
     scene.add(sunLight);
 
-    // Subtle atmospheric back-bounce light from deep space (violet-indigo tint)
-    const rimFillLight = new THREE.DirectionalLight(0x3a1a8e, 0.9);
-    rimFillLight.position.set(120, -50, -80);
+    // Front-Right Fill Light (ensures all continents & oceans stay beautifully visible)
+    const fillLight = new THREE.DirectionalLight(0x486cae, 2.0);
+    fillLight.position.set(90, -20, 70);
+    scene.add(fillLight);
+
+    // Subtle atmospheric back-bounce light from deep space
+    const rimFillLight = new THREE.DirectionalLight(0x283868, 1.2);
+    rimFillLight.position.set(0, -60, -60);
     scene.add(rimFillLight);
 
     // =============================================================
@@ -412,20 +160,16 @@ export default function InteractiveCosmicChatCanvas({
       nebulaPos[i3 + 1] = (Math.random() - 0.5) * 800;
       nebulaPos[i3 + 2] = -400 - Math.random() * 800;
 
-      // Premium: violet/indigo/gold nebula hues
       const hue = Math.random();
       if (hue < 0.4) {
-        // Deep violet nebula
         nebulaCols[i3] = 0.25 + Math.random() * 0.2;
         nebulaCols[i3 + 1] = 0.08 + Math.random() * 0.12;
         nebulaCols[i3 + 2] = 0.65 + Math.random() * 0.35;
       } else if (hue < 0.7) {
-        // Rich indigo/purple
         nebulaCols[i3] = 0.35 + Math.random() * 0.25;
         nebulaCols[i3 + 1] = 0.15 + Math.random() * 0.2;
         nebulaCols[i3 + 2] = 0.75 + Math.random() * 0.25;
       } else {
-        // Gold/champagne shimmer
         nebulaCols[i3] = 0.7 + Math.random() * 0.3;
         nebulaCols[i3 + 1] = 0.5 + Math.random() * 0.3;
         nebulaCols[i3 + 2] = 0.1 + Math.random() * 0.2;
@@ -448,42 +192,50 @@ export default function InteractiveCosmicChatCanvas({
     scene.add(nebulaClouds);
 
     // =============================================================
-    // 4. PHOTOREALISTIC 3D PLANET (NOT PLASTIC)
+    // 4. REAL PLANET EARTH (TEXTURE-MAPPED, NO RINGS, BACKDROP)
     // =============================================================
-    const { surfaceTexture, roughnessTexture, lightsTexture, cloudTexture } =
-      generatePlanetTextures(1024, 512);
+    const textureLoader = new THREE.TextureLoader();
+
+    const surfaceTexture = textureLoader.load('/textures/earth/earth_surface.jpg');
+    surfaceTexture.colorSpace = THREE.SRGBColorSpace;
+
+    const lightsTexture = textureLoader.load('/textures/earth/earth_lights.jpg');
+    lightsTexture.colorSpace = THREE.SRGBColorSpace;
+
+    const cloudTexture = textureLoader.load('/textures/earth/earth_clouds.jpg');
+    cloudTexture.colorSpace = THREE.SRGBColorSpace;
 
     const planetGroup = new THREE.Group();
-    // Positioned majestically on the right/lower quadrant:
-    // Frames the interface beautifully without EVER overlapping text or inputs!
-    planetGroup.position.set(46, -18, -25);
-    planetGroup.rotation.z = THREE.MathUtils.degToRad(23.4);
+    // Positioned centered behind the search console & hero text
+    planetGroup.position.set(0, -6, -26);
+    planetGroup.rotation.z = THREE.MathUtils.degToRad(23.44); // Real Earth axial tilt
+    planetGroup.rotation.x = THREE.MathUtils.degToRad(6.5);
 
-    const planetRadius = 35;
+    const planetRadius = 46;
 
-    // --- A. Base Planetary Surface Mesh ---
+    // --- A. Base Planetary Surface Mesh (NASA Blue Marble Texture) ---
     const planetGeo = new THREE.SphereGeometry(planetRadius, 64, 64);
     const planetMat = new THREE.MeshStandardMaterial({
       map: surfaceTexture,
-      roughnessMap: roughnessTexture,
-      roughness: 0.65,
-      metalness: 0.15,
+      roughness: 0.52,
+      metalness: 0.08,
       emissiveMap: lightsTexture,
-      emissive: new THREE.Color(0xfff0d0),
-      emissiveIntensity: 1.25,
+      emissive: new THREE.Color(0xffd59e),
+      emissiveIntensity: 1.35,
     });
     const planetMesh = new THREE.Mesh(planetGeo, planetMat);
     planetGroup.add(planetMesh);
 
-    // --- B. Atmospheric Cloud Layer ---
-    const cloudGeo = new THREE.SphereGeometry(planetRadius * 1.012, 64, 64);
+    // --- B. Atmospheric Cloud Layer (NASA Satellite Weather Pattern) ---
+    const cloudGeo = new THREE.SphereGeometry(planetRadius * 1.014, 64, 64);
     const cloudMat = new THREE.MeshStandardMaterial({
       map: cloudTexture,
       transparent: true,
-      opacity: 0.88,
-      blending: THREE.NormalBlending,
-      roughness: 0.95,
-      metalness: 0.05,
+      opacity: 0.55,
+      blending: THREE.AdditiveBlending,
+      roughness: 0.9,
+      metalness: 0.0,
+      depthWrite: false,
     });
     const cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
     planetGroup.add(cloudMesh);
@@ -492,7 +244,7 @@ export default function InteractiveCosmicChatCanvas({
     const atmoGeo = new THREE.SphereGeometry(planetRadius * 1.032, 64, 64);
     const atmoMat = new THREE.ShaderMaterial({
       uniforms: {
-        sunDir: { value: new THREE.Vector3(-140, 75, 120).normalize() },
+        sunDir: { value: new THREE.Vector3(-130, 65, 110).normalize() },
       },
       vertexShader: `
         varying vec3 vNormal;
@@ -510,14 +262,14 @@ export default function InteractiveCosmicChatCanvas({
         varying vec3 vViewPosition;
         void main() {
           vec3 viewDir = normalize(vViewPosition);
-          float fresnel = pow(1.0 - max(0.0, dot(vNormal, viewDir)), 3.2);
-
+          float fresnel = pow(1.0 - max(0.0, dot(vNormal, viewDir)), 3.6);
           float sunDot = max(0.0, dot(vNormal, sunDir));
-          float intensity = fresnel * (0.35 + 0.65 * sunDot) * 1.7;
+          float intensity = fresnel * (0.35 + 0.65 * sunDot) * 2.2;
 
-          vec3 atmoCyan = vec3(0.18, 0.68, 1.0);
-          vec3 atmoWhite = vec3(0.85, 0.95, 1.0);
-          vec3 finalColor = mix(atmoCyan, atmoWhite, pow(sunDot, 4.0));
+          // Authentic Earth atmospheric blue to sunlight cyan-white
+          vec3 atmoSapphire = vec3(0.08, 0.48, 1.0);
+          vec3 atmoHorizon = vec3(0.65, 0.90, 1.0);
+          vec3 finalColor = mix(atmoSapphire, atmoHorizon, pow(sunDot, 3.5));
 
           gl_FragColor = vec4(finalColor, intensity);
         }
@@ -530,19 +282,7 @@ export default function InteractiveCosmicChatCanvas({
     const atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
     planetGroup.add(atmoMesh);
 
-    // --- D. Luminous Orbital Communication Ring ---
-    const ringGeo = new THREE.TorusGeometry(planetRadius * 1.38, 0.22, 16, 120);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x64d2ff,
-      transparent: true,
-      opacity: 0.35,
-      blending: THREE.AdditiveBlending,
-    });
-    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-    ringMesh.rotation.x = Math.PI * 0.42;
-    ringMesh.rotation.y = Math.PI * 0.12;
-    planetGroup.add(ringMesh);
-
+    // Note: No rings! Earth does not have planetary rings.
     scene.add(planetGroup);
 
     // =============================================================
@@ -574,27 +314,25 @@ export default function InteractiveCosmicChatCanvas({
 
     const animateLoop = () => {
       animationFrameId = requestAnimationFrame(animateLoop);
-      const delta = clock.getDelta();
       const elapsed = clock.getElapsedTime();
 
       // Smooth inertia cursor damping
       mouseX += (targetMouseX - mouseX) * 0.045;
       mouseY += (targetMouseY - mouseY) * 0.045;
 
-      // Observation deck camera parallax
-      camera.position.x = mouseX * 9;
-      camera.position.y = mouseY * 6;
-      camera.lookAt(mouseX * 2.5, mouseY * 1.8, 0);
+      // Subtle observation deck camera parallax
+      camera.position.x = mouseX * 4.5;
+      camera.position.y = mouseY * 3.0;
+      camera.lookAt(0, -2, 0);
 
-      // Deep space starfield slow drift & parallax
-      starField.rotation.y = elapsed * 0.008 + mouseX * 0.03;
-      starField.rotation.x = elapsed * 0.003 + mouseY * 0.03;
-      nebulaClouds.rotation.y = elapsed * 0.005;
+      // Deep space starfield slow drift
+      starField.rotation.y = elapsed * 0.006 + mouseX * 0.02;
+      starField.rotation.x = elapsed * 0.002 + mouseY * 0.02;
+      nebulaClouds.rotation.y = elapsed * 0.004;
 
-      // Realistic planetary rotation
-      planetMesh.rotation.y = elapsed * 0.022;
-      cloudMesh.rotation.y = elapsed * 0.028;
-      ringMesh.rotation.z = elapsed * 0.015;
+      // Realistic planetary Earth rotation (West to East)
+      planetMesh.rotation.y = 2.4 + elapsed * 0.016;
+      cloudMesh.rotation.y = 2.45 + elapsed * 0.022; // Clouds gently drift over continents
 
       // Dynamic star twinkling
       starMat.opacity = 0.88 + Math.sin(elapsed * 2.2) * 0.08;
@@ -626,10 +364,7 @@ export default function InteractiveCosmicChatCanvas({
       cloudMat.dispose();
       atmoGeo.dispose();
       atmoMat.dispose();
-      ringGeo.dispose();
-      ringMat.dispose();
       surfaceTexture.dispose();
-      roughnessTexture.dispose();
       lightsTexture.dispose();
       cloudTexture.dispose();
       renderer.dispose();
