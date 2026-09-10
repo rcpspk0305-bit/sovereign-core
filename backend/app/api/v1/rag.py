@@ -16,6 +16,7 @@ from app.core.interfaces.rag import (
     SearchResult,
     VectorStoreHealth,
 )
+from app.config import settings
 from app.core.rag.chroma import ChromaStore
 from app.core.rag.chunker import TextChunker
 from app.core.rag.migration import MigrationResult, migrate_chroma_to_qdrant
@@ -249,6 +250,12 @@ async def migrate_to_qdrant(
     audit_logger: BaseAuditLogger = Depends(get_audit_logger),
 ) -> MigrationResult:
     """Safely migrate all documents from ChromaDB into Qdrant vector database."""
+    if not getattr(settings, "ENABLE_QDRANT", False):
+        raise HTTPException(
+            status_code=400,
+            detail="Qdrant integration is disabled in settings (ENABLE_QDRANT=False). Set ENABLE_QDRANT=true in .env to enable migration.",
+        )
+
     source_chroma = ChromaStore()
     target_qdrant = QdrantStore()
 
@@ -273,6 +280,10 @@ async def migrate_to_qdrant(
     )
 
     if not result.success:
-        raise HTTPException(status_code=500, detail=result.error or "Migration failed")
+        err = result.error or "Migration failed"
+        if "disabled" in err.lower() or "mismatch" in err.lower():
+            raise HTTPException(status_code=400, detail=err)
+        raise HTTPException(status_code=500, detail=err)
 
     return result
+

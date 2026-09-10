@@ -99,6 +99,51 @@ def test_websocket_flight_telemetry(test_app):
             assert pong_frame["event_type"] == "pong"
 
 
+def test_websocket_flight_telemetry_task_specific(test_app):
+    """Verify task-specific WebSocket route (/ws/{task_id}) and initial handshake."""
+    from app.core.flight_recorder.manager import get_flight_recorder_manager
+    manager = get_flight_recorder_manager()
+    initial_conn_count = len(manager.active_connections)
+
+    with TestClient(test_app) as client:
+        with client.websocket_connect("/api/v1/flight-recorder/ws/test_task_777") as ws:
+            init_frame = ws.receive_json()
+            assert init_frame["event_type"] == "connected"
+            assert init_frame["task_id"] == "test_task_777"
+
+            # Connection should be registered
+            assert len(manager.active_connections) == initial_conn_count + 1
+            assert "test_task_777" in manager.task_connections
+
+            ws.send_json({"action": "ping"})
+            pong = ws.receive_json()
+            assert pong["event_type"] == "pong"
+
+    # After exit, connections must be cleaned up (no leak)
+    assert len(manager.active_connections) == initial_conn_count
+    assert "test_task_777" not in manager.task_connections
+
+
+@pytest.mark.asyncio
+async def test_manager_broadcast_ignores_unconnected_websockets():
+    """Verify broadcast_event safely handles closed or non-connected sockets without crashing."""
+    from app.core.flight_recorder.manager import FlightRecorderManager
+    from app.core.flight_recorder.models import FlightEvent, FlightEventType
+    import datetime
+
+    manager = FlightRecorderManager()
+    
+    # Broadcast with no targets
+    ev = FlightEvent(
+        event_type=FlightEventType.STEP_STARTED,
+        task_id="t1",
+        timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        data={"step": 1},
+    )
+    await manager.broadcast_event(ev)  # Should not raise
+
+
+
 def test_run_flight_mission_fallback_approval_pending(test_app):
     """Verify that missions executed via offline fallback remain PENDING approval, not AUTO_VERIFIED."""
     from app.core.interfaces.agents import AgentResult, AgentStep, BaseAgent

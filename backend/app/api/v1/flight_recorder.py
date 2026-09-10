@@ -46,29 +46,27 @@ class ApprovalUpdateRequest(BaseModel):
     notes: Optional[str] = None
 
 
-@router.websocket("/ws")
-@router.websocket("/ws/{task_id}")
-async def websocket_flight_telemetry(
+async def _handle_flight_recorder_ws(
     websocket: WebSocket,
-    task_id: Optional[str] = None,
-    manager: FlightRecorderManager = Depends(get_flight_recorder_manager),
-    agent: BaseAgent = Depends(get_agent),
-):
-    """Real-time bi-directional telemetry streaming for AI Flight Recorder."""
-    await manager.connect(websocket, task_id=task_id)
-    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-
-    # Send initial connection acknowledgment
-    await websocket.send_text(
-        json.dumps({
-            "event_type": "connected",
-            "task_id": task_id or "global",
-            "timestamp": now_iso,
-            "data": {"message": "Sovereign-Core Flight Recorder Telemetry Stream Active"},
-        })
-    )
-
+    task_id: Optional[str],
+    manager: FlightRecorderManager,
+    agent: BaseAgent,
+) -> None:
+    """Real-time bi-directional telemetry streaming handler with robust lifecycle management."""
     try:
+        await manager.connect(websocket, task_id=task_id)
+        now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        # Send initial connection acknowledgment safely inside try block
+        await websocket.send_text(
+            json.dumps({
+                "event_type": "connected",
+                "task_id": task_id or "global",
+                "timestamp": now_iso,
+                "data": {"message": "Sovereign-Core Flight Recorder Telemetry Stream Active"},
+            })
+        )
+
         while True:
             text = await websocket.receive_text()
             try:
@@ -139,11 +137,35 @@ async def websocket_flight_telemetry(
                             json.dumps({"event_type": "error", "message": str(e)})
                         )
 
-    except WebSocketDisconnect:
-        manager.disconnect(websocket, task_id=task_id)
+    except (WebSocketDisconnect, RuntimeError) as exc:
+        logger.debug("WebSocket client disconnected or transport closing: %s", exc)
     except Exception as exc:
         logger.warning("WebSocket exception: %s", exc)
+    finally:
         manager.disconnect(websocket, task_id=task_id)
+
+
+@router.websocket("/ws")
+async def websocket_flight_telemetry(
+    websocket: WebSocket,
+    task_id: Optional[str] = Query(default=None),
+    manager: FlightRecorderManager = Depends(get_flight_recorder_manager),
+    agent: BaseAgent = Depends(get_agent),
+):
+    """Global real-time telemetry WebSocket endpoint."""
+    await _handle_flight_recorder_ws(websocket, task_id, manager, agent)
+
+
+@router.websocket("/ws/{task_id}")
+async def websocket_flight_telemetry_task(
+    websocket: WebSocket,
+    task_id: str,
+    manager: FlightRecorderManager = Depends(get_flight_recorder_manager),
+    agent: BaseAgent = Depends(get_agent),
+):
+    """Task-specific real-time telemetry WebSocket endpoint."""
+    await _handle_flight_recorder_ws(websocket, task_id, manager, agent)
+
 
 
 @router.post("/run", response_model=FlightRecord)

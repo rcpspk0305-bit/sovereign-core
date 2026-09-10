@@ -128,3 +128,32 @@ def test_rag_pdf_upload_and_citations(test_client: TestClient):
     assert doc_meta.get("document_name") == "whitepaper.pdf"
     assert "page_number" in doc_meta
     assert "source" in doc_meta
+
+
+def test_rag_migrate_disabled_returns_400(test_client: TestClient):
+    """Verify that attempting to migrate when ENABLE_QDRANT=False returns 400 Bad Request, not 500."""
+    res = test_client.post("/api/v1/rag/migrate?verify_sample=true")
+    assert res.status_code == 400
+    detail = res.json().get("detail", "")
+    assert "disabled" in detail.lower()
+
+
+def test_rag_upload_validation_errors(test_client: TestClient):
+    """Verify that invalid upload payloads return clean, descriptive 400 errors."""
+    # 1. Non-pdf file
+    res = test_client.post(
+        "/api/v1/rag/upload",
+        files={"file": ("notes.txt", b"plain text content", "text/plain")},
+    )
+    assert res.status_code == 400
+    assert "only pdf" in res.json().get("detail", "").lower()
+
+    # 2. Empty file
+    res = test_client.post(
+        "/api/v1/rag/upload",
+        files={"file": ("empty.pdf", b"", "application/pdf")},
+    )
+    assert res.status_code == 400
+    assert "empty" in res.json().get("detail", "").lower()
+
+

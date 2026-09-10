@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from fastapi import WebSocket
+from starlette.websockets import WebSocketState
 
 from app.config import settings
 from app.core.flight_recorder.models import (
@@ -99,9 +100,10 @@ class FlightRecorderManager:
     async def connect(self, websocket: WebSocket, task_id: Optional[str] = None) -> None:
         """Register a WebSocket client for real-time telemetry streaming."""
         await websocket.accept()
-        self.active_connections.add(websocket)
-        if task_id:
-            self.subscribe(websocket, task_id)
+        if getattr(websocket, "client_state", None) == WebSocketState.CONNECTED:
+            self.active_connections.add(websocket)
+            if task_id:
+                self.subscribe(websocket, task_id)
 
     def subscribe(self, websocket: WebSocket, task_id: str) -> None:
         """Subscribe a WebSocket connection to a specific task ID."""
@@ -132,14 +134,22 @@ class FlightRecorderManager:
         payload = event.model_dump()
         text = json.dumps(payload)
 
-        targets: Set[WebSocket] = set(self.active_connections)
+        # Only target active connections that are in CONNECTED state
+        targets: Set[WebSocket] = {
+            ws for ws in self.active_connections
+            if getattr(ws, "client_state", None) == WebSocketState.CONNECTED
+        }
         if event.task_id in self.task_connections:
-            targets.update(self.task_connections[event.task_id])
+            for ws in self.task_connections[event.task_id]:
+                if getattr(ws, "client_state", None) == WebSocketState.CONNECTED:
+                    targets.add(ws)
 
         if not targets:
             return
 
         async def _safe_send(ws: WebSocket) -> Optional[WebSocket]:
+            if getattr(ws, "client_state", None) != WebSocketState.CONNECTED:
+                return ws
             try:
                 await ws.send_text(text)
                 return None
