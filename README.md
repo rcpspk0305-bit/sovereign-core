@@ -1,53 +1,81 @@
 # Sovereign-Core
 
-> Production-Quality Local AI Workbench Foundation with Real-Time Telemetry & 3D Interactive Workbench
+> Privacy-First Local AI Operating System — Cinematic UI · Local LLM · RAG · Agent Orchestration · Real-Time Telemetry
 
-Sovereign-Core is an extensible, privacy-first local AI workbench built with a **FastAPI** Python backend, **Next.js TypeScript** frontend, native **Ollama** integration, **PyMuPDF** document parsing, **ChromaDB** persistent vector storage, **Anime.js v4** 3D animation physics, and **Docker Compose** orchestration.
-
-For an exhaustive breakdown of libraries, versions, models, and specifications, see [TECHNOLOGIES.md](TECHNOLOGIES.md).
+Sovereign-Core is an extensible, **local-first** AI workbench built for developers, researchers, and security-sensitive environments. It runs entirely on your machine — no cloud calls, no data leaving your network.
 
 ---
 
-## Key Features & Architecture
+## Stack
 
-### 1. Local LLM Execution & Typed Service Abstraction
-- **Local LLM Execution**: Native, async communication with local Ollama daemon using **Gemma 4 E2B** (`gemma4:e2b`) as default model, supporting streaming, prompt evaluation, and timeout handling.
-- **Typed Service Abstraction**: High-level `LLMService` decouples application logic from raw Ollama endpoints, with structured exception hierarchies (`LLMConnectionError`, `LLMTimeoutError`, `LLMModelNotFoundError`).
-- **Dynamic Model Selection**: Live model discovery and selection via `/api/v1/models` and `/api/v1/health` with fallback resilience.
+| Layer | Technology |
+|---|---|
+| **Backend** | FastAPI (Python 3.11+) |
+| **LLM Runtime** | Ollama (`gemma4:e2b` default) |
+| **Vector Store** | ChromaDB (HNSW cosine) |
+| **Document Parsing** | PyMuPDF |
+| **Frontend** | Next.js 16 · React · TypeScript |
+| **Styling** | Tailwind CSS · Vanilla CSS |
+| **Animation** | Framer Motion · Three.js / React Three Fiber |
+| **Icons** | Lucide React |
+| **UI Primitives** | shadcn/ui |
+| **Containers** | Docker Compose |
 
-### 2. Document Ingestion & Vector Knowledge Memory
-- **PyMuPDF Extraction**: Extracts text page-by-page from uploaded PDFs, preserving layout, chunk indices, and page numbers.
-- **Smart Overlapping Chunker**: Splits extracted text respecting sentence and word boundaries with configurable chunk size (500) and overlap (50).
-- **ChromaDB Vector Store**: Local persistent vector index using HNSW cosine distance space (`hnsw:space: cosine`) with auto-recovering dimensionality migration.
-- **Neural Embeddings**: Seamless vector generation via Ollama's `nomic-embed-text:latest` with zero-downtime deterministic fallback.
-- **Source Citation Retention**: Every indexed and retrieved chunk retains `document_name`, `page_number`, `chunk_index`, and `source` metadata so responses cite exact origins.
+---
 
-### 3. Controlled Inspection Agent & Tool Bay
-- **Controlled Reasoning Loop**: Bounded single-agent execution constrained strictly to authorized local tools: `document_retrieval`, `calculator`, `document_generation`, and `approval_note_generator`.
-- **Strict Security Guardrails**: Zero unrestricted shell access and zero autonomous internet access with deterministic policy enforcement (`NO_EGRESS`).
-- **Step Budget Bounds**: Configurable step count ceiling (1 to 10 steps) preventing infinite loops.
-- **Interactive Tool Bay**: Visual catalog of registered tools, schema parameter inspection, and dry-run JSON execution sandbox with millisecond latency metrics.
+## Workspaces
 
-### 4. AI Flight Recorder & Real-Time Telemetry Streaming
-- **WebSocket Telemetry Stream**: Real-time event broadcasting (`/api/v1/flight-recorder/ws` and `/ws/{task_id}`) for thought steps, tool calls, and provenance retrieval.
-- **Durable Blackbox Mission Records**: Persists task ID, model, network mode, step traces, tool executions, retrieved sources, errors, artifacts, and auditor disposition.
-- **Auditor Disposition Workflow**: Interactive sign-off controls (`AUTO_VERIFIED`, `APPROVED`, `PENDING`, `REJECTED`, `POLICY_VIOLATION`, `FAILED`).
-- **Approval Note Artifact Generator**: Produces cryptographically verified `.docx` approval documents with SHA-256 checksums, unverified claim warnings, and human sign-off signature blocks.
+The UI is a single-page AI operating system with eight switchable workspaces:
 
-### 5. Standardized Error Architecture & 3D Holographic Diagnostic HUD
-- **Contract-First Error Contracts**: Typed error schema (`AppError`, `ErrorCode`, `ErrorSeverity`) adhering to stable API design guidelines.
-- **Categorized Error Codes**: `NETWORK_OFFLINE`, `OLLAMA_DISCONNECTED`, `MISSION_TIMEOUT`, `AGENT_EXECUTION_FAILED`, `POLICY_VIOLATION`, `VALIDATION_ERROR`, and `STREAM_ABORTED`.
-- **3D Holographic Diagnostic Modal**: Floating diagnostic HUD presenting operator diagnosis, suggested remediation steps, copyable diagnostic traces, and interactive retry triggers.
-- **Orphan / Stuck Request Prevention**: Native `AbortController` integration allowing immediate cancellation of long-running missions.
+| Workspace | Description |
+|---|---|
+| **Overview** | Sovereign Command Center — system health, model status, telemetry at a glance |
+| **Chat** | Mission Intelligence Cockpit — streaming LLM chat with context injection |
+| **Knowledge Base** | ChromaDB semantic memory — search, stats, PDF ingestion |
+| **Documents** | Deterministic Knowledge Ingestion — PDF drag-and-drop pipeline |
+| **Agent Squad** | Controlled multi-agent orchestration with step-budget enforcement |
+| **Workflows** | Node-canvas visual workflow builder |
+| **Models** | Model Control Center — live Ollama model discovery and selection |
+| **Settings** | Environment, API keys, and system configuration |
 
-### 6. 3D Interactive Workbench UI & Anime.js v4 Engine
-- **3D Perspective Tilt**: Physics-based 3D tilt (`apply3DTilt`, `reset3DTilt`) on hover for console cards and workbench bays.
-- **Multi-Axis Orbital Mechanics**: Continuous 3D rotation of orbital rings and glowing core pulsations using Anime.js timing loops.
-- **Four Fully Interactive Workbench Bays**:
-  - **Mission Control**: 3D console with prompt presets, millisecond elapsed timer, live reasoning step progression, instant abort button, and formatted output feed.
-  - **Knowledge Field**: Real-time ChromaDB vector statistics, semantic memory search with similarity percentage bars, PDF drag-and-drop dropzone, and database reset.
-  - **Tool Bay**: Registered tools catalog, schema inspector, and JSON parameter execution sandbox.
-  - **Flight Recorder Bay**: Live streaming telemetry status, mission history, provenance source previews, and formal approval controls.
+The shell also includes two immersive 3D landing screens:
+
+- **Mission** — React Three Fiber cosmic hero canvas
+- **Mission Chat** — animated 3D chat canvas
+
+---
+
+## Key Features
+
+### Local LLM & Model Management
+- Async streaming via Ollama (`/api/v1/chat`, `/api/v1/models`)
+- Live model discovery, dynamic selection, and health fallback
+- Typed `LLMService` abstraction with structured exception hierarchy
+
+### Document Ingestion & RAG
+- PyMuPDF page-by-page extraction with layout preservation
+- Smart overlapping chunker (chunk=500, overlap=50, sentence-boundary-aware)
+- ChromaDB persistent HNSW vector index with auto-recovering dimensionality migration
+- `nomic-embed-text:latest` neural embeddings via Ollama
+- Source citation retention: `document_name`, `page_number`, `chunk_index`
+
+### Agent Orchestration
+- Bounded single-agent reasoning loop (1–10 configurable steps)
+- Registered tools: `document_retrieval`, `calculator`, `document_generation`, `approval_note_generator`
+- Zero unrestricted shell/internet access (`NO_EGRESS` policy)
+- Agent Squad Workspace for multi-agent management
+
+### AI Flight Recorder & Telemetry
+- WebSocket real-time telemetry stream (`/api/v1/flight-recorder/ws`)
+- Durable mission blackbox: task ID, model, step traces, tool calls, provenance, errors
+- Auditor disposition workflow: `AUTO_VERIFIED` · `APPROVED` · `PENDING` · `REJECTED` · `POLICY_VIOLATION` · `FAILED`
+- Cryptographically verified `.docx` approval note generation (SHA-256)
+
+### Cinematic UI
+- Three.js / React Three Fiber 3D cosmic canvas (landing & chat)
+- Framer Motion micro-animations, staggered entry, physics spring transitions
+- Glassmorphism panels, gradient mesh backgrounds, ambient glow system
+- Fully dark-mode, responsive, keyboard-navigable
 
 ---
 
@@ -57,36 +85,44 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
 .
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/          # Modular API routes (chat, models, rag, tools, agents, flight-recorder, audit)
+│   │   ├── api/v1/              # Routes: chat, models, rag, tools, agents, flight-recorder, audit
 │   │   ├── core/
-│   │   │   ├── interfaces/  # Abstract contracts (llm, rag, tools, agents, audit)
-│   │   │   ├── llm/         # Ollama client & typed LLMService implementation
-│   │   │   ├── rag/         # PyMuPDF parser, chunker, embeddings, & ChromaDB vector store
-│   │   │   ├── tools/       # Tool registry, calculator, doc retrieval, doc generation, approval note
-│   │   │   ├── agents/      # Controlled inspection agent orchestration engine
-│   │   │   ├── flight_recorder/ # Blackbox manager, telemetry event broadcaster, data models
-│   │   │   └── audit/       # Structured JSON audit logger
-│   │   ├── config.py        # Settings & absolute path anchoring (relative to backend/)
-│   │   └── main.py          # Application entrypoint & WebSocket routes
-│   ├── data/                # Runtime data directory (persisted locally)
-│   │   ├── artifacts/       # Generated DOCX approval notes
-│   │   ├── audit/           # Structured JSON audit logs
-│   │   ├── chroma/          # ChromaDB persistent vector index
-│   │   └── flight_records/  # Persisted mission blackbox JSON records
-│   ├── tests/               # Pytest unit & integration test suite (66+ tests)
+│   │   │   ├── interfaces/      # Abstract contracts (llm, rag, tools, agents, audit)
+│   │   │   ├── llm/             # Ollama client & LLMService
+│   │   │   ├── rag/             # PyMuPDF parser, chunker, embeddings, ChromaDB store
+│   │   │   ├── tools/           # Tool registry, calculator, doc retrieval, approval note
+│   │   │   ├── agents/          # Controlled inspection agent engine
+│   │   │   ├── flight_recorder/ # Blackbox manager & telemetry broadcaster
+│   │   │   └── audit/           # Structured JSON audit logger
+│   │   ├── config.py
+│   │   └── main.py
+│   ├── data/
+│   │   ├── artifacts/           # Generated DOCX approval notes
+│   │   ├── audit/               # Structured JSON audit logs
+│   │   ├── chroma/              # ChromaDB persistent index
+│   │   └── flight_records/      # Mission blackbox JSON records
+│   ├── tests/                   # 66+ pytest unit & integration tests
 │   ├── Dockerfile
 │   └── pyproject.toml
 ├── frontend/
 │   ├── src/
-│   │   ├── app/             # Next.js App Router (layout, globals.css with 3D tokens, page.tsx)
+│   │   ├── app/                 # Next.js App Router (layout.tsx, globals.css, page.tsx)
 │   │   ├── components/
-│   │   │   └── workbench/   # 3D Workbench bays (MissionConsole3D, KnowledgeBay, ToolBay, FlightRecorderBay, ErrorDiagnosticModal)
-│   │   └── lib/             # API client (api-client.ts), contracts (types.ts), Anime.js v4 engine (animations.ts)
+│   │   │   ├── agents/          # AgentSquadWorkspace
+│   │   │   ├── chat/            # AgentChatLauncher, ChatWorkspace, InteractiveCosmicChatCanvas
+│   │   │   ├── knowledge/       # DocumentPipelineWorkspace
+│   │   │   ├── landing/         # CosmicHero, CosmicCanvas3D
+│   │   │   ├── models/          # ModelControlCenter
+│   │   │   ├── settings/        # SettingsWorkspace
+│   │   │   ├── visualizations/  # WorkflowNodeCanvas, IntelligenceCore
+│   │   │   └── workbench/       # CommandCenterOverview, KnowledgeBay, MemoryFlowBay,
+│   │   │                        #   ToolBay, FlightRecorderBay
+│   │   └── lib/                 # api-client.ts, types.ts, animations.ts
 │   ├── Dockerfile
 │   └── package.json
-├── docker-compose.yml       # Production container orchestration
-├── TECHNOLOGIES.md          # Comprehensive technology stack reference
-└── .env.example             # Environment configuration variables
+├── docker-compose.yml
+├── TECHNOLOGIES.md
+└── .env.example
 ```
 
 ---
@@ -97,36 +133,43 @@ For an exhaustive breakdown of libraries, versions, models, and specifications, 
 
 - Python 3.11+
 - Node.js 18+
-- [Ollama](https://ollama.com) installed and running locally (`ollama serve`)
-- Pull default models:
-  ```bash
-  ollama run gemma4:e2b
-  ollama pull nomic-embed-text
-  ```
-- Docker & Docker Compose (optional for containerized deployment)
+- [Ollama](https://ollama.com) installed and running
 
-### 1. Local Development (Backend)
+```bash
+ollama serve
+ollama run gemma4:e2b
+ollama pull nomic-embed-text
+```
+
+Docker & Docker Compose *(optional)*
+
+---
+
+### Backend
 
 ```bash
 cd backend
 python -m venv .venv
-# Activate virtual environment:
-# Windows: .venv\Scripts\activate
-# Linux/macOS: source .venv/bin/activate
+
+# Activate
+# Windows:  .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
 
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
 
-# Run backend test suite
+# Run tests
 pytest -v
 
-# Start FastAPI dev server (data paths are anchored absolutely to backend/)
+# Start dev server
 uvicorn app.main:app --reload --port 8000
 ```
 
-Interactive Swagger documentation is available at `http://localhost:8000/docs`.
+Swagger UI: `http://localhost:8000/docs`
 
-### 2. Local Development (Frontend)
+---
+
+### Frontend
 
 ```bash
 cd frontend
@@ -134,51 +177,50 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` to access the Sovereign-Core interactive 3D workbench.
+Open `http://localhost:3000`
 
-### 3. Docker Compose Spin-up
+---
+
+### Docker Compose
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-The backend will connect to your host machine's Ollama instance via `host.docker.internal:11434`.
+The backend connects to Ollama on the host via `host.docker.internal:11434`.
 
 ---
 
 ## Testing
-
-Run the full backend test suite:
 
 ```bash
 cd backend
 pytest -v
 ```
 
-The 66+ tests cover:
-- Interface adherence and abstract base contract validation
-- Mock and live LLM streaming
+66+ tests covering:
+- LLM interface adherence, mock & live streaming
 - PyMuPDF parsing and source metadata retention
-- ChromaDB vector indexing, cosine similarity retrieval, and migration
-- Tool schema validation and safe sandbox execution
+- ChromaDB indexing, cosine similarity, and migration
+- Tool schema validation and sandbox execution
 - Agent reasoning loops and step-budget enforcement
-- Real-time WebSocket telemetry broadcasting
-- Claim-evidence grounding validation and unverified claim detection
-- Local DOCX approval note generation with cryptographic checksums
+- WebSocket telemetry broadcasting
+- Claim-evidence grounding and unverified claim detection
+- DOCX approval note generation with SHA-256 checksums
 - Structured JSON audit persistence
 
 ---
 
-## Documentation Links
+## Documentation
 
 - [System Architecture](docs/ARCHITECTURE.md)
-- [AI Flight Recorder Specification](docs/FLIGHT_RECORDER_SPEC.md)
-- [Approval Note Generator Specification](docs/APPROVAL_NOTE_SPEC.md)
-- [Security & Governance Specification](docs/SECURITY_AND_GOVERNANCE.md)
+- [AI Flight Recorder Spec](docs/FLIGHT_RECORDER_SPEC.md)
+- [Approval Note Generator Spec](docs/APPROVAL_NOTE_SPEC.md)
+- [Security & Governance Spec](docs/SECURITY_AND_GOVERNANCE.md)
 - [API Reference](docs/API_REFERENCE.md)
-- [Technology Stack Overview](TECHNOLOGIES.md)
-- [Interactive API Documentation (Swagger UI)](http://localhost:8000/docs)
+- [Technology Stack](TECHNOLOGIES.md)
+- [Swagger UI](http://localhost:8000/docs)
 
 ---
 

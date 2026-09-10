@@ -1,19 +1,19 @@
-# Byte-compiled / optimized / DLL files
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
 
-# C extensions and builds
+# Build / dist
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-/lib/
-/lib64/
+lib/
+lib64/
 parts/
 sdist/
 var/
@@ -32,30 +32,37 @@ ENV/
 env.bak/
 venv.bak/
 
-# Environment configurations
+# ── Environment ────────────────────────────────────────────────────────────────
 .env
 .env.local
 .env.*.local
 
-# Testing & Coverage
+# ── Testing & Coverage ─────────────────────────────────────────────────────────
 .pytest_cache/
 .ruff_cache/
 .coverage
+.coverage.*
 htmlcov/
+coverage.xml
 
-# Node / Next.js
+# ── Node / Next.js ─────────────────────────────────────────────────────────────
 node_modules/
 frontend/node_modules/
 .next/
 frontend/.next/
+# Turbopack cache
+.turbo/
+frontend/.turbo/
 frontend/out/
 frontend/build/
 .npm/
+.pnpm-store/
+.yarn/
 .eslintcache
 *.tsbuildinfo
 next-env.d.ts
 
-# Runtime logs & data storage
+# ── Runtime data & generated artifacts ────────────────────────────────────────
 *.log
 logs/
 /audit/
@@ -66,10 +73,21 @@ backend/data/chroma/
 backend/data/flight_records/*
 !backend/data/**/.gitkeep
 
-# OS & IDE metadata
+# ── OS & IDE metadata ──────────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 .idea/
 .vscode/
 *.swp
+*.sak
 *.bak
+
+# ── AI / agent tooling ────────────────────────────────────────────────────────
+.agents/
+.gemini/
