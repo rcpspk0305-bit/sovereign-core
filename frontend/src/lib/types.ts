@@ -297,4 +297,52 @@ export interface CreateSessionRequest {
   model?: string;
 }
 
+export interface WorkflowNodeModel {
+  id: string;
+  label: string;
+  type: 'trigger' | 'router' | 'agent' | 'retrieval' | 'eval' | 'model' | 'seal' | 'tool' | 'custom';
+  handler?: string;
+  tool?: string;
+  agent?: string;
+  input?: Record<string, any>;
+  output?: Record<string, any>;
+  condition?: string;
+  status: 'idle' | 'running' | 'completed' | 'failed' | 'skipped';
+  latencyMs?: number;
+}
+
+export interface WorkflowEdgeModel {
+  source: string;
+  target: string;
+  condition?: string;
+}
+
+export interface WorkflowGraphModel {
+  id: string;
+  name: string;
+  description?: string;
+  nodes: WorkflowNodeModel[];
+  edges: WorkflowEdgeModel[];
+}
+
+export interface GraphExecutionState {
+  mission_id: string;
+  task: string;
+  current_step: number;
+  max_steps: number;
+  selected_model: string;
+  current_node?: string;
+  completed_nodes: string[];
+  tool_calls: Array<{ tool: string; args: Record<string, any> }>;
+  tool_results: Array<Record<string, any>>;
+  evidence: Array<Record<string, any>>;
+  citations: string[];
+  provenance: Record<string, any>;
+  verification_status: 'unverified' | 'in_progress' | 'verified' | 'rejected';
+  approval_required: boolean;
+  approval_status: 'pending' | 'approved' | 'rejected' | 'auto_approved';
+  errors: string[];
+  final_output: string;
+}
+
 

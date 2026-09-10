@@ -59,17 +59,49 @@ Discover available local models. If local Ollama daemon is offline, returns defa
 ## 3. Agents Endpoints
 
 ### `POST /agents/run`
-Execute the controlled `InspectionAnalysisAgent`.
+Execute the controlled agent loop using either Sovereign Classic Loop or LangGraph Controlled State Graph.
 - **Request Body**:
   ```json
   {
     "prompt": "string",
     "session_id": "string (optional)",
     "max_steps": 5,
-    "model": "string (optional)"
+    "model": "string (optional)",
+    "orchestrator": "langgraph | default (optional)"
   }
   ```
 - **Response**: `AgentResult`
+
+### `GET /agents/{mission_id}`
+Retrieve the execution state and status of a graph or classic mission.
+- **Path Parameter**: `mission_id` (string)
+- **Response**:
+  ```json
+  {
+    "mission_id": "string",
+    "status": "RUNNING | COMPLETED | ERROR",
+    "current_step": 2,
+    "max_steps": 5,
+    "result": "AgentResult | null"
+  }
+  ```
+
+### `POST /agents/{mission_id}/approve`
+Submit human authority gate approval or rejection for a mission.
+- **Path Parameter**: `mission_id` (string)
+- **Request Body**:
+  ```json
+  {
+    "approved": true,
+    "notes": "string (optional)"
+  }
+  ```
+- **Response**: `{"mission_id": "...", "approval_status": "APPROVED | REJECTED"}`
+
+### `POST /agents/{mission_id}/cancel`
+Gracefully cancel an active mission execution.
+- **Path Parameter**: `mission_id` (string)
+- **Response**: `{"mission_id": "...", "status": "CANCELLED"}`
 
 ---
 

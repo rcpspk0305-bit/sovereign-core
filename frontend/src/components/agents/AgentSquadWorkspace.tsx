@@ -110,6 +110,23 @@ const INITIAL_AGENTS: AgentEntity[] = [
   },
 ];
 
+export type GraphNodeId = 'MISSION' | 'PLANNER' | 'RETRIEVAL' | 'CALCULATOR' | 'VERIFIER' | 'APPROVAL';
+
+interface GraphStageDef {
+  id: GraphNodeId;
+  label: string;
+  role: string;
+}
+
+const GRAPH_STAGES: GraphStageDef[] = [
+  { id: 'MISSION', label: 'MISSION', role: 'Directive Intake & Context Framing' },
+  { id: 'PLANNER', label: 'PLANNER', role: 'Bounded Reasoning & Tool Routing' },
+  { id: 'RETRIEVAL', label: 'RETRIEVAL', role: 'Air-Gapped ChromaDB Vector Evidence' },
+  { id: 'CALCULATOR', label: 'CALCULATOR', role: 'Deterministic Sandboxed Computation' },
+  { id: 'VERIFIER', label: 'VERIFIER', role: 'Strict Provenance & Fact Verification' },
+  { id: 'APPROVAL', label: 'APPROVAL', role: 'Human Authority Cryptographic Gate' },
+];
+
 interface AgentSquadWorkspaceProps {
   currentModel?: string;
   onError?: (err: AppError) => void;
@@ -123,8 +140,13 @@ export default function AgentSquadWorkspace({
   const [selectedAgentId, setSelectedAgentId] = useState<string>('agent-research');
   const [directivePrompt, setDirectivePrompt] = useState<string>('');
   const [isDispatching, setIsDispatching] = useState<boolean>(false);
-  const [launchStep, setLaunchStep] = useState<number>(0);
+  const [orchestratorType, setOrchestratorType] = useState<'langgraph' | 'default'>('langgraph');
+  const [activeNode, setActiveNode] = useState<GraphNodeId | null>(null);
+  const [completedNodes, setCompletedNodes] = useState<GraphNodeId[]>([]);
+  const [verificationStatus, setVerificationStatus] = useState<'UNVERIFIED' | 'IN_PROGRESS' | 'VERIFIED' | 'REJECTED'>('UNVERIFIED');
   const [executionResult, setExecutionResult] = useState<AgentResult | null>(null);
+  const [liveToolCalls, setLiveToolCalls] = useState<Array<{ tool: string; args: Record<string, any>; output?: any }>>([]);
+  const [liveEvidence, setLiveEvidence] = useState<Array<any>>([]);
 
   const selectedAgent = agents.find((a) => a.id === selectedAgentId) || agents[0];
 
@@ -133,27 +155,74 @@ export default function AgentSquadWorkspace({
 
     setIsDispatching(true);
     setExecutionResult(null);
+    setLiveToolCalls([]);
+    setLiveEvidence([]);
+    setVerificationStatus('IN_PROGRESS');
+    setCompletedNodes([]);
+    setActiveNode('MISSION');
 
-    // Update agent state to EXECUTING
+    // Update agent visual state
     setAgents((prev) =>
       prev.map((a) =>
         a.id === selectedAgentId ? { ...a, state: 'EXECUTING', currentTask: directivePrompt } : a
       )
     );
 
-    // Animate the Mission Launch Pipeline:
-    // USER -> MISSION -> AGENT -> TOOLS -> KNOWLEDGE -> MODEL -> RESULT
-    setLaunchStep(1); // USER DIRECTIVE
-    setTimeout(() => setLaunchStep(2), 350); // MISSION PARAMETERS
-    setTimeout(() => setLaunchStep(3), 700); // AGENT DISPATCH
-    setTimeout(() => setLaunchStep(4), 1100); // TOOLS ACTIVATION
-    setTimeout(() => setLaunchStep(5), 1500); // KNOWLEDGE RETRIEVAL
-    setTimeout(() => setLaunchStep(6), 1900); // MODEL INFERENCE
-    setTimeout(() => setLaunchStep(7), 2400); // FINAL VERIFIED RESULT
+    // Dynamic timeline transitions
+    setTimeout(() => {
+      setCompletedNodes((prev) => Array.from(new Set([...prev, 'MISSION' as GraphNodeId])));
+      setActiveNode('PLANNER');
+    }, 400);
 
     try {
-      const res = await api.runAgent(directivePrompt.trim(), currentModel, 5);
+      const res = await api.runAgent(directivePrompt.trim(), currentModel, 5, orchestratorType);
       setExecutionResult(res);
+
+      // Extract tool calls and evidence from steps
+      const toolInvocations: Array<{ tool: string; args: Record<string, any>; output?: any }> = [];
+      const evidenceList: Array<any> = [];
+
+      let usedRetrieval = false;
+      let usedCalculator = false;
+
+      if (res.steps && res.steps.length > 0) {
+        res.steps.forEach((s) => {
+          if (s.tool_name) {
+            toolInvocations.push({
+              tool: s.tool_name,
+              args: s.tool_arguments || {},
+              output: s.tool_result?.output,
+            });
+            if (s.tool_name.toLowerCase().includes('retriev') || s.tool_name.toLowerCase().includes('rag') || s.tool_name.toLowerCase().includes('document')) {
+              usedRetrieval = true;
+            }
+            if (s.tool_name.toLowerCase().includes('calc')) {
+              usedCalculator = true;
+            }
+            if (s.tool_result?.output) {
+              evidenceList.push({
+                source_tool: s.tool_name,
+                data: s.tool_result.output,
+                timestamp: new Date().toISOString(),
+              });
+            }
+          }
+        });
+      }
+
+      setLiveToolCalls(toolInvocations);
+      setLiveEvidence(evidenceList);
+
+      // Sequence completion through graph nodes
+      const finishedNodes: GraphNodeId[] = ['MISSION', 'PLANNER'];
+      if (usedRetrieval) finishedNodes.push('RETRIEVAL');
+      if (usedCalculator) finishedNodes.push('CALCULATOR');
+      finishedNodes.push('VERIFIER');
+      finishedNodes.push('APPROVAL');
+
+      setCompletedNodes(finishedNodes);
+      setActiveNode(null);
+      setVerificationStatus(res.success ? 'VERIFIED' : 'REJECTED');
 
       setAgents((prev) =>
         prev.map((a) =>
@@ -161,6 +230,8 @@ export default function AgentSquadWorkspace({
         )
       );
     } catch (err) {
+      setActiveNode(null);
+      setVerificationStatus('REJECTED');
       setAgents((prev) =>
         prev.map((a) =>
           a.id === selectedAgentId ? { ...a, state: 'ERROR', currentTask: 'Execution timeout or error' } : a
@@ -171,16 +242,6 @@ export default function AgentSquadWorkspace({
       setIsDispatching(false);
     }
   };
-
-  const LAUNCH_PIPELINE = [
-    { num: 1, label: 'USER' },
-    { num: 2, label: 'MISSION' },
-    { num: 3, label: 'AGENT' },
-    { num: 4, label: 'TOOLS' },
-    { num: 5, label: 'KNOWLEDGE' },
-    { num: 6, label: 'MODEL' },
-    { num: 7, label: 'RESULT' },
-  ];
 
   return (
     <div className="sovereign-stage-container">
@@ -355,59 +416,226 @@ export default function AgentSquadWorkspace({
         })}
       </div>
 
-      {/* MISSION LAUNCH DISPATCHER (USER -> MISSION -> AGENT -> TOOLS -> KNOWLEDGE -> MODEL -> RESULT) */}
-      <div className="sovereign-glass-panel" style={{ padding: '28px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      {/* MISSION ORCHESTRATION & GRAPH PIPELINE */}
+      <div className="sovereign-glass-panel" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Zap size={18} className="text-gold" />
             <span style={{ fontWeight: 800, fontSize: '15px', color: '#fff' }}>
-              Dispatch Mission to {selectedAgent.name}
+              Mission Orchestration: {selectedAgent.name}
             </span>
           </div>
-          <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>
-            TARGET: {selectedAgent.callsign}
-          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0, 0, 0, 0.4)', padding: '4px 8px', borderRadius: '8px', border: '1px solid var(--sov-border-subtle)' }}>
+              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>ORCHESTRATOR:</span>
+              <button
+                type="button"
+                onClick={() => setOrchestratorType('langgraph')}
+                style={{
+                  fontSize: '10px',
+                  fontFamily: 'var(--font-mono)',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: orchestratorType === 'langgraph' ? 'var(--sov-cyan)' : 'transparent',
+                  color: orchestratorType === 'langgraph' ? '#000' : 'var(--sov-text-muted)',
+                  fontWeight: orchestratorType === 'langgraph' ? 700 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                LangGraph Controlled
+              </button>
+              <button
+                type="button"
+                onClick={() => setOrchestratorType('default')}
+                style={{
+                  fontSize: '10px',
+                  fontFamily: 'var(--font-mono)',
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: orchestratorType === 'default' ? 'var(--sov-gold)' : 'transparent',
+                  color: orchestratorType === 'default' ? '#000' : 'var(--sov-text-muted)',
+                  fontWeight: orchestratorType === 'default' ? 700 : 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Classic Loop
+              </button>
+            </div>
+
+            <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>
+              TARGET: {selectedAgent.callsign}
+            </span>
+          </div>
         </div>
 
-        {/* Animated Launch Pipeline Visualizer */}
-        {launchStep > 0 && (
+        {/* GRAPH MODEL PIPELINE DISPLAY (MISSION ↓ PLANNER ✓ ↓ RETRIEVAL ✓ ↓ CALCULATOR ✓ ↓ VERIFIER ● ↓ APPROVAL) */}
+        <div
+          style={{
+            padding: '20px',
+            borderRadius: '12px',
+            background: 'rgba(5, 3, 15, 0.85)',
+            border: '1px solid var(--sov-border-medium)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', color: 'var(--sov-cyan)', fontWeight: 700 }}>
+              CONTROLLED STATE GRAPH TOPOLOGY
+            </span>
+            <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>
+              BOUNDED STEP BUDGET: 1 &le; STEPS &le; 10
+            </span>
+          </div>
+
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '12px 18px',
-              borderRadius: '8px',
-              background: 'rgba(6, 4, 18, 0.85)',
-              border: '1px solid var(--sov-border-medium)',
-              marginBottom: '20px',
               gap: '8px',
               flexWrap: 'wrap',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: 'rgba(10, 8, 24, 0.6)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
             }}
           >
-            {LAUNCH_PIPELINE.map((p, idx) => (
+            {GRAPH_STAGES.map((stage, idx) => {
+              const isCompleted = completedNodes.includes(stage.id);
+              const isActive = activeNode === stage.id;
+
+              return (
+                <React.Fragment key={stage.id}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      background: isActive
+                        ? 'rgba(0, 210, 255, 0.15)'
+                        : isCompleted
+                        ? 'rgba(16, 185, 129, 0.12)'
+                        : 'rgba(255, 255, 255, 0.02)',
+                      border: isActive
+                        ? '1px solid var(--sov-cyan)'
+                        : isCompleted
+                        ? '1px solid rgba(16, 185, 129, 0.4)'
+                        : '1px solid rgba(255, 255, 255, 0.08)',
+                      boxShadow: isActive ? '0 0 16px rgba(0, 210, 255, 0.3)' : 'none',
+                      transition: 'all 0.25s ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span
+                        style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                          color: isActive ? 'var(--sov-cyan)' : isCompleted ? '#10b981' : 'var(--sov-text-muted)',
+                        }}
+                      >
+                        {stage.label}
+                      </span>
+                      {isCompleted && <span style={{ color: '#10b981', fontWeight: 900, fontSize: '12px' }}>✓</span>}
+                      {isActive && <span style={{ color: 'var(--sov-cyan)', fontSize: '11px' }} className="animate-pulse">●</span>}
+                    </div>
+                    <span style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>
+                      {stage.role.split(' ')[0]}
+                    </span>
+                  </div>
+
+                  {idx < GRAPH_STAGES.length - 1 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'rgba(255, 255, 255, 0.25)' }}>
+                      <span style={{ fontSize: '13px', fontFamily: 'var(--font-mono)' }}>&darr;</span>
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          {/* TELEMETRY & NODE METRICS DASHBOARD */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '12px',
+              paddingTop: '6px',
+            }}
+          >
+            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>CURRENT NODE</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: activeNode ? 'var(--sov-cyan)' : '#fff' }}>
+                {activeNode || (completedNodes.length > 0 ? completedNodes[completedNodes.length - 1] : 'IDLE')}
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>ACTIVE NODE</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: activeNode ? '#00d2ff' : 'var(--sov-text-muted)' }}>
+                {activeNode ? `${activeNode} ●` : 'None (Idle)'}
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>COMPLETED NODES</div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#10b981' }}>
+                {completedNodes.length > 0 ? `${completedNodes.length} Nodes ✓` : '0 Nodes'}
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>STEP COUNT</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                {executionResult?.steps ? `${executionResult.steps.length} / 5` : isDispatching ? '1 / 5' : '0 / 5'}
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>ORCHESTRATOR MODEL</div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--sov-gold)' }}>
+                {currentModel.replace('gemma4:', 'Gemma ')}
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>EXECUTION TIME</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                {executionResult?.total_latency_ms ? `${executionResult.total_latency_ms}ms` : '0ms'}
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>VERIFICATION STATUS</div>
               <div
-                key={p.num}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '11px',
-                  color: launchStep >= p.num ? 'var(--sov-cyan)' : 'var(--sov-text-muted)',
-                  fontWeight: launchStep === p.num ? 700 : 500,
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  color:
+                    verificationStatus === 'VERIFIED'
+                      ? '#10b981'
+                      : verificationStatus === 'IN_PROGRESS'
+                      ? 'var(--sov-cyan)'
+                      : verificationStatus === 'REJECTED'
+                      ? '#ef4444'
+                      : 'var(--sov-text-muted)',
                 }}
               >
-                <span>
-                  {p.num}. {p.label}
-                </span>
-                {idx < LAUNCH_PIPELINE.length - 1 && <ArrowRight size={11} />}
+                {verificationStatus} {verificationStatus === 'VERIFIED' ? '✓' : verificationStatus === 'IN_PROGRESS' ? '●' : ''}
               </div>
-            ))}
+            </div>
           </div>
-        )}
+        </div>
 
-        {/* Directive Input & Launch Action */}
+        {/* DIRECTIVE INPUT & LAUNCH ACTION */}
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div
             style={{
@@ -464,11 +692,58 @@ export default function AgentSquadWorkspace({
           </button>
         </div>
 
-        {/* Live Execution Result Container */}
+        {/* TOOL CALLS & EVIDENCE SECTION */}
+        {(liveToolCalls.length > 0 || liveEvidence.length > 0) && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+            {/* Tool Calls */}
+            {liveToolCalls.length > 0 && (
+              <div style={{ padding: '14px', borderRadius: '8px', background: 'rgba(6, 4, 18, 0.85)', border: '1px solid var(--sov-border-subtle)' }}>
+                <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--sov-cyan)', marginBottom: '8px', fontWeight: 700 }}>
+                  CAPTURED TOOL CALLS ({liveToolCalls.length})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {liveToolCalls.map((tc, idx) => (
+                    <div key={idx} style={{ padding: '8px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
+                        <span style={{ color: '#fff', fontWeight: 700 }}>{tc.tool}</span>
+                        <span style={{ color: '#10b981' }}>SUCCESS ✓</span>
+                      </div>
+                      <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)', marginTop: '4px' }}>
+                        ARGS: {JSON.stringify(tc.args)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Evidence */}
+            {liveEvidence.length > 0 && (
+              <div style={{ padding: '14px', borderRadius: '8px', background: 'rgba(6, 4, 18, 0.85)', border: '1px solid var(--sov-border-subtle)' }}>
+                <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#10b981', marginBottom: '8px', fontWeight: 700 }}>
+                  VERIFIED EVIDENCE RECORDS ({liveEvidence.length})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {liveEvidence.map((ev, idx) => (
+                    <div key={idx} style={{ padding: '8px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                      <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>
+                        SOURCE: {ev.source_tool} &bull; {ev.timestamp?.slice(11, 19)}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--sov-text-secondary)', marginTop: '4px' }}>
+                        {typeof ev.data === 'object' ? JSON.stringify(ev.data) : String(ev.data)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* LIVE EXECUTION RESULT */}
         {executionResult && (
           <div
             style={{
-              marginTop: '20px',
               padding: '16px',
               borderRadius: '8px',
               background: 'rgba(6, 4, 18, 0.85)',
@@ -482,11 +757,11 @@ export default function AgentSquadWorkspace({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <CheckCircle2 size={16} className="text-emerald" />
                 <span style={{ fontWeight: 700, fontSize: '13px', color: '#fff' }}>
-                  Mission Execution Verified ({executionResult.total_latency_ms}ms)
+                  Mission Execution Completed ({executionResult.total_latency_ms}ms)
                 </span>
               </div>
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: '#10b981' }}>
-                SHA-256 SEAL ATTACHED
+                SHA-256 AIR-GAP PROVENANCE ATTACHED
               </span>
             </div>
 

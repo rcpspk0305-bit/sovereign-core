@@ -280,13 +280,52 @@ class ApiClient {
     return res.json();
   }
 
-  async runAgent(prompt: string, model?: string, maxSteps: number = 5): Promise<AgentResult> {
+  async runAgent(
+    prompt: string,
+    model?: string,
+    maxSteps: number = 5,
+    orchestrator?: string,
+    sessionId?: string,
+  ): Promise<AgentResult> {
     const res = await fetch(`${this.base}/api/v1/agents/run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, model, max_steps: maxSteps }),
+      body: JSON.stringify({
+        prompt,
+        model,
+        max_steps: maxSteps,
+        orchestrator,
+        session_id: sessionId,
+      }),
     });
-    if (!res.ok) throw new Error('Agent execution failed');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Agent execution failed' }));
+      throw new Error(err.detail || 'Agent execution failed');
+    }
+    return res.json();
+  }
+
+  async getAgentMission(missionId: string): Promise<any> {
+    const res = await fetch(`${this.base}/api/v1/agents/${encodeURIComponent(missionId)}`);
+    if (!res.ok) throw new Error(`Failed to fetch mission ${missionId}`);
+    return res.json();
+  }
+
+  async approveAgentMission(missionId: string, approved: boolean = true, notes?: string): Promise<any> {
+    const res = await fetch(`${this.base}/api/v1/agents/${encodeURIComponent(missionId)}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ approved, notes }),
+    });
+    if (!res.ok) throw new Error(`Failed to update approval for mission ${missionId}`);
+    return res.json();
+  }
+
+  async cancelAgentMission(missionId: string): Promise<any> {
+    const res = await fetch(`${this.base}/api/v1/agents/${encodeURIComponent(missionId)}/cancel`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error(`Failed to cancel mission ${missionId}`);
     return res.json();
   }
 

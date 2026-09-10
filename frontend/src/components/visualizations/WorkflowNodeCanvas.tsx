@@ -20,12 +20,25 @@ import {
   Zap,
 } from 'lucide-react';
 
+interface WorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+  condition?: string;
+  label?: string;
+}
+
 interface WorkflowNode {
   id: string;
   stepNumber: number;
   label: string;
   role: string;
-  type: 'trigger' | 'router' | 'agent' | 'retrieval' | 'eval' | 'model' | 'seal';
+  type: 'trigger' | 'router' | 'agent' | 'retrieval' | 'eval' | 'model' | 'seal' | 'tool';
+  tool?: string;
+  agent?: string;
+  input?: string;
+  output?: string;
+  condition?: string;
   icon: React.ReactNode;
   color: string;
   glow: string;
@@ -34,6 +47,16 @@ interface WorkflowNode {
   schema: string;
 }
 
+const INITIAL_EDGES: WorkflowEdge[] = [
+  { id: 'e1-2', source: 'n1', target: 'n2', condition: 'task.valid == true', label: 'Intake -> Planner' },
+  { id: 'e2-3', source: 'n2', target: 'n3', condition: 'requires_tools == true', label: 'Planner -> Routing' },
+  { id: 'e3-4', source: 'n3', target: 'n4', condition: 'tool == "document_retrieval"', label: 'ChromaDB Query' },
+  { id: 'e3-5', source: 'n3', target: 'n5', condition: 'tool == "calculator"', label: 'Safe Calculator' },
+  { id: 'e4-6', source: 'n4', target: 'n6', condition: 'evidence.collected == true', label: 'Evidence -> Verifier' },
+  { id: 'e5-6', source: 'n5', target: 'n6', condition: 'calc.completed == true', label: 'Result -> Verifier' },
+  { id: 'e6-7', source: 'n6', target: 'n7', condition: 'approval_required == false', label: 'Verified -> Signed Seal' },
+];
+
 const INITIAL_NODES: WorkflowNode[] = [
   {
     id: 'n1',
@@ -41,6 +64,10 @@ const INITIAL_NODES: WorkflowNode[] = [
     label: 'Mission Trigger',
     role: 'Air-Gapped Directive Intake',
     type: 'trigger',
+    agent: 'IntakeSentinel',
+    input: 'directive: string, session_id: string',
+    output: 'validated_mission: MissionContext',
+    condition: 'directive.trim().length > 0',
     icon: <Radio size={16} />,
     color: '#00d2ff',
     glow: 'rgba(0, 210, 255, 0.4)',
@@ -51,9 +78,13 @@ const INITIAL_NODES: WorkflowNode[] = [
   {
     id: 'n2',
     stepNumber: 2,
-    label: 'Intent Router',
-    role: 'Deterministic Classification',
+    label: 'Task Planner',
+    role: 'Deterministic Task Graph Decomposition',
     type: 'router',
+    agent: 'PlannerAgent',
+    input: 'mission: MissionContext, model: string',
+    output: 'tool_decision: ToolCall | null, thought: string',
+    condition: 'current_step < max_steps',
     icon: <Compass size={16} />,
     color: '#8b72ff',
     glow: 'rgba(139, 114, 255, 0.4)',
@@ -64,9 +95,13 @@ const INITIAL_NODES: WorkflowNode[] = [
   {
     id: 'n3',
     stepNumber: 3,
-    label: 'Research Agent',
-    role: 'Sentinel-01 Task Planner',
+    label: 'Routing & Decision',
+    role: 'Controlled Tool Allowlist Routing',
     type: 'agent',
+    agent: 'ToolRegistryRouter',
+    input: 'tool_name: string, tool_arguments: dict',
+    output: 'routed_adapter: SovereignToolAdapter',
+    condition: 'tool_name in tool_registry.allowlist',
     icon: <Bot size={16} />,
     color: '#d4a843',
     glow: 'rgba(212, 168, 67, 0.4)',
@@ -77,9 +112,13 @@ const INITIAL_NODES: WorkflowNode[] = [
   {
     id: 'n4',
     stepNumber: 4,
-    label: 'Vector Search',
-    role: 'ChromaDB HNSW Cosine Query',
+    label: 'Vector Retrieval',
+    role: 'Air-Gapped ChromaDB Cosine Evidence',
     type: 'retrieval',
+    tool: 'document_retrieval',
+    input: 'query: string, top_k: int',
+    output: 'chunks: Array<SourceChunk>, similarity_scores',
+    condition: 'collection.count > 0',
     icon: <Database size={16} />,
     color: '#00c896',
     glow: 'rgba(0, 200, 150, 0.4)',
@@ -90,35 +129,46 @@ const INITIAL_NODES: WorkflowNode[] = [
   {
     id: 'n5',
     stepNumber: 5,
-    label: 'Document Analysis',
-    role: 'PyMuPDF Section Extraction',
-    type: 'eval',
+    label: 'Sandboxed Calculator',
+    role: 'AST-Bounded Arithmetic Evaluation',
+    type: 'tool',
+    tool: 'calculator',
+    input: 'operation: string, a: float, b: float',
+    output: 'result: float, execution_time_ms: float',
+    condition: 'a != null && b != null',
     icon: <FileSearch size={16} />,
     color: '#38bdf8',
     glow: 'rgba(56, 189, 248, 0.4)',
     status: 'idle',
     latencyMs: 92,
-    schema: 'chunk_size: 512, overlap: 64',
+    schema: 'operation: "add"|"subtract"|"multiply"|"divide"',
   },
   {
     id: 'n6',
     stepNumber: 6,
-    label: 'Local LLM Inference',
-    role: 'Offline Gemma Reasoner',
-    type: 'model',
+    label: 'Claim Verifier',
+    role: 'Provenance Cross-Check & Fact Grounding',
+    type: 'eval',
+    agent: 'VerificationAgent',
+    input: 'evidence: Array<Evidence>, output_claim: string',
+    output: 'verification_status: "verified" | "rejected"',
+    condition: 'evidence.length >= 1',
     icon: <Cpu size={16} />,
     color: '#a78bfa',
     glow: 'rgba(167, 139, 250, 0.4)',
     status: 'idle',
     latencyMs: 410,
-    schema: 'model: "gemma4:e2b", temperature: 0.1',
+    schema: 'verification: "verified" | "rejected", confidence: float',
   },
   {
     id: 'n7',
     stepNumber: 7,
-    label: 'Signed Response',
-    role: 'Cryptographic SHA-256 Seal',
+    label: 'Signed Response & Seal',
+    role: 'Cryptographic SHA-256 Air-Gap Attestation',
     type: 'seal',
+    input: 'final_response: string, provenance: ProvenanceRecord',
+    output: 'signed_envelope: SignedResponseEnvelope',
+    condition: 'verification_status == "verified"',
     icon: <ShieldCheck size={16} />,
     color: '#10b981',
     glow: 'rgba(16, 185, 129, 0.4)',
@@ -130,6 +180,7 @@ const INITIAL_NODES: WorkflowNode[] = [
 
 export default function WorkflowNodeCanvas() {
   const [nodes, setNodes] = useState<WorkflowNode[]>(INITIAL_NODES);
+  const [edges] = useState<WorkflowEdge[]>(INITIAL_EDGES);
   const [activeNodeId, setActiveNodeId] = useState<string>('n3');
   const [isRunningPipeline, setIsRunningPipeline] = useState<boolean>(false);
 
@@ -380,6 +431,51 @@ export default function WorkflowNodeCanvas() {
             <div style={{ padding: '10px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
               <span style={{ fontSize: '10px', color: 'var(--sov-text-muted)', display: 'block' }}>FAIL RECOVERY</span>
               <strong style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', color: '#10b981' }}>EXPONENTIAL</strong>
+            </div>
+          </div>
+
+          {/* Node Model Spec (Agent, Tool, Condition, Input, Output) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <span style={{ color: 'var(--sov-text-muted)' }}>AGENT:</span>
+              <span style={{ color: selectedNode.agent ? 'var(--sov-gold)' : 'rgba(255, 255, 255, 0.4)' }}>{selectedNode.agent || 'None (Handler)'}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <span style={{ color: 'var(--sov-text-muted)' }}>TOOL:</span>
+              <span style={{ color: selectedNode.tool ? 'var(--sov-cyan)' : 'rgba(255, 255, 255, 0.4)' }}>{selectedNode.tool || 'None'}</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <span style={{ color: 'var(--sov-text-muted)' }}>CONDITION:</span>
+              <span style={{ color: '#a78bfa' }}>{selectedNode.condition || 'always'}</span>
+            </div>
+
+            <div style={{ padding: '6px 8px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <span style={{ color: 'var(--sov-text-muted)', display: 'block', marginBottom: '2px' }}>INPUT:</span>
+              <span style={{ color: '#7dd3fc', wordBreak: 'break-all' }}>{selectedNode.input || 'None'}</span>
+            </div>
+
+            <div style={{ padding: '6px 8px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <span style={{ color: 'var(--sov-text-muted)', display: 'block', marginBottom: '2px' }}>OUTPUT:</span>
+              <span style={{ color: '#10b981', wordBreak: 'break-all' }}>{selectedNode.output || 'None'}</span>
+            </div>
+
+            {/* Outbound Edges */}
+            <div style={{ padding: '6px 8px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <span style={{ color: 'var(--sov-text-muted)', display: 'block', marginBottom: '4px' }}>CONNECTED OUTBOUND EDGES:</span>
+              {edges.filter((e) => e.source === selectedNode.id).length > 0 ? (
+                edges
+                  .filter((e) => e.source === selectedNode.id)
+                  .map((e) => (
+                    <div key={e.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#fff', marginBottom: '2px' }}>
+                      <span>&rarr; {nodes.find((n) => n.id === e.target)?.label || e.target}</span>
+                      <span style={{ color: 'var(--sov-cyan)' }}>[{e.condition}]</span>
+                    </div>
+                  ))
+              ) : (
+                <span style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)' }}>Terminal Node (No outgoing edges)</span>
+              )}
             </div>
           </div>
 

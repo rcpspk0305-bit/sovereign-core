@@ -365,7 +365,7 @@ export default function ChatWorkspace({
                     {s.title || s.session_id}
                   </span>
                   <span style={{ fontSize: '10px', color: 'var(--sov-text-muted)' }}>
-                    {s.total_tokens ? `${s.total_tokens} tokens` : 'Standard context'}
+                    {s.memory_breakdown?.total_tokens ? `${s.memory_breakdown.total_tokens} tokens` : 'Standard context'}
                   </span>
                 </button>
               ))

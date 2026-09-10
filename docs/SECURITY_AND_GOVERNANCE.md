@@ -8,7 +8,16 @@ Sovereign-Core is architected for zero-trust, high-assurance environments where 
 - **No Unrestricted Shell Access**: Shell command execution, arbitrary code interpretation, and operating system access are prohibited.
 - **No Autonomous External Internet**: Agents cannot perform outbound HTTP requests, web crawling, or external API queries.
 - **Strict Tool Whitelisting**: Agents can only invoke tools registered with `ControlledToolRegistry`. Attempted invocations of unregistered tools trigger an immediate `POLICY_VIOLATION` audit log and are blocked.
-- **Step Bounding**: Agents operate within a hard ceiling of allowed steps (default: 5, max: 10) to prevent denial-of-service or infinite loops.
+- **Step Bounding**: Agents operate within a hard ceiling of allowed steps (default: 5, range: `1 <= max_steps <= 10`) to prevent denial-of-service or infinite loops.
+
+### 1.2 LangGraph Orchestration Guardrails
+When LangGraph is invoked via `LangGraphAgentOrchestrator`:
+- **Adapter Confinement**: LangGraph operates strictly as an internal execution mechanism wrapped behind Sovereign-Core's `BaseAgent` and `BaseIntegrationAdapter`. It has no direct access to the operating system, shell, or network.
+- **Strict Tool Isolation**: LangGraph cannot execute arbitrary callables or LangChain community tools. All tool calls route exclusively through `SovereignToolAdapter`, which verifies permissions against `ControlledToolRegistry` and normalizes arguments.
+- **Air-Gap Preservation (`NO_EGRESS`)**: LangGraph runs within the active air-gap policy (`AIR_GAPPED_LOCAL` or `NO_EGRESS`), preventing outbound network requests.
+- **Bounded State Transitions**: Every state transition checks `current_step >= max_steps`. If the budget is exhausted, the graph immediately branches to `final_response` without allowing recursion.
+- **Telemetry Sanitization**: All node transitions, tool invocations, and verifications broadcast to the Flight Recorder WebSocket without exposing system environment secrets or sensitive API credentials.
+- **Human Authority Gate**: Operations requiring escalated permissions halt at the `approval_gate` node until cryptographic or explicit human authority approval is granted via `POST /api/v1/agents/{mission_id}/approve`.
 
 ---
 
