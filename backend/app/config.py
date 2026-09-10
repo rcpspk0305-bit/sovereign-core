@@ -24,11 +24,18 @@ class Settings(BaseSettings):
         default=["http://localhost:3000", "http://127.0.0.1:3000"]
     )
 
-    # Ollama settings
+    # Ollama & LLM settings
+    LLM_PROVIDER: str = "ollama"  # "ollama" or "litellm"
+    LOCAL_ONLY: bool = True       # Enforce strict zero-egress local boundary (rejects remote cloud providers)
+    LLM_MODEL: str = "gemma4:e2b"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     DEFAULT_MODEL: str = "gemma4:e2b"
     DEFAULT_EMBEDDING_MODEL: str = "nomic-embed-text:latest"
     LLM_TIMEOUT_SECONDS: float = 120.0
+
+    # Optional Remote Cloud Provider Keys (never hardcoded, read from environment)
+    OPENAI_API_KEY: Optional[str] = None
+    ANTHROPIC_API_KEY: Optional[str] = None
 
     # Audit settings
     AUDIT_LOG_ENABLED: bool = True

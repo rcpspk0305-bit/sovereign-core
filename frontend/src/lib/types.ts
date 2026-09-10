@@ -14,6 +14,11 @@ export interface ChatMessage {
 export interface ModelInfo {
   id: string;
   name: string;
+  provider?: string;
+  is_local?: boolean;
+  status?: 'READY' | 'AVAILABLE' | 'DISABLED' | 'UNCONFIGURED' | string;
+  capabilities?: string[];
+  context_window?: number;
   size_bytes?: number;
   digest?: string;
   modified_at?: string;

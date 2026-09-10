@@ -14,13 +14,19 @@ from app.config import settings
 from app.core.interfaces.llm import (
     BaseLLMClient,
     ChatMessage,
+    LLMConnectionError,
+    LLMError,
     LLMHealthStatus,
+    LLMModelNotFoundError,
     LLMResponse,
+    LLMSecurityError,
     LLMValidationError,
     ModelInfo,
     StreamChunk,
 )
+from app.core.llm.adapters import create_llm_provider
 from app.core.llm.ollama import OllamaClient
+from app.core.llm.security import is_remote_model_or_provider
 from app.core.telemetry import (
     trace_llm,
     trace_embedding,
@@ -48,19 +54,27 @@ class LLMService:
         max_tokens: Optional[int] = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """Execute a non-streaming chat completion with validation and logging."""
+        """Execute a non-streaming chat completion with validation, telemetry, and safe local fallback."""
         if not messages:
             raise LLMValidationError("At least one message is required for completion")
 
-        target_model = model or settings.DEFAULT_MODEL
+        target_model = model or getattr(settings, "LLM_MODEL", settings.DEFAULT_MODEL)
+        provider_name = getattr(self._provider, "name", "unknown")
+        is_local = not is_remote_model_or_provider(target_model, provider_name)
+
         logger.debug(
-            "Service dispatching complete: provider=%s model=%s messages=%d",
-            type(self._provider).__name__,
+            "Service dispatching complete: provider=%s model=%s local=%s messages=%d",
+            provider_name,
             target_model,
+            is_local,
             len(messages),
         )
         start_time = time.perf_counter()
+
         with trace_llm(model=target_model, stream=False) as span:
+            span.set_attribute("llm.provider", provider_name)
+            span.set_attribute("llm.is_local", is_local)
+
             try:
                 res = await self._provider.complete(
                     messages=messages,
@@ -73,7 +87,33 @@ class LLMService:
                 record_llm_request(model=target_model, latency_seconds=dur, success=True)
                 if res.usage:
                     span.set_attribute("llm.total_tokens", res.usage.total_tokens)
+                    span.set_attribute("llm.prompt_tokens", res.usage.prompt_tokens)
+                    span.set_attribute("llm.completion_tokens", res.usage.completion_tokens)
                 return res
+            except (LLMConnectionError, LLMModelNotFoundError) as exc:
+                # Safe Local Fallback: never fall back to cloud, only to local DEFAULT_MODEL
+                fallback_model = settings.DEFAULT_MODEL
+                if target_model != fallback_model:
+                    logger.warning(
+                        "Model '%s' failed on provider '%s': %s. Executing safe fallback to local model '%s'.",
+                        target_model,
+                        provider_name,
+                        exc,
+                        fallback_model,
+                    )
+                    span.set_attribute("llm.fallback", True)
+                    span.set_attribute("llm.fallback_target", fallback_model)
+                    res = await self._provider.complete(
+                        messages=messages,
+                        model=fallback_model,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        **kwargs,
+                    )
+                    dur = time.perf_counter() - start_time
+                    record_llm_request(model=fallback_model, latency_seconds=dur, success=True)
+                    return res
+                raise
             except Exception as e:
                 dur = time.perf_counter() - start_time
                 record_llm_request(model=target_model, latency_seconds=dur, success=False, error_type=type(e).__name__)
@@ -87,25 +127,57 @@ class LLMService:
         max_tokens: Optional[int] = None,
         **kwargs: Any,
     ) -> AsyncIterator[StreamChunk]:
-        """Execute a streaming chat completion yielding chunks."""
+        """Execute a streaming chat completion yielding normalized StreamChunks."""
         if not messages:
             raise LLMValidationError("At least one message is required for streaming")
 
-        target_model = model or settings.DEFAULT_MODEL
+        target_model = model or getattr(settings, "LLM_MODEL", settings.DEFAULT_MODEL)
+        provider_name = getattr(self._provider, "name", "unknown")
+        is_local = not is_remote_model_or_provider(target_model, provider_name)
+
         logger.debug(
-            "Service dispatching stream: provider=%s model=%s messages=%d",
-            type(self._provider).__name__,
+            "Service dispatching stream: provider=%s model=%s local=%s messages=%d",
+            provider_name,
             target_model,
+            is_local,
             len(messages),
         )
-        async for chunk in self._provider.stream(
-            messages=messages,
-            model=target_model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            **kwargs,
-        ):
-            yield chunk
+
+        with trace_llm(model=target_model, stream=True) as span:
+            span.set_attribute("llm.provider", provider_name)
+            span.set_attribute("llm.is_local", is_local)
+
+            try:
+                async for chunk in self._provider.stream(
+                    messages=messages,
+                    model=target_model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    **kwargs,
+                ):
+                    yield chunk
+            except (LLMConnectionError, LLMModelNotFoundError) as exc:
+                fallback_model = settings.DEFAULT_MODEL
+                if target_model != fallback_model:
+                    logger.warning(
+                        "Streaming model '%s' failed on provider '%s': %s. Executing safe fallback to local model '%s'.",
+                        target_model,
+                        provider_name,
+                        exc,
+                        fallback_model,
+                    )
+                    span.set_attribute("llm.fallback", True)
+                    span.set_attribute("llm.fallback_target", fallback_model)
+                    async for chunk in self._provider.stream(
+                        messages=messages,
+                        model=fallback_model,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        **kwargs,
+                    ):
+                        yield chunk
+                else:
+                    raise
 
     async def embed(
         self,
@@ -137,6 +209,7 @@ class LLMService:
                 clean_target == m.id.lower()
                 or clean_target == m.name.lower()
                 or clean_target.split(":")[0] == m.name.split(":")[0]
+                or clean_target.split("/")[-1] == m.id.lower().split("/")[-1]
                 for m in models
             )
         except Exception as exc:
@@ -144,16 +217,21 @@ class LLMService:
             return False
 
 
-# Singleton provider factory for dependency injection
-_shared_ollama_provider: Optional[BaseLLMClient] = None
+# Singleton provider instance cache
+_active_provider_instance: Optional[BaseLLMClient] = None
+_active_provider_name: Optional[str] = None
 
 
 def get_llm_provider() -> BaseLLMClient:
-    """Dependency provider returning the configured active LLM client."""
-    global _shared_ollama_provider
-    if _shared_ollama_provider is None:
-        _shared_ollama_provider = OllamaClient()
-    return _shared_ollama_provider
+    """Dependency provider returning the configured active LLM client adapter."""
+    global _active_provider_instance, _active_provider_name
+    current_provider_config = getattr(settings, "LLM_PROVIDER", "ollama").strip().lower()
+
+    if _active_provider_instance is None or _active_provider_name != current_provider_config:
+        _active_provider_instance = create_llm_provider(current_provider_config)
+        _active_provider_name = current_provider_config
+
+    return _active_provider_instance
 
 
 def get_llm_service(

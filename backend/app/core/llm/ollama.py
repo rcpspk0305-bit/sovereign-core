@@ -42,6 +42,10 @@ class OllamaClient(BaseLLMClient):
         self.timeout = timeout or settings.LLM_TIMEOUT_SECONDS
         self.connect_timeout = connect_timeout
 
+    @property
+    def name(self) -> str:
+        return "ollama"
+
     def _get_client(self) -> httpx.AsyncClient:
         return httpx.AsyncClient(
             base_url=self.base_url,

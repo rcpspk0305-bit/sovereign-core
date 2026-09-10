@@ -14,6 +14,7 @@ from app.core.interfaces.llm import (
     LLMError,
     LLMModelNotFoundError,
     LLMResponseError,
+    LLMSecurityError,
     LLMTimeoutError,
     LLMValidationError,
 )
@@ -113,6 +114,19 @@ def create_application() -> FastAPI:
                 "detail": exc.message,
                 "status_code": exc.status_code,
                 "provider": exc.provider,
+                "path": request.url.path,
+            },
+        )
+
+    @app.exception_handler(LLMSecurityError)
+    async def handle_llm_security_error(request: Request, exc: LLMSecurityError):
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "LLMSecurityError",
+                "detail": exc.message,
+                "provider": exc.provider,
+                "model": exc.model,
                 "path": request.url.path,
             },
         )

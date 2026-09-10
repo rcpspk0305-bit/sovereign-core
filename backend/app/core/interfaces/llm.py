@@ -24,6 +24,11 @@ class ChatMessage(BaseModel):
 class ModelInfo(BaseModel):
     id: str
     name: str
+    provider: str = "ollama"
+    is_local: bool = True
+    status: str = "READY"
+    capabilities: List[str] = Field(default_factory=lambda: ["chat", "streaming"])
+    context_window: Optional[int] = 8192
     size_bytes: Optional[int] = None
     digest: Optional[str] = None
     modified_at: Optional[str] = None
@@ -124,8 +129,18 @@ class LLMValidationError(LLMError):
     pass
 
 
+class LLMSecurityError(LLMError):
+    """Raised when a security policy or sovereignty boundary is violated (e.g. cloud provider in LOCAL_ONLY mode)."""
+    pass
+
+
 class BaseLLMClient(ABC):
     """Clean abstract base client for local LLM inference engines."""
+
+    @property
+    def name(self) -> str:
+        """Provider name identifier, e.g. 'ollama' or 'litellm'."""
+        return "unknown"
 
     @abstractmethod
     async def complete(
