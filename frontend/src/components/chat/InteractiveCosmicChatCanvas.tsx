@@ -202,9 +202,6 @@ export default function InteractiveCosmicChatCanvas({
     const lightsTexture = textureLoader.load('/textures/earth/earth_lights.jpg');
     lightsTexture.colorSpace = THREE.SRGBColorSpace;
 
-    const cloudTexture = textureLoader.load('/textures/earth/earth_clouds.jpg');
-    cloudTexture.colorSpace = THREE.SRGBColorSpace;
-
     const planetGroup = new THREE.Group();
     // Positioned centered behind the search console & hero text
     planetGroup.position.set(0, -6, -26);
@@ -213,34 +210,20 @@ export default function InteractiveCosmicChatCanvas({
 
     const planetRadius = 46;
 
-    // --- A. Base Planetary Surface Mesh (NASA Blue Marble Texture) ---
+    // --- A. Base Planetary Surface Mesh (Pristine NASA Satellite Earth) ---
     const planetGeo = new THREE.SphereGeometry(planetRadius, 64, 64);
     const planetMat = new THREE.MeshStandardMaterial({
       map: surfaceTexture,
-      roughness: 0.52,
+      roughness: 0.48,
       metalness: 0.08,
       emissiveMap: lightsTexture,
       emissive: new THREE.Color(0xffd59e),
-      emissiveIntensity: 1.35,
+      emissiveIntensity: 1.45,
     });
     const planetMesh = new THREE.Mesh(planetGeo, planetMat);
     planetGroup.add(planetMesh);
 
-    // --- B. Atmospheric Cloud Layer (NASA Satellite Weather Pattern) ---
-    const cloudGeo = new THREE.SphereGeometry(planetRadius * 1.014, 64, 64);
-    const cloudMat = new THREE.MeshStandardMaterial({
-      map: cloudTexture,
-      transparent: true,
-      opacity: 0.55,
-      blending: THREE.AdditiveBlending,
-      roughness: 0.9,
-      metalness: 0.0,
-      depthWrite: false,
-    });
-    const cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
-    planetGroup.add(cloudMesh);
-
-    // --- C. Photorealistic Rayleigh Atmospheric Scattering Rim Shell ---
+    // --- B. Photorealistic Rayleigh Atmospheric Scattering Rim Shell ---
     const atmoGeo = new THREE.SphereGeometry(planetRadius * 1.032, 64, 64);
     const atmoMat = new THREE.ShaderMaterial({
       uniforms: {
@@ -332,7 +315,6 @@ export default function InteractiveCosmicChatCanvas({
 
       // Realistic planetary Earth rotation (West to East)
       planetMesh.rotation.y = 2.4 + elapsed * 0.016;
-      cloudMesh.rotation.y = 2.45 + elapsed * 0.022; // Clouds gently drift over continents
 
       // Dynamic star twinkling
       starMat.opacity = 0.88 + Math.sin(elapsed * 2.2) * 0.08;
@@ -360,13 +342,10 @@ export default function InteractiveCosmicChatCanvas({
       nebulaMat.dispose();
       planetGeo.dispose();
       planetMat.dispose();
-      cloudGeo.dispose();
-      cloudMat.dispose();
       atmoGeo.dispose();
       atmoMat.dispose();
       surfaceTexture.dispose();
       lightsTexture.dispose();
-      cloudTexture.dispose();
       renderer.dispose();
     };
   }, []);
