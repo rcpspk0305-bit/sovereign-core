@@ -303,8 +303,8 @@ export default function ModelControlCenter({
 
                   <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
                     <span style={{ fontSize: '10px', color: 'var(--sov-text-muted)', display: 'block' }}>CONTEXT WINDOW</span>
-                    <strong style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#38bdf8' }}>
-                      {m.context_window ? `${m.context_window.toLocaleString()} TOKENS` : '8,192 TOKENS'}
+                    <strong style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#38bdf8' }} suppressHydrationWarning>
+                      {m.context_window ? `${m.context_window.toLocaleString('en-US')} TOKENS` : '8,192 TOKENS'}
                     </strong>
                   </div>
                 </div>
@@ -427,8 +427,8 @@ export default function ModelControlCenter({
 
                   <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
                     <span style={{ fontSize: '10px', color: 'var(--sov-text-muted)', display: 'block' }}>CONTEXT WINDOW</span>
-                    <strong style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#94a3b8' }}>
-                      {m.context_window ? `${m.context_window.toLocaleString()} TOKENS` : '128,000 TOKENS'}
+                    <strong style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: '#94a3b8' }} suppressHydrationWarning>
+                      {m.context_window ? `${m.context_window.toLocaleString('en-US')} TOKENS` : '128,000 TOKENS'}
                     </strong>
                   </div>
                 </div>

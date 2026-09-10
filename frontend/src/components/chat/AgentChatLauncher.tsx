@@ -46,20 +46,9 @@ import AgentSquadWorkspace from '@/components/agents/AgentSquadWorkspace';
 import WorkflowNodeCanvas from '@/components/visualizations/WorkflowNodeCanvas';
 import ModelControlCenter from '@/components/models/ModelControlCenter';
 import SettingsWorkspace from '@/components/settings/SettingsWorkspace';
+import { sessionStore, WorkbenchBay } from '@/lib/session-store';
 
-export type WorkbenchBay =
-  | 'mission'
-  | 'overview'
-  | 'chat'
-  | 'knowledge'
-  | 'documents'
-  | 'memory'
-  | 'agents'
-  | 'workflows'
-  | 'tools'
-  | 'recorder'
-  | 'models'
-  | 'settings';
+export type { WorkbenchBay };
 
 interface MediaAttachment {
   id: string;
@@ -128,18 +117,28 @@ export default function AgentChatLauncher({
   const [currentBay, setCurrentBay] = useState<WorkbenchBay>(activeBay || 'mission');
 
   const isMissionActive = currentBay === 'mission' || currentBay === 'chat';
-  const isKnowledgeActive = currentBay === 'knowledge' || currentBay === 'documents' || currentBay === 'memory';
+  const isKnowledgeActive = currentBay === 'documents' || currentBay === 'knowledge' || currentBay === 'memory';
   const isSquadActive = currentBay === 'agents' || currentBay === 'tools';
   const [isAirGapped, setIsAirGapped] = useState(true);
 
   useEffect(() => {
     if (activeBay) {
       setCurrentBay(activeBay);
+      sessionStore.setActiveBay(activeBay);
     }
   }, [activeBay]);
 
+  // Safe client hydration for stored bay and stored session
+  useEffect(() => {
+    const storedBay = sessionStore.getActiveBay(activeBay || 'mission');
+    if (storedBay) setCurrentBay(storedBay);
+    const storedSid = sessionStore.getActiveSessionId('SES-20260909-001');
+    if (storedSid) setCurrentSessionId(storedSid);
+  }, []);
+
   const handleSwitchBay = (bay: WorkbenchBay) => {
     setCurrentBay(bay);
+    sessionStore.setActiveBay(bay);
     if (onBayChange) onBayChange(bay);
     if (onOpenWorkbench) onOpenWorkbench(bay);
   };
@@ -161,7 +160,7 @@ export default function AgentChatLauncher({
   const [isCopied, setIsCopied] = useState(false);
 
   // Live Session Information State (Date, Time, Session ID)
-  const [currentSessionId, setCurrentSessionId] = useState('SES-20260909-001');
+  const [currentSessionId, setCurrentSessionId] = useState<string>('SES-20260909-001');
   const [liveDateStr, setLiveDateStr] = useState('2026-09-09');
   const [liveTimeStr, setLiveTimeStr] = useState('18:15:00 IST');
 
@@ -174,7 +173,7 @@ export default function AgentChatLauncher({
     setSelectedModel(currentModel);
   }, [currentModel]);
 
-  // Live Date and Time ticker
+  // Live Date and Time ticker & Session sync
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -191,15 +190,30 @@ export default function AgentChatLauncher({
     updateTime();
     const interval = setInterval(updateTime, 1000);
 
-    // Also fetch active session from backend
+    // Fetch active session from backend and sync with sessionStore
     api
       .getCurrentSession()
       .then((s) => {
-        if (s && s.session_id) setCurrentSessionId(s.session_id);
+        if (s && s.session_id) {
+          setCurrentSessionId(s.session_id);
+          sessionStore.setActiveSessionId(s.session_id);
+        }
       })
       .catch(() => {});
 
-    return () => clearInterval(interval);
+    // Listen to session changes and bay updates
+    const unsubSession = sessionStore.onSessionChange((newId) => {
+      setCurrentSessionId(newId);
+    });
+    const unsubBay = sessionStore.onBayChange((newBay) => {
+      setCurrentBay(newBay);
+    });
+
+    return () => {
+      clearInterval(interval);
+      unsubSession();
+      unsubBay();
+    };
   }, []);
 
   // Voice recording simulation timer
@@ -514,55 +528,63 @@ export default function AgentChatLauncher({
       />
 
       {/* 01 Mission Center Stage / Chat Cockpit */}
-      {isMissionActive && (
-        <div className="flex flex-col w-full relative z-20">
-          <div className="workspace-subnav-bar">
-            <div className="workspace-subnav-cluster" role="tablist" aria-label="Mission Interface Mode">
-              <button
-                role="tab"
-                aria-selected={currentBay === 'mission'}
-                className={`workspace-subnav-pill ${currentBay === 'mission' ? 'active' : ''}`}
-                onClick={() => handleSwitchBay('mission')}
-                title="Interactive 3D Celestial Mission Launcher"
-              >
-                <Radio size={12} />
-                <span>Cosmic Mission Launcher</span>
-              </button>
-              <button
-                role="tab"
-                aria-selected={currentBay === 'chat'}
-                className={`workspace-subnav-pill ${currentBay === 'chat' ? 'active' : ''}`}
-                onClick={() => handleSwitchBay('chat')}
-                title="Streaming Contextual Chat Cockpit"
-              >
-                <Bot size={12} />
-                <span>Chat Cockpit (Streaming)</span>
-              </button>
-            </div>
+      <div
+        className="flex flex-col w-full relative z-20"
+        style={{ display: isMissionActive ? 'flex' : 'none' }}
+      >
+        <div className="workspace-subnav-bar">
+          <div className="workspace-subnav-cluster" role="tablist" aria-label="Mission Interface Mode">
+            <button
+              role="tab"
+              aria-selected={currentBay === 'mission'}
+              className={`workspace-subnav-pill ${currentBay === 'mission' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('mission')}
+              title="Interactive 3D Celestial Mission Launcher"
+            >
+              <Radio size={12} />
+              <span>Cosmic Mission Launcher</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={currentBay === 'chat'}
+              className={`workspace-subnav-pill ${currentBay === 'chat' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('chat')}
+              title="Streaming Contextual Chat Cockpit"
+            >
+              <Bot size={12} />
+              <span>Chat Cockpit (Streaming)</span>
+            </button>
           </div>
+        </div>
 
-          {currentBay === 'mission' && (
-            <div className="launcher-center-stage">
+        <div style={{ display: currentBay === 'mission' ? 'block' : 'none' }}>
+          <div className="launcher-center-stage">
         {!hasLaunched ? (
           /* ============================================================ */
           /* ULTRA-CLEAN MODERN PROMPT & MISSION DISPATCH CONSOLE          */
           /* ============================================================ */
           <div className="gemini-search-container">
             {/* Live Session Temporal HUD (Session ID, Date, Time, Memory Flow) */}
-            <div className="session-temporal-hud-strip">
-              <div className="session-hud-item">
+            <div className="session-temporal-hud-strip" suppressHydrationWarning>
+              <div className="session-hud-item" suppressHydrationWarning>
                 <span className="session-status-dot" />
-                <span className="session-id-tag">SESSION: <strong>{currentSessionId}</strong></span>
+                <span className="session-id-tag" suppressHydrationWarning>
+                  SESSION: <strong suppressHydrationWarning>{currentSessionId}</strong>
+                </span>
               </div>
               <span className="telemetry-dot">•</span>
-              <div className="session-hud-item">
+              <div className="session-hud-item" suppressHydrationWarning>
                 <Calendar size={12} className="text-cyan" />
-                <span>DATE: <strong>{liveDateStr}</strong></span>
+                <span suppressHydrationWarning>
+                  DATE: <strong suppressHydrationWarning>{liveDateStr}</strong>
+                </span>
               </div>
               <span className="telemetry-dot">•</span>
-              <div className="session-hud-item">
+              <div className="session-hud-item" suppressHydrationWarning>
                 <Clock size={12} className="text-emerald" />
-                <span>TIME: <strong className="font-mono">{liveTimeStr}</strong></span>
+                <span suppressHydrationWarning>
+                  TIME: <strong className="font-mono" suppressHydrationWarning>{liveTimeStr}</strong>
+                </span>
               </div>
               <span className="telemetry-dot">•</span>
               <button
@@ -890,11 +912,13 @@ export default function AgentChatLauncher({
             </div>
           </div>
         )}
-      </div>
-      )}
+          </div>
+        </div>
 
-      {currentBay === 'chat' && (
-        <div className="launcher-bay-fullwidth-stage">
+        <div
+          style={{ display: currentBay === 'chat' ? 'block' : 'none' }}
+          className="launcher-bay-fullwidth-stage"
+        >
           <ChatWorkspace
             currentModel={selectedModel}
             availableModels={availableModels}
@@ -902,155 +926,165 @@ export default function AgentChatLauncher({
             onError={onError}
           />
         </div>
-      )}
-    </div>
-    )}
+      </div>
 
       {/* 02 Knowledge Base Stage (Unified Ingestion Pipeline, Vector Store & Memory Flow) */}
-      {isKnowledgeActive && (
-        <div className="flex flex-col w-full">
-          <div className="workspace-subnav-bar">
-            <div className="workspace-subnav-cluster" role="tablist" aria-label="Knowledge Base Sub-Views">
-              <button
-                role="tab"
-                aria-selected={currentBay === 'documents'}
-                className={`workspace-subnav-pill ${currentBay === 'documents' ? 'active' : ''}`}
-                onClick={() => handleSwitchBay('documents')}
-                title="Deterministic Document Ingestion Pipeline"
-              >
-                <FileText size={12} />
-                <span>Ingestion Pipeline</span>
-              </button>
-              <button
-                role="tab"
-                aria-selected={currentBay === 'knowledge'}
-                className={`workspace-subnav-pill ${currentBay === 'knowledge' ? 'active' : ''}`}
-                onClick={() => handleSwitchBay('knowledge')}
-                title="Semantic Vector Space (ChromaDB / Qdrant)"
-              >
-                <Database size={12} />
-                <span>Vector Space (Chroma/Qdrant)</span>
-              </button>
-              <button
-                role="tab"
-                aria-selected={currentBay === 'memory'}
-                className={`workspace-subnav-pill ${currentBay === 'memory' ? 'active' : ''}`}
-                onClick={() => handleSwitchBay('memory')}
-                title="Four-Tier Cognitive Memory Flow"
-              >
-                <Cpu size={12} />
-                <span>Memory Flow (Cognitive)</span>
-              </button>
-            </div>
+      <div
+        className="flex flex-col w-full"
+        style={{ display: isKnowledgeActive ? 'flex' : 'none' }}
+      >
+        <div className="workspace-subnav-bar">
+          <div className="workspace-subnav-cluster" role="tablist" aria-label="Knowledge Base Sub-Views">
+            <button
+              role="tab"
+              aria-selected={currentBay === 'documents'}
+              className={`workspace-subnav-pill ${currentBay === 'documents' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('documents')}
+              title="Deterministic Document Ingestion Pipeline"
+            >
+              <FileText size={12} />
+              <span>Ingestion Pipeline</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={currentBay === 'knowledge'}
+              className={`workspace-subnav-pill ${currentBay === 'knowledge' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('knowledge')}
+              title="Semantic Vector Space (ChromaDB / Qdrant)"
+            >
+              <Database size={12} />
+              <span>Vector Space (Chroma/Qdrant)</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={currentBay === 'memory'}
+              className={`workspace-subnav-pill ${currentBay === 'memory' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('memory')}
+              title="Four-Tier Cognitive Memory Flow"
+            >
+              <Cpu size={12} />
+              <span>Memory Flow (Cognitive)</span>
+            </button>
           </div>
-
-          {currentBay === 'documents' && (
-            <div className="launcher-bay-fullwidth-stage">
-              <DocumentPipelineWorkspace onError={onError} />
-            </div>
-          )}
-
-          {currentBay === 'knowledge' && (
-            <div className="launcher-bay-fullwidth-stage">
-              <KnowledgeBay onError={(err) => (onError ? onError(err) : console.error(err))} />
-            </div>
-          )}
-
-          {currentBay === 'memory' && (
-            <div className="launcher-bay-fullwidth-stage">
-              <MemoryFlowBay onError={(err) => (onError ? onError(err) : console.error(err))} />
-            </div>
-          )}
         </div>
-      )}
+
+        <div
+          style={{ display: currentBay === 'documents' ? 'block' : 'none' }}
+          className="launcher-bay-fullwidth-stage"
+        >
+          <DocumentPipelineWorkspace onError={onError} />
+        </div>
+
+        <div
+          style={{ display: currentBay === 'knowledge' ? 'block' : 'none' }}
+          className="launcher-bay-fullwidth-stage"
+        >
+          <KnowledgeBay onError={(err) => (onError ? onError(err) : console.error(err))} />
+        </div>
+
+        <div
+          style={{ display: currentBay === 'memory' ? 'block' : 'none' }}
+          className="launcher-bay-fullwidth-stage"
+        >
+          <MemoryFlowBay onError={(err) => (onError ? onError(err) : console.error(err))} />
+        </div>
+      </div>
 
       {/* 03 Autonomous Squad Stage (Unified Agent Command Grid & Tool Sandbox) */}
-      {isSquadActive && (
-        <div className="flex flex-col w-full">
-          <div className="workspace-subnav-bar">
-            <div className="workspace-subnav-cluster" role="tablist" aria-label="Squad Workspace Sub-Views">
-              <button
-                role="tab"
-                aria-selected={currentBay === 'agents'}
-                className={`workspace-subnav-pill ${currentBay === 'agents' ? 'active' : ''}`}
-                onClick={() => handleSwitchBay('agents')}
-                title="Autonomous Multi-Agent Command Grid"
-              >
-                <Sparkles size={12} />
-                <span>Agent Command Grid</span>
-              </button>
-              <button
-                role="tab"
-                aria-selected={currentBay === 'tools'}
-                className={`workspace-subnav-pill ${currentBay === 'tools' ? 'active' : ''}`}
-                onClick={() => handleSwitchBay('tools')}
-                title="Controlled Zero-Egress Tool Execution Sandbox"
-              >
-                <Wrench size={12} />
-                <span>Tool Sandbox & Registry</span>
-              </button>
-            </div>
+      <div
+        className="flex flex-col w-full"
+        style={{ display: isSquadActive ? 'flex' : 'none' }}
+      >
+        <div className="workspace-subnav-bar">
+          <div className="workspace-subnav-cluster" role="tablist" aria-label="Squad Workspace Sub-Views">
+            <button
+              role="tab"
+              aria-selected={currentBay === 'agents'}
+              className={`workspace-subnav-pill ${currentBay === 'agents' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('agents')}
+              title="Autonomous Multi-Agent Command Grid"
+            >
+              <Sparkles size={12} />
+              <span>Agent Command Grid</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={currentBay === 'tools'}
+              className={`workspace-subnav-pill ${currentBay === 'tools' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('tools')}
+              title="Controlled Zero-Egress Tool Execution Sandbox"
+            >
+              <Wrench size={12} />
+              <span>Tool Sandbox & Registry</span>
+            </button>
           </div>
-
-          {currentBay === 'agents' && (
-            <div className="launcher-bay-fullwidth-stage">
-              <AgentSquadWorkspace currentModel={selectedModel} onError={onError} />
-            </div>
-          )}
-
-          {currentBay === 'tools' && (
-            <div className="launcher-bay-fullwidth-stage">
-              <ToolBay onError={(err) => (onError ? onError(err) : console.error(err))} />
-            </div>
-          )}
         </div>
-      )}
+
+        <div
+          style={{ display: currentBay === 'agents' ? 'block' : 'none' }}
+          className="launcher-bay-fullwidth-stage"
+        >
+          <AgentSquadWorkspace currentModel={selectedModel} onError={onError} />
+        </div>
+
+        <div
+          style={{ display: currentBay === 'tools' ? 'block' : 'none' }}
+          className="launcher-bay-fullwidth-stage"
+        >
+          <ToolBay onError={(err) => (onError ? onError(err) : console.error(err))} />
+        </div>
+      </div>
 
       {/* Sovereign Command Center Overview Stage */}
-      {currentBay === 'overview' && (
-        <div className="launcher-bay-fullwidth-stage">
-          <CommandCenterOverview
-            onNavigateWorkspace={(bay) => handleSwitchBay(bay as WorkbenchBay)}
-            onError={onError}
-            currentModel={selectedModel}
-          />
-        </div>
-      )}
+      <div
+        style={{ display: currentBay === 'overview' ? 'block' : 'none' }}
+        className="launcher-bay-fullwidth-stage"
+      >
+        <CommandCenterOverview
+          onNavigateWorkspace={(bay) => handleSwitchBay(bay as WorkbenchBay)}
+          onError={onError}
+          currentModel={selectedModel}
+        />
+      </div>
 
       {/* 04 Autonomous Mission Orchestration Node Graph Stage */}
-      {currentBay === 'workflows' && (
-        <div className="launcher-bay-fullwidth-stage">
-          <WorkflowNodeCanvas />
-        </div>
-      )}
+      <div
+        style={{ display: currentBay === 'workflows' ? 'block' : 'none' }}
+        className="launcher-bay-fullwidth-stage"
+      >
+        <WorkflowNodeCanvas />
+      </div>
 
       {/* 05 Flight Log Recorder Stage (Full Width, Mission Telemetry & Flight Audit) */}
-      {currentBay === 'recorder' && (
-        <div className="launcher-bay-fullwidth-stage">
-          <FlightRecorderBay
-            onError={(err) => (onError ? onError(err) : console.error(err))}
-            selectedTaskId={lastCompletedTask}
-          />
-        </div>
-      )}
+      <div
+        style={{ display: currentBay === 'recorder' ? 'block' : 'none' }}
+        className="launcher-bay-fullwidth-stage"
+      >
+        <FlightRecorderBay
+          onError={(err) => (onError ? onError(err) : console.error(err))}
+          selectedTaskId={lastCompletedTask}
+        />
+      </div>
 
       {/* 06 Local Model Control Center Stage */}
-      {currentBay === 'models' && (
-        <div className="launcher-bay-fullwidth-stage">
-          <ModelControlCenter
-            currentModel={selectedModel}
-            onModelChange={onModelChange}
-            onError={onError}
-          />
-        </div>
-      )}
+      <div
+        style={{ display: currentBay === 'models' ? 'block' : 'none' }}
+        className="launcher-bay-fullwidth-stage"
+      >
+        <ModelControlCenter
+          currentModel={selectedModel}
+          onModelChange={onModelChange}
+          onError={onError}
+        />
+      </div>
 
       {/* Security Governance & Air-Gap Settings Stage */}
-      {currentBay === 'settings' && (
-        <div className="launcher-bay-fullwidth-stage">
-          <SettingsWorkspace />
-        </div>
-      )}
+      <div
+        style={{ display: currentBay === 'settings' ? 'block' : 'none' }}
+        className="launcher-bay-fullwidth-stage"
+      >
+        <SettingsWorkspace />
+      </div>
     </div>
   );
 }

@@ -301,9 +301,9 @@ export default function MemoryFlowBay({
               <div className="budget-info-row">
                 <div className="budget-title-cluster">
                   <Activity size={16} className="text-cyan" />
-                  <span className="budget-title">
-                    Context Window Token Allocation ({breakdown.total_tokens.toLocaleString()} /{' '}
-                    {breakdown.max_context_window.toLocaleString()} tokens — {pctUsage}% used)
+                  <span className="budget-title" suppressHydrationWarning>
+                    Context Window Token Allocation ({breakdown.total_tokens.toLocaleString('en-US')} /{' '}
+                    {breakdown.max_context_window.toLocaleString('en-US')} tokens — {pctUsage}% used)
                   </span>
                 </div>
                 <div className="budget-legend">
@@ -1060,8 +1060,8 @@ export default function MemoryFlowBay({
                             {sess.model.replace('gemma4:', 'Gemma ')}
                           </td>
                           <td className="session-turns-cell font-mono">{sess.turns_count}</td>
-                          <td className="session-tokens-cell font-mono text-cyan">
-                            {sess.memory_breakdown?.total_tokens?.toLocaleString() || 0}t
+                          <td className="session-tokens-cell font-mono text-cyan" suppressHydrationWarning>
+                            {sess.memory_breakdown?.total_tokens?.toLocaleString('en-US') || 0}t
                           </td>
                           <td className="session-status-cell">
                             <span className={`status-pill ${sess.status}`}>

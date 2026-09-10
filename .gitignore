@@ -74,6 +74,7 @@ backend/data/chroma/
 backend/data/flight_records/*
 backend/data/telemetry/*
 backend/data/traces/*
+backend/data/sessions/*
 !backend/data/**/.gitkeep
 *.trace
 

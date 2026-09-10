@@ -409,6 +409,40 @@ class ApiClient {
     return res.json();
   }
 
+  async activateSession(sessionId: string): Promise<SessionItem> {
+    const res = await fetch(`${this.base}/api/v1/sessions/${encodeURIComponent(sessionId)}/activate`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error(`Failed to activate session ${sessionId}`);
+    return res.json();
+  }
+
+  async appendSessionTurn(
+    sessionId: string,
+    turn: { role: string; content: string; type?: string; tokens?: number }
+  ): Promise<SessionItem> {
+    const res = await fetch(`${this.base}/api/v1/sessions/${encodeURIComponent(sessionId)}/turns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(turn),
+    });
+    if (!res.ok) throw new Error(`Failed to append turn to session ${sessionId}`);
+    return res.json();
+  }
+
+  async updateSession(
+    sessionId: string,
+    data: { title?: string; status?: string; model?: string }
+  ): Promise<SessionItem> {
+    const res = await fetch(`${this.base}/api/v1/sessions/${encodeURIComponent(sessionId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Failed to update session ${sessionId}`);
+    return res.json();
+  }
+
   getWebSocketUrl(taskId?: string): string {
     const wsBase = this.base.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
     return taskId

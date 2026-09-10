@@ -174,8 +174,8 @@ export default function FlightRecorderBay({ onError, selectedTaskId }: FlightRec
               <div className="record-detail-header">
                 <div>
                   <h4>Mission: {activeRecord.task_id.slice(0, 12)}</h4>
-                  <p className="record-time-text">
-                    Started: {new Date(activeRecord.start_time).toLocaleString()}
+                  <p className="record-time-text" suppressHydrationWarning>
+                    Started: {new Date(activeRecord.start_time).toLocaleString('en-US')}
                   </p>
                 </div>
 

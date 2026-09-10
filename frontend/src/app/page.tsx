@@ -9,9 +9,9 @@ import SpaceNavigation from '@/components/landing/SpaceNavigation';
 import CosmicHero from '@/components/landing/CosmicHero';
 import WorkflowSection from '@/components/landing/WorkflowSection';
 import SpaceFooter from '@/components/landing/SpaceFooter';
-import AgentChatLauncher, { WorkbenchBay } from '@/components/chat/AgentChatLauncher';
+import AgentChatLauncher from '@/components/chat/AgentChatLauncher';
 import ErrorDiagnosticModal from '@/components/workbench/ErrorDiagnosticModal';
-
+import { sessionStore, WorkbenchBay } from '@/lib/session-store';
 
 export default function Home() {
   // Universal modern navigation: 'app' (holds all 5 bays with top pill navigation bar) or 'landing' (3D showcase)
@@ -24,6 +24,16 @@ export default function Home() {
   ]);
   const [activeError, setActiveError] = useState<AppError | null>(null);
   const [lastCompletedTask, setLastCompletedTask] = useState<string | null>(null);
+
+  // Restore cached bay, model, and lastCompletedTask on mount
+  useEffect(() => {
+    const cachedBay = sessionStore.getActiveBay('mission');
+    setActiveBay(cachedBay);
+    const cachedModel = sessionStore.getSelectedModel('gemma4:e2b');
+    setModel(cachedModel);
+    const cachedTask = sessionStore.getLastCompletedTask();
+    if (cachedTask) setLastCompletedTask(cachedTask);
+  }, []);
 
   // Check health and available models on mount
   useEffect(() => {
@@ -52,6 +62,7 @@ export default function Home() {
 
   const handleMissionCompleted = (record: FlightRecord) => {
     setLastCompletedTask(record.task_id);
+    sessionStore.setLastCompletedTask(record.task_id);
   };
 
   const handleExploreWorkflow = () => {
@@ -64,6 +75,7 @@ export default function Home() {
 
   const handleOpenBay = (bay: WorkbenchBay = 'mission') => {
     setActiveBay(bay);
+    sessionStore.setActiveBay(bay);
     setViewMode('app');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -91,11 +103,17 @@ export default function Home() {
         <AgentChatLauncher
           onBackToLanding={handleBackToLanding}
           activeBay={activeBay}
-          onBayChange={(bay) => setActiveBay(bay)}
+          onBayChange={(bay) => {
+            setActiveBay(bay);
+            sessionStore.setActiveBay(bay);
+          }}
           onOpenWorkbench={(bay) => handleOpenBay((bay as WorkbenchBay) || 'mission')}
           availableModels={availableModels}
           currentModel={model}
-          onModelChange={(m) => setModel(m)}
+          onModelChange={(m) => {
+            setModel(m);
+            sessionStore.setSelectedModel(m);
+          }}
           onError={(err) => setActiveError(err)}
           lastCompletedTask={lastCompletedTask}
           onMissionCompleted={handleMissionCompleted}

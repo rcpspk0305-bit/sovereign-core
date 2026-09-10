@@ -50,9 +50,10 @@ class Settings(BaseSettings):
     RAG_CHUNK_SIZE: int = 500
     RAG_CHUNK_OVERLAP: int = 50
 
-    # Artifact & flight-record storage
+    # Artifact, flight-record, & session storage
     ARTIFACTS_DIR: Path = _BACKEND_DIR / "data" / "artifacts"
     FLIGHT_RECORDS_DIR: Path = _BACKEND_DIR / "data" / "flight_records"
+    SESSIONS_DIR: Path = _BACKEND_DIR / "data" / "sessions"
 
     # Open-Source Integration Flags (all disabled by default, air-gapped local endpoints)
     ENABLE_LITELLM: bool = False

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { api, normalizeError } from '@/lib/api-client';
 import { AppError, ChatMessage, SessionItem } from '@/lib/types';
+import { sessionStore } from '@/lib/session-store';
 
 interface ChatWorkspaceProps {
   currentModel?: string;
@@ -51,6 +52,8 @@ export default function ChatWorkspace({
   onModelChange,
   onError,
 }: ChatWorkspaceProps) {
+  const [activeSessionId, setActiveSessionId] = useState<string>('SES-20260909-001');
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
@@ -58,6 +61,7 @@ export default function ChatWorkspace({
         'Sovereign AI Reasoning Core online. Local air-gapped environment verified. Ready to analyze classified documentation, execute local sandbox tools, or synthesize mission telemetry.',
     },
   ]);
+
   const [inputPrompt, setInputPrompt] = useState('');
   const [selectedModel, setSelectedModel] = useState(currentModel);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -67,7 +71,6 @@ export default function ChatWorkspace({
 
   // Sessions
   const [sessions, setSessions] = useState<SessionItem[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState('SES-DEFAULT-01');
 
   // Telemetry Rail Stages
   const [telemetryStages, setTelemetryStages] = useState<TelemetryStage[]>([
@@ -91,28 +94,98 @@ export default function ChatWorkspace({
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isStreaming]);
 
-  // Load Sessions
+  // Load Sessions and Hydrate
   useEffect(() => {
+    const currentSid = sessionStore.getActiveSessionId('SES-20260909-001');
+    setActiveSessionId(currentSid);
+
     api
       .listSessions()
       .then((data) => {
         if (data && data.length > 0) {
           setSessions(data);
-          setActiveSessionId(data[0].session_id);
+          const cached = sessionStore.getSessionMessages(currentSid);
+          const matched = data.find((s) => s.session_id === currentSid);
+          if (matched && (!cached || cached.length <= 1) && matched.recent_turns?.length) {
+            const loaded: ChatMessage[] = matched.recent_turns
+              .filter((t) => t.role === 'user' || t.role === 'assistant')
+              .map((t) => ({ role: t.role as 'user' | 'assistant', content: t.content }));
+            if (loaded.length > 0) {
+              setMessages(loaded);
+              sessionStore.saveSessionMessages(currentSid, loaded);
+            }
+          }
         }
       })
       .catch(() => {});
+
+    // Listen for session changes from other components
+    const unsub = sessionStore.onSessionChange((newSid) => {
+      if (newSid && newSid !== activeSessionId) {
+        handleSelectSession(newSid);
+      }
+    });
+
+    return () => unsub();
   }, []);
 
-  const handleStartNewSession = () => {
-    const newId = `SES-${Date.now().toString().slice(-6)}`;
-    setActiveSessionId(newId);
-    setMessages([
+  const handleSelectSession = async (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    sessionStore.setActiveSessionId(sessionId);
+    api.activateSession(sessionId).catch(() => {});
+
+    // 1. Check local cache first for instant retrieval
+    const cached = sessionStore.getSessionMessages(sessionId);
+    if (cached && cached.length > 0) {
+      setMessages(cached);
+    }
+
+    // 2. Fetch latest session details from backend
+    try {
+      const full = await api.getSession(sessionId);
+      if (full && full.recent_turns && full.recent_turns.length > 0) {
+        const mapped: ChatMessage[] = full.recent_turns
+          .filter((t) => t.role === 'user' || t.role === 'assistant')
+          .map((t) => ({
+            role: t.role as 'user' | 'assistant',
+            content: t.content,
+          }));
+        if (mapped.length > 0) {
+          setMessages(mapped);
+          sessionStore.saveSessionMessages(sessionId, mapped);
+        }
+      }
+    } catch {
+      // Keep cached messages
+    }
+  };
+
+  const handleStartNewSession = async () => {
+    const defaultGreeting: ChatMessage[] = [
       {
         role: 'assistant',
-        content: `New mission session initialized (${newId}). Context memory buffer cleared. Ready for instructions.`,
+        content: 'New mission session initialized. Context memory buffer cleared. Ready for instructions.',
       },
-    ]);
+    ];
+
+    try {
+      const created = await api.createSession({
+        title: `Mission ${new Date().toLocaleTimeString('en-US', { hour12: false })}`,
+        model: selectedModel,
+      });
+      const newId = created.session_id;
+      setActiveSessionId(newId);
+      sessionStore.setActiveSessionId(newId);
+      setMessages(defaultGreeting);
+      sessionStore.saveSessionMessages(newId, defaultGreeting);
+      setSessions((prev) => [created, ...prev.filter((s) => s.session_id !== newId)]);
+    } catch {
+      const fallbackId = `SES-${Date.now().toString().slice(-6)}`;
+      setActiveSessionId(fallbackId);
+      sessionStore.setActiveSessionId(fallbackId);
+      setMessages(defaultGreeting);
+      sessionStore.saveSessionMessages(fallbackId, defaultGreeting);
+    }
   };
 
   const handleSendMessage = async (customPrompt?: string) => {
@@ -123,6 +196,16 @@ export default function ChatWorkspace({
     const userMsg: ChatMessage = { role: 'user', content: text.trim() };
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
+    sessionStore.saveSessionMessages(activeSessionId, updatedMessages);
+
+    // Record user turn to durable backend session
+    api
+      .appendSessionTurn(activeSessionId, {
+        role: 'user',
+        type: 'user_input',
+        content: text.trim(),
+      })
+      .catch(() => {});
 
     setIsStreaming(true);
     setElapsedSeconds(0);
@@ -191,6 +274,18 @@ export default function ChatWorkspace({
           setTelemetryStages((prev) =>
             prev.map((s) => ({ ...s, status: 'completed' }))
           );
+          const finalMessages: ChatMessage[] = [
+            ...updatedMessages,
+            { role: 'assistant', content: assistantContent },
+          ];
+          sessionStore.saveSessionMessages(activeSessionId, finalMessages);
+          api
+            .appendSessionTurn(activeSessionId, {
+              role: 'assistant',
+              type: 'internal_chatter',
+              content: assistantContent,
+            })
+            .catch(() => {});
         },
         (err) => {
           setIsStreaming(false);
@@ -325,7 +420,10 @@ export default function ChatWorkspace({
             <span style={{ fontSize: '10px', color: 'var(--sov-cyan)', fontFamily: 'var(--font-mono)' }}>
               ACTIVE SESSION
             </span>
-            <span style={{ fontSize: '12px', color: '#fff', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+            <span
+              suppressHydrationWarning
+              style={{ fontSize: '12px', color: '#fff', fontWeight: 700, fontFamily: 'var(--font-mono)' }}
+            >
               {activeSessionId}
             </span>
             <span style={{ fontSize: '10px', color: 'var(--sov-text-muted)' }}>
@@ -346,7 +444,7 @@ export default function ChatWorkspace({
               sessions.slice(0, 5).map((s) => (
                 <button
                   key={s.session_id}
-                  onClick={() => setActiveSessionId(s.session_id)}
+                  onClick={() => handleSelectSession(s.session_id)}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',

@@ -624,7 +624,7 @@ export default function DocumentPipelineWorkspace({ onError }: DocumentPipelineW
                     <span>•</span>
                     <span>{doc.total_chunks} chunks</span>
                     <span>•</span>
-                    <span>{doc.total_tokens?.toLocaleString()} tokens</span>
+                    <span suppressHydrationWarning>{doc.total_tokens?.toLocaleString('en-US')} tokens</span>
                   </div>
                 </div>
               </div>
