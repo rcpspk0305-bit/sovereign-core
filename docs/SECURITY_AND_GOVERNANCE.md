@@ -40,3 +40,18 @@ All system activities are recorded into an append-only JSONL audit ledger (`data
 - All generated inspection documents are isolated under `data/artifacts/`.
 - Vector embeddings and chunk data are isolated under `data/chroma/`.
 - All temporary scripts and scratch files are cleaned and excluded from version control via `.gitignore`.
+
+---
+
+## 4. OpenTelemetry Telemetry Redaction & Air-Gap Compliance
+
+Observability in Sovereign-Core is governed by strict privacy-first constraints to prevent data exfiltration or credential leakage:
+
+### 4.1 Sensitive Attribute Redaction Engine
+- **Pattern-Based Key Masking**: Any attribute matching `api[_-]?key`, `password`, `secret`, `token`, `credential`, `auth(orization)?`, or `cookie` is automatically masked with `[REDACTED_CREDENTIAL]`.
+- **Value Deep-Scanning**: String attribute values containing patterns such as `Bearer `, `eyj...` (JWT), `sk-...`, or `password=` are sanitized immediately.
+- **Payload Truncation**: Raw prompts, system prompts, responses, document text, and vector chunk contents are truncated to a maximum of 120 characters (`[CONTENT_TRUNCATED len=...]`) to prevent sensitive proprietary or classified documents from leaking into telemetry sinks.
+
+### 4.2 Local-First / Air-Gap Network Enforcement
+- **Default Disabled/Local**: `OTEL_ENABLED` defaults to `false`. When enabled, the default exporter is `console` or `in_memory`.
+- **Egress Prevention**: When using `OTEL_EXPORTER=otlp`, `validate_local_endpoint()` validates the target URL against local network interfaces (`localhost`, `127.0.0.1`, `::1`). External cloud telemetry endpoints are strictly rejected to ensure compliance with air-gapped facility requirements.

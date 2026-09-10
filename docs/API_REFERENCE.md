@@ -149,3 +149,27 @@ Retrieve recent audit log events.
 - **Query Parameters**:
   - `limit` (int, default: 50)
 - **Response**: `List[AuditEvent]`
+
+---
+
+## 7. OpenTelemetry Distributed Tracing & Metrics
+
+Sovereign-Core automatically propagates OpenTelemetry context throughout all internal subsystem operations, correlating each Flight Record with a W3C trace.
+
+### Configuration Environment Variables
+
+| Variable | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `OTEL_ENABLED` | bool | `false` | Enable/disable OpenTelemetry tracing and metrics |
+| `OTEL_EXPORTER` | string | `"console"` | Exporter backend: `"console"`, `"in_memory"`, or `"otlp"` |
+| `OTEL_ENDPOINT` | string | `""` | Local OTLP endpoint (e.g. `"http://localhost:4317"`). Non-local destinations rejected. |
+| `OTEL_SERVICE_NAME`| string | `"sovereign-core"` | Service name attached to all telemetry resources |
+| `OTEL_REDACTION_ENABLED` | bool | `true` | Redact sensitive keys and truncate long prompt/document payloads |
+
+### Correlated Schema Extensions
+
+`FlightRecord`, `FlightEvent`, `StepRecord`, and `ToolExecutionRecord` payloads now include:
+- `trace_id` (string, optional): 32-character hex OpenTelemetry Trace ID (e.g., `4bf92f3577b34da6a3ce929d0e0e4736`).
+- `span_id` (string, optional): 16-character hex OpenTelemetry Span ID (e.g., `00f067aa0ba902b7`).
+- `latency_ms` (float, optional): Step/tool execution time in milliseconds.
+- `tokens` (int, optional): Step/tool token consumption.

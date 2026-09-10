@@ -27,6 +27,12 @@ from app.core.flight_recorder.models import (
 )
 from app.core.interfaces.agents import BaseAgent
 
+from app.core.telemetry import (
+    trace_mission,
+    get_active_trace_context,
+    record_agent_mission,
+)
+
 logger = logging.getLogger("sovereign.flight_recorder")
 
 
@@ -186,39 +192,48 @@ class FlightRecorderManager:
         tid = task_id or f"task_{uuid.uuid4().hex[:8]}"
         resolved_model = model or settings.DEFAULT_MODEL
 
-        # Initialize flight record
-        record = FlightRecord(
-            task_id=tid,
-            model=resolved_model,
-            prompt=prompt,
-            network_mode=network_mode,
-            approval_status=ApprovalStatus.PENDING,
-            status="running",
-            start_time=now_iso,
-            steps=[],
-            tools_called=[],
-            retrieved_sources=[],
-            artifacts_generated=[],
-            errors=[],
-            metadata={"agent": agent.name, "max_steps": max_steps},
-        )
-        self.records[tid] = record
+        with trace_mission(mission_id=tid, prompt=prompt, model=resolved_model) as mission_span:
+            trace_ctx = get_active_trace_context()
 
-        # Emit task started event
-        await self.broadcast_event(
-            FlightEvent(
-                event_type=FlightEventType.TASK_STARTED,
+            # Initialize flight record
+            record = FlightRecord(
                 task_id=tid,
-                timestamp=now_iso,
-                data={
-                    "model": resolved_model,
-                    "prompt": prompt,
-                    "network_mode": network_mode.value,
-                    "approval_status": record.approval_status.value,
-                    "start_time": now_iso,
-                },
+                model=resolved_model,
+                prompt=prompt,
+                network_mode=network_mode,
+                approval_status=ApprovalStatus.PENDING,
+                status="running",
+                start_time=now_iso,
+                steps=[],
+                tools_called=[],
+                retrieved_sources=[],
+                artifacts_generated=[],
+                errors=[],
+                metadata={"agent": agent.name, "max_steps": max_steps},
+                trace_id=trace_ctx["trace_id"],
+                span_id=trace_ctx["span_id"],
             )
-        )
+            self.records[tid] = record
+
+            # Emit task started event
+            await self.broadcast_event(
+                FlightEvent(
+                    event_type=FlightEventType.TASK_STARTED,
+                    task_id=tid,
+                    timestamp=now_iso,
+                    trace_id=record.trace_id,
+                    span_id=record.span_id,
+                    data={
+                        "model": resolved_model,
+                        "prompt": prompt,
+                        "network_mode": network_mode.value,
+                        "approval_status": record.approval_status.value,
+                        "start_time": now_iso,
+                        "trace_id": record.trace_id,
+                        "span_id": record.span_id,
+                    },
+                )
+            )
 
         async def telemetry_callback(raw_event: Dict[str, Any]) -> None:
             ev_type_str = raw_event.get("type")
@@ -232,6 +247,8 @@ class FlightRecorderManager:
                         thought=raw_event.get("thought", ""),
                         timestamp=ts,
                         status="running",
+                        trace_id=record.trace_id,
+                        span_id=record.span_id,
                     )
                 )
                 await self.broadcast_event(
@@ -239,9 +256,13 @@ class FlightRecorderManager:
                         event_type=FlightEventType.STEP_STARTED,
                         task_id=tid,
                         timestamp=ts,
+                        trace_id=record.trace_id,
+                        span_id=record.span_id,
                         data={
                             "step_number": step_num,
                             "thought": raw_event.get("thought", ""),
+                            "trace_id": record.trace_id,
+                            "span_id": record.span_id,
                         },
                     )
                 )
@@ -257,11 +278,15 @@ class FlightRecorderManager:
                         event_type=FlightEventType.TOOL_CALLED,
                         task_id=tid,
                         timestamp=ts,
+                        trace_id=record.trace_id,
+                        span_id=record.span_id,
                         data={
                             "step_number": step_num,
                             "tool_name": tool_name,
                             "tool_arguments": args,
                             "thought": thought,
+                            "trace_id": record.trace_id,
+                            "span_id": record.span_id,
                         },
                     )
                 )
@@ -276,6 +301,8 @@ class FlightRecorderManager:
                     success=raw_event.get("success", True),
                     error=raw_event.get("error"),
                     output_preview=raw_event.get("output_preview"),
+                    trace_id=record.trace_id,
+                    span_id=record.span_id,
                 )
                 record.tools_called.append(tool_rec)
 
@@ -284,6 +311,8 @@ class FlightRecorderManager:
                         event_type=FlightEventType.TOOL_COMPLETED,
                         task_id=tid,
                         timestamp=ts,
+                        trace_id=record.trace_id,
+                        span_id=record.span_id,
                         data=tool_rec.model_dump(),
                     )
                 )
@@ -393,6 +422,8 @@ class FlightRecorderManager:
                         observation=s.observation,
                         timestamp=s.timestamp,
                         status="completed",
+                        trace_id=record.trace_id,
+                        span_id=record.span_id,
                     )
                     for s in agent_result.steps
                 ]
@@ -435,6 +466,7 @@ class FlightRecorderManager:
             record.final_response = err_msg
 
         self._persist_record(record)
+        record_agent_mission(agent_name=agent.name, success=record.status == "completed")
 
         # Broadcast completion event
         await self.broadcast_event(
@@ -442,6 +474,8 @@ class FlightRecorderManager:
                 event_type=FlightEventType.TASK_COMPLETED,
                 task_id=tid,
                 timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                trace_id=record.trace_id,
+                span_id=record.span_id,
                 data={
                     "status": record.status,
                     "approval_status": record.approval_status.value,
@@ -451,6 +485,8 @@ class FlightRecorderManager:
                     "tools_called_count": len(record.tools_called),
                     "artifacts_count": len(record.artifacts_generated),
                     "errors_count": len(record.errors),
+                    "trace_id": record.trace_id,
+                    "span_id": record.span_id,
                 },
             )
         )

@@ -1,6 +1,7 @@
 """ChromaDB Vector Store and Retriever implementing BaseRetriever."""
 
 import logging
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -14,6 +15,13 @@ from app.core.interfaces.rag import (
     SearchResult,
 )
 from app.core.rag.embeddings import OllamaEmbeddingProvider
+from app.core.telemetry import (
+    trace_rag,
+    trace_embedding,
+    trace_vector_search,
+    trace_document_ingestion,
+    record_rag_query,
+)
 
 logger = logging.getLogger("sovereign.rag.chroma")
 
@@ -120,53 +128,66 @@ class ChromaVectorStore(BaseRetriever):
         if not query.strip() or self._collection.count() == 0:
             return []
 
-        query_emb = await self.embedding_provider.embed_query(query)
-        k = min(top_k, self._collection.count())
+        start_time = time.perf_counter()
+        with trace_rag(collection=self.collection_name, top_k=top_k, query=query) as rag_span:
+            try:
+                emb_model = getattr(self.embedding_provider, "model", "default")
+                with trace_embedding(model=emb_model, chunk_count=1):
+                    query_emb = await self.embedding_provider.embed_query(query)
 
-        try:
-            results = self._collection.query(
-                query_embeddings=[query_emb],
-                n_results=k,
-                include=["documents", "metadatas", "distances"],
-            )
-        except Exception as exc:
-            if "dimension" in str(exc).lower():
-                logger.warning(
-                    "Dimensionality mismatch for query against collection '%s' (%s). Clearing outdated collection.",
-                    self.collection_name,
-                    exc,
-                )
-                await self.clear()
-                return []
-            raise exc
+                k = min(top_k, self._collection.count())
+                with trace_vector_search(collection=self.collection_name, top_k=k):
+                    try:
+                        results = self._collection.query(
+                            query_embeddings=[query_emb],
+                            n_results=k,
+                            include=["documents", "metadatas", "distances"],
+                        )
+                    except Exception as exc:
+                        if "dimension" in str(exc).lower():
+                            logger.warning(
+                                "Dimensionality mismatch for query against collection '%s' (%s). Clearing outdated collection.",
+                                self.collection_name,
+                                exc,
+                            )
+                            await self.clear()
+                            return []
+                        raise exc
 
-        matched_ids = results.get("ids", [[]])[0]
-        matched_docs = results.get("documents", [[]])[0]
-        matched_metas = results.get("metadatas", [[]])[0]
-        matched_distances = results.get("distances", [[]])[0]
+                matched_ids = results.get("ids", [[]])[0]
+                matched_docs = results.get("documents", [[]])[0]
+                matched_metas = results.get("metadatas", [[]])[0]
+                matched_distances = results.get("distances", [[]])[0]
 
-        search_results: List[SearchResult] = []
-        for doc_id, text, meta, dist in zip(matched_ids, matched_docs, matched_metas, matched_distances):
-            # In cosine space, distance in Chroma is 1 - cosine_similarity
-            similarity = max(0.0, min(1.0, 1.0 - dist))
-            if score_threshold is not None and similarity < score_threshold:
-                continue
+                search_results: List[SearchResult] = []
+                for doc_id, text, meta, dist in zip(matched_ids, matched_docs, matched_metas, matched_distances):
+                    # In cosine space, distance in Chroma is 1 - cosine_similarity
+                    similarity = max(0.0, min(1.0, 1.0 - dist))
+                    if score_threshold is not None and similarity < score_threshold:
+                        continue
 
-            doc = Document(
-                id=doc_id,
-                content=text,
-                metadata=meta or {},
-            )
-            search_results.append(
-                SearchResult(
-                    document=doc,
-                    score=round(similarity, 4),
-                )
-            )
+                    doc = Document(
+                        id=doc_id,
+                        content=text,
+                        metadata=meta or {},
+                    )
+                    search_results.append(
+                        SearchResult(
+                            document=doc,
+                            score=round(similarity, 4),
+                        )
+                    )
 
-        # Sort descending by similarity score
-        search_results.sort(key=lambda r: r.score, reverse=True)
-        return search_results
+                # Sort descending by similarity score
+                search_results.sort(key=lambda r: r.score, reverse=True)
+                dur = time.perf_counter() - start_time
+                record_rag_query(collection=self.collection_name, latency_seconds=dur, success=True)
+                rag_span.set_attribute("rag.matches_count", len(search_results))
+                return search_results
+            except Exception as e:
+                dur = time.perf_counter() - start_time
+                record_rag_query(collection=self.collection_name, latency_seconds=dur, success=False)
+                raise
 
     async def delete(self, document_ids: List[str]) -> bool:
         """Remove documents by ID from Chroma collection."""

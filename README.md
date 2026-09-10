@@ -11,6 +11,8 @@ Sovereign-Core is an extensible, **local-first** AI workbench built for develope
 | Layer | Technology |
 |---|---|
 | **Backend** | FastAPI (Python 3.11+) |
+| **Agent Graph Engine** | LangGraph StateGraph (Adapter-pattern bounded orchestration) |
+| **Telemetry & Tracing** | OpenTelemetry + Sovereign Flight Recorder (air-gapped, redacted) |
 | **LLM Runtime** | Ollama (`gemma4:e2b` default) |
 | **Vector Store** | ChromaDB (HNSW cosine) |
 | **Document Parsing** | PyMuPDF |
@@ -59,15 +61,22 @@ The shell also includes two immersive 3D landing screens:
 - `nomic-embed-text:latest` neural embeddings via Ollama
 - Source citation retention: `document_name`, `page_number`, `chunk_index`
 
-### Agent Orchestration
-- Bounded single-agent reasoning loop (1–10 configurable steps)
+### Agent Orchestration & LangGraph
+- Bounded single-agent & multi-agent reasoning loop (1–10 configurable steps)
+- LangGraph adapter for controlled graph-based orchestration with deterministic routing
+- Human approval checkpoints, failure recovery branches, and strict step budgets
 - Registered tools: `document_retrieval`, `calculator`, `document_generation`, `approval_note_generator`
 - Zero unrestricted shell/internet access (`NO_EGRESS` policy)
 - Agent Squad Workspace for multi-agent management
 
-### AI Flight Recorder & Telemetry
+### AI Flight Recorder & OpenTelemetry
 - WebSocket real-time telemetry stream (`/api/v1/flight-recorder/ws`)
 - Durable mission blackbox: task ID, model, step traces, tool calls, provenance, errors
+- Standardized OpenTelemetry tracing & metrics substrate underneath Flight Recorder
+- Hierarchical span model: `mission` → `agent execution` / `workflow` → `llm.call` → `rag.retrieve` (`embedding`, `vector.search`) → `tool` → `verifier` → `artifact.generate`
+- Metric instrumentation: mission execution counters, step duration histograms, error meters
+- Privacy-first redaction pipeline: automatic sanitization of prompts, tokens, and PII before trace export
+- Air-gapped local exporters: console, in-memory, and local OTLP (`http://localhost:4317`); disabled by default (`OTEL_ENABLED=false`)
 - Auditor disposition workflow: `AUTO_VERIFIED` · `APPROVED` · `PENDING` · `REJECTED` · `POLICY_VIOLATION` · `FAILED`
 - Cryptographically verified `.docx` approval note generation (SHA-256)
 
@@ -93,7 +102,9 @@ The shell also includes two immersive 3D landing screens:
 │   │   │   ├── tools/           # Tool registry, calculator, doc retrieval, approval note
 │   │   │   ├── agents/          # Controlled inspection agent engine
 │   │   │   ├── flight_recorder/ # Blackbox manager & telemetry broadcaster
+│   │   │   ├── telemetry/       # OpenTelemetry tracer, metrics, bridge, redaction
 │   │   │   └── audit/           # Structured JSON audit logger
+│   │   ├── integrations/        # LangGraph, OpenTelemetry, LiteLLM, Qdrant, Dify adapters
 │   │   ├── config.py
 │   │   └── main.py
 │   ├── data/
@@ -101,7 +112,7 @@ The shell also includes two immersive 3D landing screens:
 │   │   ├── audit/               # Structured JSON audit logs
 │   │   ├── chroma/              # ChromaDB persistent index
 │   │   └── flight_records/      # Mission blackbox JSON records
-│   ├── tests/                   # 66+ pytest unit & integration tests
+│   ├── tests/                   # 102+ pytest unit & integration tests
 │   ├── Dockerfile
 │   └── pyproject.toml
 ├── frontend/
@@ -199,12 +210,14 @@ cd backend
 pytest -v
 ```
 
-66+ tests covering:
+102+ tests covering:
 - LLM interface adherence, mock & live streaming
 - PyMuPDF parsing and source metadata retention
 - ChromaDB indexing, cosine similarity, and migration
 - Tool schema validation and sandbox execution
 - Agent reasoning loops and step-budget enforcement
+- LangGraph StateGraph adapter, routing, approval checkpoints, and cycle limits
+- OpenTelemetry span hierarchy, tracer lifecycle, redaction, and metric counters
 - WebSocket telemetry broadcasting
 - Claim-evidence grounding and unverified claim detection
 - DOCX approval note generation with SHA-256 checksums

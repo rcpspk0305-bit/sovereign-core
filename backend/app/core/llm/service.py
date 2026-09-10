@@ -5,6 +5,7 @@ Agents, RAG, API endpoints) and specific LLM provider implementations (such as O
 """
 
 import logging
+import time
 from typing import Any, AsyncIterator, List, Optional
 
 from fastapi import Depends
@@ -20,6 +21,11 @@ from app.core.interfaces.llm import (
     StreamChunk,
 )
 from app.core.llm.ollama import OllamaClient
+from app.core.telemetry import (
+    trace_llm,
+    trace_embedding,
+    record_llm_request,
+)
 
 logger = logging.getLogger("sovereign.llm.service")
 
@@ -53,13 +59,25 @@ class LLMService:
             target_model,
             len(messages),
         )
-        return await self._provider.complete(
-            messages=messages,
-            model=target_model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            **kwargs,
-        )
+        start_time = time.perf_counter()
+        with trace_llm(model=target_model, stream=False) as span:
+            try:
+                res = await self._provider.complete(
+                    messages=messages,
+                    model=target_model,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    **kwargs,
+                )
+                dur = time.perf_counter() - start_time
+                record_llm_request(model=target_model, latency_seconds=dur, success=True)
+                if res.usage:
+                    span.set_attribute("llm.total_tokens", res.usage.total_tokens)
+                return res
+            except Exception as e:
+                dur = time.perf_counter() - start_time
+                record_llm_request(model=target_model, latency_seconds=dur, success=False, error_type=type(e).__name__)
+                raise
 
     async def stream(
         self,
@@ -99,7 +117,8 @@ class LLMService:
         if not texts:
             return []
         target_model = model or settings.DEFAULT_EMBEDDING_MODEL
-        return await self._provider.embed(texts=texts, model=target_model, **kwargs)
+        with trace_embedding(model=target_model, chunk_count=len(texts)):
+            return await self._provider.embed(texts=texts, model=target_model, **kwargs)
 
     async def list_models(self) -> List[ModelInfo]:
         """Retrieve available models from the configured provider."""

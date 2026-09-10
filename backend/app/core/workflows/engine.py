@@ -17,6 +17,7 @@ from app.core.interfaces.workflows import (
     WorkflowNodeType,
     WorkflowStepResult,
 )
+from app.core.telemetry import trace_workflow, record_workflow_execution
 
 
 class WorkflowExecutionError(Exception):
@@ -85,17 +86,19 @@ class DeterministicLocalWorkflowEngine(BaseWorkflowEngine):
         start_time = time.perf_counter()
         execution_id = f"wf_exec_{uuid.uuid4().hex[:12]}"
 
-        try:
-            self.validate_graph(graph)
-        except WorkflowExecutionError as e:
-            total_latency = (time.perf_counter() - start_time) * 1000.0
-            return WorkflowExecutionResult(
-                workflow_id=graph.id,
-                execution_id=execution_id,
-                success=False,
-                total_latency_ms=total_latency,
-                error=str(e),
-            )
+        with trace_workflow(workflow_id=graph.id, step_count=len(graph.nodes)):
+            try:
+                self.validate_graph(graph)
+            except WorkflowExecutionError as e:
+                total_latency = (time.perf_counter() - start_time) * 1000.0
+                record_workflow_execution(workflow_id=graph.id, success=False)
+                return WorkflowExecutionResult(
+                    workflow_id=graph.id,
+                    execution_id=execution_id,
+                    success=False,
+                    total_latency_ms=total_latency,
+                    error=str(e),
+                )
 
         node_map: Dict[str, WorkflowNode] = {n.id: n for n in graph.nodes}
         in_degree: Dict[str, int] = {n.id: 0 for n in graph.nodes}
@@ -174,6 +177,7 @@ class DeterministicLocalWorkflowEngine(BaseWorkflowEngine):
                     ready_queue.append(neighbor)
 
         total_latency = (time.perf_counter() - start_time) * 1000.0
+        record_workflow_execution(workflow_id=graph.id, success=True)
         return WorkflowExecutionResult(
             workflow_id=graph.id,
             execution_id=execution_id,

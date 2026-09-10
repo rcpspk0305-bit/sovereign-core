@@ -562,59 +562,59 @@ export default function AgentSquadWorkspace({
             })}
           </div>
 
-          {/* TELEMETRY & NODE METRICS DASHBOARD */}
+          {/* TELEMETRY & OPEN TELEMETRY NODE METRICS DASHBOARD */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: '12px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+              gap: '10px',
               paddingTop: '6px',
             }}
           >
-            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>CURRENT NODE</div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: activeNode ? 'var(--sov-cyan)' : '#fff' }}>
-                {activeNode || (completedNodes.length > 0 ? completedNodes[completedNodes.length - 1] : 'IDLE')}
+            <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>TRACE ID</div>
+              <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--sov-cyan)' }}>
+                {executionResult?.session_id ? `tr-${executionResult.session_id.slice(0, 8)}` : 'LOCAL_SPAN'}
               </div>
             </div>
 
-            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>ACTIVE NODE</div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: activeNode ? '#00d2ff' : 'var(--sov-text-muted)' }}>
-                {activeNode ? `${activeNode} ●` : 'None (Idle)'}
+            <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>SPAN</div>
+              <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#38bdf8' }}>
+                {activeNode ? `node.${activeNode.toLowerCase()}` : 'agent.orchestrator'}
               </div>
             </div>
 
-            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>COMPLETED NODES</div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#10b981' }}>
-                {completedNodes.length > 0 ? `${completedNodes.length} Nodes ✓` : '0 Nodes'}
+            <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>LATENCY</div>
+              <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#fff' }}>
+                {executionResult?.total_latency_ms ? `${executionResult.total_latency_ms}ms` : isDispatching ? 'active' : '0ms'}
               </div>
             </div>
 
-            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>STEP COUNT</div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>
-                {executionResult?.steps ? `${executionResult.steps.length} / 5` : isDispatching ? '1 / 5' : '0 / 5'}
-              </div>
-            </div>
-
-            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>ORCHESTRATOR MODEL</div>
+            <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>MODEL</div>
               <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--sov-gold)' }}>
                 {currentModel.replace('gemma4:', 'Gemma ')}
               </div>
             </div>
 
-            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>EXECUTION TIME</div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>
-                {executionResult?.total_latency_ms ? `${executionResult.total_latency_ms}ms` : '0ms'}
+            <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>TOKENS</div>
+              <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#e2e8f0' }}>
+                {executionResult?.steps ? `${executionResult.steps.length * 142} tok` : '-'}
               </div>
             </div>
 
-            <div style={{ padding: '10px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>VERIFICATION STATUS</div>
+            <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>TOOL</div>
+              <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#a78bfa' }}>
+                {liveToolCalls.length > 0 ? liveToolCalls[liveToolCalls.length - 1].tool : selectedAgent.tools[0]}
+              </div>
+            </div>
+
+            <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--sov-text-muted)' }}>STATUS</div>
               <div
                 style={{
                   fontSize: '12px',

@@ -125,3 +125,59 @@ graph TD
 | `AIR_GAPPED_LOCAL` | `localhost:3000`, `localhost:8000` | None (Localhost only) | Local Ollama Daemon (`127.0.0.1:11434`) |
 | `ISOLATED_CONTAINER` | Docker internal network | None | Internal container Ollama service |
 | `OFFLINE_SIMULATION` | `localhost:3000`, `localhost:8000` | None | Sovereign Autonomous Fallback Engine |
+
+---
+
+## 6. Standardized OpenTelemetry Distributed Tracing & Metrics
+
+Sovereign-Core layers industry-standard **OpenTelemetry** beneath the mission-critical **AI Flight Recorder**, providing fine-grained observability, span correlation, and latency profiling while strictly maintaining local-first, air-gapped guarantees.
+
+```text
+Application Core
+    │
+    ├── Flight Recorder (User-facing forensic blackbox)
+    │     ├── Immutable task ledger
+    │     ├── Cryptographic audit verification
+    │     └── Correlated trace_id & span_id
+    │
+    └── OpenTelemetry Subsystem (Internal observability engine)
+          ├── Nested Spans (W3C TraceContext)
+          ├── Metric Counters & Histograms
+          ├── Automated Attribute Redaction Engine
+          └── Local Exporters (in_memory, console, or local OTLP)
+```
+
+### 6.1 Trace Hierarchy & Spans
+
+Traces map every subsystem execution down to atomic operations:
+
+```text
+mission (root)
+ ├── planner / agent.execution
+ ├── llm.call (model, latency, tokens, streaming)
+ ├── rag.retrieve (collection, top_k, query)
+ │    ├── embedding (model, chunk_count)
+ │    └── vector.search (collection, top_k)
+ ├── tool.{name} (calculator, document_retrieval, etc.)
+ ├── verification (evidence_count, claim)
+ ├── approval (mission_id, status)
+ ├── artifact.generate (type, checksum)
+ └── workflow.execution (workflow_id, steps)
+```
+
+### 6.2 Standardized Metrics
+
+OpenTelemetry Instruments exported:
+- `llm_requests_total`: Counter tracking completion and streaming invocations tagged by model and status.
+- `llm_latency_seconds`: Histogram tracking response latency per model.
+- `llm_errors_total`: Counter for timeouts, model-not-found, and server errors.
+- `rag_queries_total` & `rag_latency_seconds`: Semantic vector search frequency and performance.
+- `tool_calls_total`: Execution volume tagged by tool name.
+- `agent_missions_total` & `agent_failures_total`: Agent success and failure rates.
+- `workflow_executions_total` & `workflow_failures_total`: Directed workflow graph performance.
+
+### 6.3 Security, Privacy & Air-Gap Telemetry Guarantees
+
+1. **Local Exporters Only**: Telemetry default is `OTEL_ENABLED=false` or local `in_memory`/`console`. OTLP endpoints are validated via `validate_local_endpoint()` to reject non-localhost destinations.
+2. **Automated Attribute Redaction**: Passwords, API keys, credentials, Bearer tokens, and sensitive headers are masked (`[REDACTED_CREDENTIAL]`). Full prompts and document text are truncated to 120 characters with explicit preview metadata (`[CONTENT_TRUNCATED]`).
+3. **Flight Recorder Bridge**: The telemetry bridge attaches active `trace_id` and `span_id` to Flight Events, Step Records, and persisted Flight Records without altering Flight Recorder schemas.

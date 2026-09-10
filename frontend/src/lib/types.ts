@@ -221,6 +221,8 @@ export interface ToolExecutionRecord {
   success: boolean;
   error?: string;
   output_preview?: string;
+  trace_id?: string;
+  span_id?: string;
 }
 
 export interface FlightEvent {
@@ -228,6 +230,8 @@ export interface FlightEvent {
   task_id: string;
   timestamp: string;
   data: Record<string, any>;
+  trace_id?: string;
+  span_id?: string;
 }
 
 export interface StepRecord {
@@ -238,6 +242,10 @@ export interface StepRecord {
   observation?: string;
   timestamp?: string;
   status?: string;
+  trace_id?: string;
+  span_id?: string;
+  latency_ms?: number;
+  tokens?: number;
 }
 
 export interface FlightRecord {
@@ -250,6 +258,8 @@ export interface FlightRecord {
   start_time: string;
   end_time?: string;
   total_latency_ms?: number;
+  trace_id?: string;
+  span_id?: string;
   steps: StepRecord[];
   tools_called: ToolExecutionRecord[];
   retrieved_sources: RetrievedSource[];

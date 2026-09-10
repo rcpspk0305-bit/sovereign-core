@@ -69,6 +69,8 @@ class ToolExecutionRecord(BaseModel):
     success: bool = True
     error: Optional[str] = None
     output_preview: Optional[str] = None
+    trace_id: Optional[str] = None
+    span_id: Optional[str] = None
 
 
 class FlightEvent(BaseModel):
@@ -77,6 +79,8 @@ class FlightEvent(BaseModel):
     task_id: str
     timestamp: str
     data: Dict[str, Any] = Field(default_factory=dict)
+    trace_id: Optional[str] = None
+    span_id: Optional[str] = None
 
 
 class StepRecord(BaseModel):
@@ -88,6 +92,8 @@ class StepRecord(BaseModel):
     observation: Optional[str] = None
     timestamp: Optional[str] = None
     status: Optional[str] = "completed"
+    trace_id: Optional[str] = None
+    span_id: Optional[str] = None
 
 
 class FlightRecord(BaseModel):
@@ -108,3 +114,5 @@ class FlightRecord(BaseModel):
     errors: List[RecordedError] = Field(default_factory=list)
     final_response: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    trace_id: Optional[str] = None
+    span_id: Optional[str] = None

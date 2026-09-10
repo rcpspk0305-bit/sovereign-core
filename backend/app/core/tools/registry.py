@@ -12,6 +12,7 @@ from app.core.interfaces.tools import (
     ToolDefinition,
     ToolResult,
 )
+from app.core.telemetry import trace_tool, record_tool_call
 
 
 class SystemInfoTool(BaseTool):
@@ -261,12 +262,16 @@ class ControlledToolRegistry(BaseToolRegistry):
                 error=f"Validation failed for tool '{name}'. Missing required parameters: {', '.join(missing_keys)}",
             )
 
-        try:
-            return await tool.execute(**arguments)
-        except Exception as exc:
-            return ToolResult(
-                success=False,
-                output=None,
-                error=f"Tool '{name}' execution failure: {str(exc)}",
-            )
+        with trace_tool(tool_name=name, arguments=arguments) as tool_span:
+            try:
+                res = await tool.execute(**arguments)
+                record_tool_call(tool_name=name, success=res.success)
+                return res
+            except Exception as exc:
+                record_tool_call(tool_name=name, success=False)
+                return ToolResult(
+                    success=False,
+                    output=None,
+                    error=f"Tool '{name}' execution failure: {str(exc)}",
+                )
 

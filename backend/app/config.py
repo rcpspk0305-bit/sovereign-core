@@ -55,9 +55,14 @@ class Settings(BaseSettings):
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION_NAME: str = "sovereign_knowledge"
 
+    # OpenTelemetry Tracing & Metrics (local-first, air-gapped)
     ENABLE_OPENTELEMETRY: bool = False
+    OTEL_ENABLED: bool = False
+    OTEL_EXPORTER: str = "console"  # "console", "in_memory", "otlp", "none"
+    OTEL_ENDPOINT: Optional[str] = None
     OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4317"
     OTEL_SERVICE_NAME: str = "sovereign-core"
+    OTEL_REDACTION_ENABLED: bool = True
 
     ENABLE_LANGGRAPH: bool = False
 

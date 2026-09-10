@@ -180,70 +180,128 @@ export default function FlightRecorderBay({ onError, selectedTaskId }: FlightRec
                 </div>
               </div>
 
-              {/* Status Meta Cards */}
-              <div className="telemetry-badges-row">
+              {/* Status Meta Cards & OpenTelemetry Span Indicators */}
+              <div className="telemetry-badges-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))' }}>
                 <div className="telemetry-chip">
-                  <span>AIR-GAP MODE</span>
-                  <strong>{activeRecord.network_mode}</strong>
+                  <span>TRACE ID</span>
+                  <strong title={activeRecord.trace_id || activeRecord.metadata?.trace_id || 'LOCAL_SPAN'}>
+                    {activeRecord.trace_id ? `${activeRecord.trace_id.slice(0, 10)}...` : activeRecord.metadata?.trace_id ? `${String(activeRecord.metadata.trace_id).slice(0, 10)}...` : 'LOCAL_SPAN'}
+                  </strong>
                 </div>
                 <div className="telemetry-chip">
-                  <span>EXECUTION STATUS</span>
+                  <span>SPAN</span>
+                  <strong>{activeRecord.span_id ? `span-${activeRecord.span_id.slice(0, 8)}` : 'mission.root'}</strong>
+                </div>
+                <div className="telemetry-chip">
+                  <span>STATUS</span>
                   <strong className={activeRecord.status}>{activeRecord.status.toUpperCase()}</strong>
                 </div>
                 <div className="telemetry-chip">
                   <span>LATENCY</span>
                   <strong>{activeRecord.total_latency_ms ? `${activeRecord.total_latency_ms} ms` : 'N/A'}</strong>
                 </div>
+                <div className="telemetry-chip">
+                  <span>MODEL</span>
+                  <strong>{activeRecord.model}</strong>
+                </div>
+                <div className="telemetry-chip">
+                  <span>TOKENS</span>
+                  <strong>{activeRecord.metadata?.total_tokens ?? activeRecord.metadata?.tokens ?? 'N/A'}</strong>
+                </div>
+                <div className="telemetry-chip">
+                  <span>AIR-GAP MODE</span>
+                  <strong>{activeRecord.network_mode}</strong>
+                </div>
               </div>
 
-              {/* Retrieved Provenance Sources */}
-              {activeRecord.retrieved_sources?.length > 0 && (
-                <div className="record-section">
-                  <h5>
-                    <FileCheck size={14} />
-                    PROVENANCE SOURCES ({activeRecord.retrieved_sources.length})
-                  </h5>
-                  <div className="sources-list">
-                    {activeRecord.retrieved_sources.map((src, i) => (
-                      <div key={i} className="source-pill">
-                        <strong>{src.document_name}</strong>
-                        {src.page_number && <span>p.{src.page_number}</span>}
-                        <span>{(src.similarity_score * 100).toFixed(0)}% match</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Recorded Errors */}
-              {activeRecord.errors?.length > 0 && (
-                <div className="record-section">
-                  <h5 className="error-section-title">
-                    <AlertTriangle size={14} />
-                    RECORDED ERRORS ({activeRecord.errors.length})
-                  </h5>
-                  <div className="errors-list">
-                    {activeRecord.errors.map((err, i) => (
-                      <div key={i} className={`error-log-card ${err.severity}`}>
-                        <span className="error-log-sev">[{err.severity.toUpperCase()}]</span>
-                        <p>{err.error_message}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Steps Trace */}
+              {/* OpenTelemetry Distributed Trace Spans */}
               <div className="record-section">
                 <h5>
                   <Layers size={14} />
-                  STEPS EXECUTED ({activeRecord.steps?.length || 0})
+                  OPENTELEMETRY TRACE SPANS ({activeRecord.tools_called?.length || 0 + (activeRecord.steps?.length || 0)})
                 </h5>
-                <div className="steps-scroll-tray">
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                  maxHeight: '220px',
+                  overflowY: 'auto',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '11px',
+                }}>
+                  {/* Root Mission Span */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.2fr 1fr 0.8fr 1fr 0.8fr 1fr 0.7fr',
+                    padding: '6px 10px',
+                    borderRadius: '4px',
+                    background: 'rgba(0, 210, 255, 0.08)',
+                    border: '1px solid rgba(0, 210, 255, 0.25)',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}>
+                    <span style={{ color: 'var(--sov-cyan)', fontWeight: 700 }}>
+                      TRACE: {activeRecord.trace_id ? activeRecord.trace_id.slice(0, 8) : 'root'}
+                    </span>
+                    <span style={{ color: '#fff' }}>SPAN: mission</span>
+                    <span style={{ color: '#e2e8f0' }}>{activeRecord.total_latency_ms ? `${activeRecord.total_latency_ms}ms` : '-'}</span>
+                    <span style={{ color: '#f59e0b' }}>{activeRecord.model}</span>
+                    <span style={{ color: '#94a3b8' }}>{activeRecord.metadata?.total_tokens ?? '-'} tok</span>
+                    <span style={{ color: '#a78bfa' }}>TOOL: orchestrator</span>
+                    <span style={{ color: activeRecord.status === 'completed' ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+                      {activeRecord.status.toUpperCase()}
+                    </span>
+                  </div>
+
+                  {/* Tool Spans */}
+                  {activeRecord.tools_called?.map((tool, idx) => (
+                    <div key={`tool-${idx}`} style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1.2fr 1fr 0.8fr 1fr 0.8fr 1fr 0.7fr',
+                      padding: '5px 10px',
+                      borderRadius: '4px',
+                      background: 'rgba(0, 6, 18, 0.6)',
+                      border: '1px solid rgba(255, 255, 255, 0.07)',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}>
+                      <span style={{ color: '#64748b' }}>
+                        {tool.trace_id ? tool.trace_id.slice(0, 8) : activeRecord.trace_id ? activeRecord.trace_id.slice(0, 8) : 'trace'}
+                      </span>
+                      <span style={{ color: '#38bdf8' }}>SPAN: tool.{tool.tool_name}</span>
+                      <span style={{ color: '#e2e8f0' }}>{tool.execution_time_ms ? `${tool.execution_time_ms}ms` : '-'}</span>
+                      <span style={{ color: '#94a3b8' }}>-</span>
+                      <span style={{ color: '#94a3b8' }}>-</span>
+                      <span style={{ color: '#a78bfa' }}>TOOL: {tool.tool_name}</span>
+                      <span style={{ color: tool.success ? '#10b981' : '#ef4444', fontWeight: 600 }}>
+                        {tool.success ? 'OK' : 'ERROR'}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Step Spans */}
                   {activeRecord.steps?.map((step, idx) => (
-                    <div key={idx} className="step-trace-card">
-                      <span className="step-idx">#{step.step_number}</span>
-                      <p>{step.thought || step.observation || 'Step executed.'}</p>
+                    <div key={`step-${idx}`} style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1.2fr 1fr 0.8fr 1fr 0.8fr 1fr 0.7fr',
+                      padding: '5px 10px',
+                      borderRadius: '4px',
+                      background: 'rgba(0, 6, 18, 0.4)',
+                      border: '1px solid rgba(255, 255, 255, 0.04)',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}>
+                      <span style={{ color: '#64748b' }}>
+                        {step.trace_id ? step.trace_id.slice(0, 8) : activeRecord.trace_id ? activeRecord.trace_id.slice(0, 8) : 'trace'}
+                      </span>
+                      <span style={{ color: '#93c5fd' }}>SPAN: step.{step.step_number}</span>
+                      <span style={{ color: '#e2e8f0' }}>{step.latency_ms ? `${step.latency_ms}ms` : '-'}</span>
+                      <span style={{ color: '#f59e0b' }}>{activeRecord.model}</span>
+                      <span style={{ color: '#94a3b8' }}>{step.tokens ? `${step.tokens} tok` : '-'}</span>
+                      <span style={{ color: '#a78bfa' }}>TOOL: {step.tool_name || 'none'}</span>
+                      <span style={{ color: step.status === 'error' ? '#ef4444' : '#10b981' }}>
+                        {(step.status || 'OK').toUpperCase()}
+                      </span>
                     </div>
                   ))}
                 </div>
