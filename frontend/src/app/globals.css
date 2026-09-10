@@ -6840,7 +6840,222 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   color: #f43f5e;
 }
 
+/* =========================================================================
+   UNIFIED SOVEREIGN-CORE CINEMATIC OPERATING SYSTEM DESIGN SYSTEM
+   Aligns Overview, Chat, Knowledge, Documents, Agents, Workflows,
+   Memory, Tools, and Flight Log into One Living Ecosystem.
+   ========================================================================= */
 
+:root {
+  --sov-bg-space: #000000;
+  --sov-surface-base: rgba(8, 6, 20, 0.78);
+  --sov-surface-elevated: rgba(16, 12, 36, 0.82);
+  --sov-surface-card: rgba(12, 8, 28, 0.65);
+  --sov-surface-card-hover: rgba(24, 16, 52, 0.75);
+  --sov-border-subtle: rgba(255, 255, 255, 0.08);
+  --sov-border-medium: rgba(160, 140, 255, 0.18);
+  --sov-border-bright: rgba(0, 210, 255, 0.45);
+  --sov-border-gold: rgba(212, 168, 67, 0.4);
 
+  --sov-cyan: #00d2ff;
+  --sov-cyan-glow: rgba(0, 210, 255, 0.35);
+  --sov-gold: #d4a843;
+  --sov-gold-bright: #f5cf68;
+  --sov-gold-glow: rgba(212, 168, 67, 0.35);
+  --sov-indigo: #8b72ff;
+  --sov-indigo-glow: rgba(139, 114, 255, 0.35);
+  --sov-emerald: #00c896;
+  --sov-rose: #f43f5e;
+  --sov-amber: #e8a820;
 
+  --sov-text-primary: #ffffff;
+  --sov-text-secondary: rgba(255, 255, 255, 0.7);
+  --sov-text-muted: rgba(255, 255, 255, 0.42);
+}
 
+/* Sovereign Stage Container */
+.sovereign-stage-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  animation: sovFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes sovFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sovereign Section Header */
+.sovereign-header-block {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--sov-border-subtle);
+  flex-wrap: wrap;
+}
+
+.sovereign-header-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.sovereign-header-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: radial-gradient(circle at center, rgba(0, 210, 255, 0.2), rgba(139, 114, 255, 0.05));
+  border: 1px solid var(--sov-border-bright);
+  display: grid;
+  place-items: center;
+  color: var(--sov-cyan);
+  box-shadow: 0 0 24px var(--sov-cyan-glow);
+  flex-shrink: 0;
+}
+
+.sovereign-eyebrow-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 10px var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--sov-cyan);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.sovereign-title {
+  margin: 0 0 6px;
+  font-size: clamp(22px, 2.5vw, 28px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ffffff 40%, rgba(255, 255, 255, 0.7));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.sovereign-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--sov-text-secondary);
+  line-height: 1.5;
+  max-width: 680px;
+}
+
+.sovereign-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sovereign-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 11px var(--font-mono);
+  letter-spacing: 0.08em;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  border: 1px solid var(--sov-border-medium);
+  background: rgba(12, 6, 30, 0.7);
+  backdrop-filter: blur(12px);
+  color: #d4c4f0;
+}
+
+.sovereign-badge-pill.verified {
+  border-color: rgba(0, 200, 150, 0.35);
+  color: #5ee7c4;
+  background: rgba(4, 20, 30, 0.7);
+}
+
+.sovereign-badge-pill.model {
+  border-color: var(--sov-border-bright);
+  color: #7dd3fc;
+}
+
+/* Secondary Navigation Strip inside Workspaces */
+.sovereign-subnav-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  background: rgba(10, 6, 26, 0.6);
+  border: 1px solid var(--sov-border-subtle);
+  border-radius: 9999px;
+  backdrop-filter: blur(16px);
+  width: fit-content;
+}
+
+.sovereign-subnav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sov-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.sovereign-subnav-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sovereign-subnav-btn.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(139, 114, 255, 0.25), rgba(0, 210, 255, 0.15));
+  border-color: var(--sov-border-medium);
+  box-shadow: 0 0 20px rgba(139, 114, 255, 0.2);
+}
+
+/* Standard Sovereign Glass Panel */
+.sovereign-glass-panel {
+  background: linear-gradient(135deg, rgba(16, 10, 42, 0.88), rgba(8, 5, 22, 0.85));
+  border: 1px solid var(--sov-border-subtle);
+  border-radius: 12px;
+  padding: 24px;
+  backdrop-filter: blur(24px);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(200, 170, 255, 0.1);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sovereign-glass-panel:hover {
+  border-color: var(--sov-border-medium);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(200, 170, 255, 0.18);
+}
+
+/* Sovereign Pulse Line Keyframe */
+@keyframes sovPulseFlow {
+  0% {
+    stroke-dashoffset: 200;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.sov-pulse-path {
+  stroke-dasharray: 8, 8;
+  animation: sovPulseFlow 2.5s linear infinite;
+}

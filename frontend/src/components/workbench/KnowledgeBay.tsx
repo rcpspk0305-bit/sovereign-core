@@ -29,6 +29,7 @@ import { api, normalizeError } from '@/lib/api-client';
 import { AppError, SearchResult } from '@/lib/types';
 import CosmicBrainGraph3D from './CosmicBrainGraph3D';
 import RealisticKnowledgeGraph from './RealisticKnowledgeGraph';
+import VectorSpaceCanvas from '@/components/visualizations/VectorSpaceCanvas';
 
 interface KnowledgeBayProps {
   onError: (error: AppError) => void;
@@ -79,7 +80,7 @@ const DEFAULT_SAMPLE_DOCS: DocumentItem[] = [
 ];
 
 export default function KnowledgeBay({ onError }: KnowledgeBayProps) {
-  const [activeTab, setActiveTab] = useState<'network' | 'attachments' | 'brain' | 'graphs' | 'search'>('network');
+  const [activeTab, setActiveTab] = useState<'network' | 'vector' | 'attachments' | 'brain' | 'graphs' | 'search'>('network');
   const [stats, setStats] = useState<{ total_documents: number; backend: string } | null>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>(DEFAULT_SAMPLE_DOCS);
   const [searchQuery, setSearchQuery] = useState('');
@@ -273,6 +274,13 @@ export default function KnowledgeBay({ onError }: KnowledgeBayProps) {
             <span>Network Graph</span>
           </button>
           <button
+            className={`knowledge-tab-btn ${activeTab === 'vector' ? 'active' : ''}`}
+            onClick={() => setActiveTab('vector')}
+          >
+            <Sparkles size={15} />
+            <span>Vector Constellation</span>
+          </button>
+          <button
             className={`knowledge-tab-btn ${activeTab === 'attachments' ? 'active' : ''}`}
             onClick={() => setActiveTab('attachments')}
           >
@@ -361,6 +369,15 @@ export default function KnowledgeBay({ onError }: KnowledgeBayProps) {
         {activeTab === 'network' && (
           <div className="network-graph-stage">
             <RealisticKnowledgeGraph />
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* VECTOR CONSTELLATION & SEMANTIC PROJECTION CANVAS           */}
+        {/* ============================================================ */}
+        {activeTab === 'vector' && (
+          <div style={{ padding: '0 0 20px' }}>
+            <VectorSpaceCanvas />
           </div>
         )}
 

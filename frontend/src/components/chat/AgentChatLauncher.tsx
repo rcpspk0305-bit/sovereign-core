@@ -29,6 +29,7 @@ import {
   Check,
   Calendar,
   Clock,
+  Compass,
   GitBranch,
 } from 'lucide-react';
 import InteractiveCosmicChatCanvas from './InteractiveCosmicChatCanvas';
@@ -38,8 +39,27 @@ import KnowledgeBay from '@/components/workbench/KnowledgeBay';
 import MemoryFlowBay from '@/components/workbench/MemoryFlowBay';
 import ToolBay from '@/components/workbench/ToolBay';
 import FlightRecorderBay from '@/components/workbench/FlightRecorderBay';
+import CommandCenterOverview from '@/components/workbench/CommandCenterOverview';
+import ChatWorkspace from '@/components/chat/ChatWorkspace';
+import DocumentPipelineWorkspace from '@/components/knowledge/DocumentPipelineWorkspace';
+import AgentSquadWorkspace from '@/components/agents/AgentSquadWorkspace';
+import WorkflowNodeCanvas from '@/components/visualizations/WorkflowNodeCanvas';
+import ModelControlCenter from '@/components/models/ModelControlCenter';
+import SettingsWorkspace from '@/components/settings/SettingsWorkspace';
 
-export type WorkbenchBay = 'mission' | 'knowledge' | 'memory' | 'tools' | 'recorder';
+export type WorkbenchBay =
+  | 'mission'
+  | 'overview'
+  | 'chat'
+  | 'knowledge'
+  | 'documents'
+  | 'memory'
+  | 'agents'
+  | 'workflows'
+  | 'tools'
+  | 'recorder'
+  | 'models'
+  | 'settings';
 
 interface MediaAttachment {
   id: string;
@@ -353,43 +373,98 @@ export default function AgentChatLauncher({
         </div>
 
         {/* Center Quick Bay Navigation Switcher */}
-        <nav className="launcher-bay-switcher" aria-label="Workbench bays">
-          <button
-            className={`bay-switch-pill ${currentBay === 'mission' ? 'active' : ''}`}
-            onClick={() => handleSwitchBay('mission')}
-          >
-            <Radio size={13} />
-            <span>01 Mission</span>
-          </button>
-          <button
-            className={`bay-switch-pill ${currentBay === 'knowledge' ? 'active' : ''}`}
-            onClick={() => handleSwitchBay('knowledge')}
-          >
-            <Database size={13} />
-            <span>02 Knowledge</span>
-          </button>
-          <button
-            className={`bay-switch-pill ${currentBay === 'memory' ? 'active' : ''}`}
-            onClick={() => handleSwitchBay('memory')}
-          >
-            <Cpu size={13} />
-            <span>03 Memory Flow</span>
-          </button>
-          <button
-            className={`bay-switch-pill ${currentBay === 'tools' ? 'active' : ''}`}
-            onClick={() => handleSwitchBay('tools')}
-          >
-            <Wrench size={13} />
-            <span>04 Tools</span>
-          </button>
-          <button
-            className={`bay-switch-pill ${currentBay === 'recorder' ? 'active' : ''}`}
-            onClick={() => handleSwitchBay('recorder')}
-          >
-            <Radar size={13} />
-            <span>05 Flight Log</span>
-          </button>
-        </nav>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {/* Primary 5 Mission Bays */}
+          <nav className="launcher-bay-switcher" aria-label="Workbench bays">
+            <button
+              className={`bay-switch-pill ${currentBay === 'mission' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('mission')}
+            >
+              <Radio size={13} />
+              <span>01 Mission</span>
+            </button>
+            <button
+              className={`bay-switch-pill ${currentBay === 'knowledge' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('knowledge')}
+            >
+              <Database size={13} />
+              <span>02 Knowledge</span>
+            </button>
+            <button
+              className={`bay-switch-pill ${currentBay === 'memory' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('memory')}
+            >
+              <Cpu size={13} />
+              <span>03 Memory Flow</span>
+            </button>
+            <button
+              className={`bay-switch-pill ${currentBay === 'tools' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('tools')}
+            >
+              <Wrench size={13} />
+              <span>04 Tools</span>
+            </button>
+            <button
+              className={`bay-switch-pill ${currentBay === 'recorder' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('recorder')}
+            >
+              <Radar size={13} />
+              <span>05 Flight Log</span>
+            </button>
+          </nav>
+
+          {/* Secondary System Workspaces Switcher */}
+          <nav className="launcher-bay-switcher" aria-label="System workspaces">
+            <button
+              className={`bay-switch-pill ${currentBay === 'overview' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('overview')}
+              title="Sovereign Command Center"
+            >
+              <Compass size={12} />
+              <span>Overview</span>
+            </button>
+            <button
+              className={`bay-switch-pill ${currentBay === 'chat' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('chat')}
+              title="Mission Intelligence Cockpit"
+            >
+              <Bot size={12} />
+              <span>Chat</span>
+            </button>
+            <button
+              className={`bay-switch-pill ${currentBay === 'documents' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('documents')}
+              title="Deterministic Knowledge Ingestion"
+            >
+              <FileText size={12} />
+              <span>Docs</span>
+            </button>
+            <button
+              className={`bay-switch-pill ${currentBay === 'agents' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('agents')}
+              title="Autonomous Agent Command Grid"
+            >
+              <Sparkles size={12} />
+              <span>Squad</span>
+            </button>
+            <button
+              className={`bay-switch-pill ${currentBay === 'workflows' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('workflows')}
+              title="Autonomous Mission Orchestration"
+            >
+              <GitBranch size={12} />
+              <span>Workflows</span>
+            </button>
+            <button
+              className={`bay-switch-pill ${currentBay === 'models' ? 'active' : ''}`}
+              onClick={() => handleSwitchBay('models')}
+              title="Local Ollama Runtimes"
+            >
+              <Cpu size={12} />
+              <span>Models</span>
+            </button>
+          </nav>
+        </div>
 
         {/* Right Status Badge & Dynamic Model Selector (Exact Image 2) */}
         <div className="launcher-topbar-right">
@@ -818,6 +893,68 @@ export default function AgentChatLauncher({
             onError={(err) => (onError ? onError(err) : console.error(err))}
             selectedTaskId={lastCompletedTask}
           />
+        </div>
+      )}
+
+      {/* Sovereign Command Center Overview Stage */}
+      {currentBay === 'overview' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <CommandCenterOverview
+            onNavigateWorkspace={(bay) => handleSwitchBay(bay as WorkbenchBay)}
+            onError={onError}
+            currentModel={selectedModel}
+          />
+        </div>
+      )}
+
+      {/* Mission Chat & Intelligence Cockpit Stage */}
+      {currentBay === 'chat' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <ChatWorkspace
+            currentModel={selectedModel}
+            availableModels={availableModels}
+            onModelChange={onModelChange}
+            onError={onError}
+          />
+        </div>
+      )}
+
+      {/* Deterministic Knowledge Ingestion Pipeline Stage */}
+      {currentBay === 'documents' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <DocumentPipelineWorkspace onError={onError} />
+        </div>
+      )}
+
+      {/* Autonomous Agent Command Grid Stage */}
+      {currentBay === 'agents' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <AgentSquadWorkspace currentModel={selectedModel} onError={onError} />
+        </div>
+      )}
+
+      {/* Autonomous Mission Orchestration Node Graph Stage */}
+      {currentBay === 'workflows' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <WorkflowNodeCanvas />
+        </div>
+      )}
+
+      {/* Local Model Control Center Stage */}
+      {currentBay === 'models' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <ModelControlCenter
+            currentModel={selectedModel}
+            onModelChange={onModelChange}
+            onError={onError}
+          />
+        </div>
+      )}
+
+      {/* Security Governance & Air-Gap Settings Stage */}
+      {currentBay === 'settings' && (
+        <div className="launcher-bay-fullwidth-stage">
+          <SettingsWorkspace />
         </div>
       )}
     </div>
