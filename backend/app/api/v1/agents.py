@@ -20,7 +20,18 @@ from app.core.tools.approval_note import ApprovalNoteGeneratorTool
 from app.core.tools.document_generation import DocumentGenerationTool
 from app.core.tools.document_retrieval import DocumentRetrievalTool
 from app.core.tools.registry import CalculatorTool, ControlledToolRegistry
-from app.integrations.langgraph.orchestrator import LangGraphAgentOrchestrator
+try:
+    from app.integrations.langgraph.orchestrator import LangGraphAgentOrchestrator
+except ModuleNotFoundError as exc:  # pragma: no cover - optional integration dependency
+    if exc.name != "langgraph":
+        raise
+
+    class LangGraphAgentOrchestrator:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            raise HTTPException(
+                status_code=503,
+                detail="LangGraph integration is unavailable. Install the langgraph dependency.",
+            )
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
 

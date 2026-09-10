@@ -5,7 +5,10 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import chromadb
+try:
+    import chromadb
+except ModuleNotFoundError:  # pragma: no cover - exercised when optional RAG extra is absent
+    chromadb = None  # type: ignore[assignment]
 
 from app.config import settings
 from app.core.interfaces.rag import (
@@ -39,6 +42,10 @@ class ChromaVectorStore(BaseRetriever):
         collection_name: Optional[str] = None,
         embedding_provider: Optional[BaseEmbeddingProvider] = None,
     ) -> None:
+        if chromadb is None:
+            raise RuntimeError(
+                "ChromaDB is not installed. Install the backend dependencies before using the Chroma vector store."
+            )
         self.persist_dir = Path(persist_dir or settings.CHROMA_PERSIST_DIR)
         self.persist_dir.mkdir(parents=True, exist_ok=True)
         self.collection_name = collection_name or settings.CHROMA_COLLECTION_NAME

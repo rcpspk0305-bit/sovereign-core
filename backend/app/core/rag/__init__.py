@@ -9,7 +9,13 @@ from app.core.rag.in_memory import (
     cosine_similarity,
 )
 from app.core.rag.migration import MigrationResult, migrate_chroma_to_qdrant
-from app.core.rag.pdf_parser import PyMuPDFParser
+
+try:
+    from app.core.rag.pdf_parser import PyMuPDFParser
+except ModuleNotFoundError as exc:  # pragma: no cover - optional PDF dependency
+    if exc.name != "pymupdf":
+        raise
+    PyMuPDFParser = None  # type: ignore[assignment,misc]
 from app.core.rag.service import get_vector_store, set_active_vector_store
 from app.integrations.qdrant.adapter import QdrantRetrieverAdapter, QdrantStore
 

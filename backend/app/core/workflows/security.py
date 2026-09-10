@@ -223,6 +223,42 @@ class WorkflowSecurityAnalyzer:
                 )
             )
 
+        # A DAG is not sufficient for execution safety: every node must belong
+        # to the START-to-END workflow path, otherwise the runtime can finish
+        # successfully while silently skipping part of the graph.
+        reachable_from_start: Set[str] = set()
+        queue = deque(node.id for node in start_nodes)
+        while queue:
+            current = queue.popleft()
+            if current in reachable_from_start:
+                continue
+            reachable_from_start.add(current)
+            queue.extend(adj[current])
+
+        unreachable_nodes = node_ids - reachable_from_start
+        if unreachable_nodes:
+            findings.append(
+                SecurityFinding(
+                    severity=FindingSeverity.CRITICAL,
+                    message=(
+                        "Workflow contains nodes unreachable from START: "
+                        f"{sorted(unreachable_nodes)}"
+                    ),
+                    rule_violated="TOPOLOGY_UNREACHABLE_NODE",
+                )
+            )
+
+        if start_nodes and end_nodes and not any(
+            end_node.id in reachable_from_start for end_node in end_nodes
+        ):
+            findings.append(
+                SecurityFinding(
+                    severity=FindingSeverity.CRITICAL,
+                    message="No END node is reachable from START.",
+                    rule_violated="TOPOLOGY_END_UNREACHABLE",
+                )
+            )
+
     def _inspect_nodes_and_configs(self, workflow: Workflow, findings: List[SecurityFinding]) -> None:
         """Deep scan for dangerous code, command execution, egress, and unknown tools."""
         for node in workflow.nodes:

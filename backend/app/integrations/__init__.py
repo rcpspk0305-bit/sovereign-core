@@ -10,8 +10,14 @@ from app.integrations.base import (
 from app.integrations.litellm import LiteLLMClientAdapter
 from app.integrations.qdrant import QdrantRetrieverAdapter
 from app.integrations.opentelemetry import OpenTelemetrySinkAdapter
-from app.integrations.langgraph import LangGraphWorkflowAdapter
 from app.integrations.dify import DifyWorkflowAdapter
+
+try:
+    from app.integrations.langgraph import LangGraphWorkflowAdapter
+except ModuleNotFoundError as exc:  # pragma: no cover - depends on optional integration extra
+    if exc.name != "langgraph":
+        raise
+    LangGraphWorkflowAdapter = None  # type: ignore[assignment,misc]
 
 __all__ = [
     "BaseIntegrationAdapter",

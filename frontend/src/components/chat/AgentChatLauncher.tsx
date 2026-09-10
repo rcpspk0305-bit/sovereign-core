@@ -529,7 +529,7 @@ export default function AgentChatLauncher({
 
       {/* 01 Mission Center Stage / Chat Cockpit */}
       <div
-        className="flex flex-col w-full relative z-20"
+        className="mission-stage-shell flex flex-col w-full relative z-20"
         style={{ display: isMissionActive ? 'flex' : 'none' }}
       >
         <div className="workspace-subnav-bar">

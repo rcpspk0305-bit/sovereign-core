@@ -3,7 +3,10 @@
 import re
 from typing import List, Optional
 
-import pymupdf
+try:
+    import pymupdf
+except ModuleNotFoundError:  # pragma: no cover - optional PDF dependency
+    pymupdf = None  # type: ignore[assignment]
 
 from app.core.interfaces.rag import Document
 from app.core.rag.chunker import TextChunker
@@ -25,6 +28,11 @@ class PyMuPDFParser:
         - chunk_index: index of the chunk within the page
         - source: human-readable citation string (e.g. "report.pdf (Page 2)")
         """
+        if pymupdf is None:
+            raise RuntimeError(
+                "PyMuPDF is not installed. Install the backend dependencies before uploading PDFs."
+            )
+
         clean_name = re.sub(r"[^\w\-.]", "_", filename)
         doc = pymupdf.open(stream=file_bytes, filetype="pdf")
         total_pages = len(doc)
