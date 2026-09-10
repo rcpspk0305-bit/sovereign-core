@@ -53,6 +53,10 @@ export default function ChatWorkspace({
   onError,
 }: ChatWorkspaceProps) {
   const [activeSessionId, setActiveSessionId] = useState<string>('SES-20260909-001');
+  // Ref so the sessionStore subscriber can read the current session ID
+  // without stale closure — avoids comparing against the initial default.
+  const activeSessionIdRef = React.useRef<string>('SES-20260909-001');
+  useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -98,6 +102,7 @@ export default function ChatWorkspace({
   useEffect(() => {
     const currentSid = sessionStore.getActiveSessionId('SES-20260909-001');
     setActiveSessionId(currentSid);
+    activeSessionIdRef.current = currentSid;
 
     api
       .listSessions()
@@ -119,31 +124,65 @@ export default function ChatWorkspace({
       })
       .catch(() => {});
 
-    // Listen for session changes from other components
+    // Listen for session changes dispatched by OTHER components (e.g. HUD).
+    // CRITICAL: Do NOT call sessionStore.setActiveSessionId inside this listener —
+    // that re-fires SESSION_CHANGE_EVENT creating an infinite recursion loop.
     const unsub = sessionStore.onSessionChange((newSid) => {
-      if (newSid && newSid !== activeSessionId) {
-        handleSelectSession(newSid);
+      if (newSid && newSid !== activeSessionIdRef.current) {
+        // Update local React state only — do NOT write back to the store.
+        switchSessionLocalState(newSid);
       }
     });
 
     return () => unsub();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * switchSessionLocalState — called ONLY from the sessionStore subscriber.
+   * Updates React state WITHOUT writing to sessionStore (which would
+   * re-fire the event and cause an infinite loop).
+   */
+  const switchSessionLocalState = async (sessionId: string) => {
+    setActiveSessionId(sessionId);
+    activeSessionIdRef.current = sessionId;
+    const cached = sessionStore.getSessionMessages(sessionId);
+    if (cached && cached.length > 0) setMessages(cached);
+    try {
+      const full = await api.getSession(sessionId);
+      if (full?.recent_turns?.length) {
+        const mapped: ChatMessage[] = full.recent_turns
+          .filter((t) => t.role === 'user' || t.role === 'assistant')
+          .map((t) => ({ role: t.role as 'user' | 'assistant', content: t.content }));
+        if (mapped.length > 0) {
+          setMessages(mapped);
+          sessionStore.saveSessionMessages(sessionId, mapped);
+        }
+      }
+    } catch { /* keep cached */ }
+  };
+
+  /**
+   * handleSelectSession — called when the USER clicks a session in the sidebar.
+   * Writes to sessionStore (notifies HUD), then hydrates messages.
+   * The ref guard prevents the subscriber from re-entering this path.
+   */
   const handleSelectSession = async (sessionId: string) => {
+    if (sessionId === activeSessionIdRef.current) return; // already active — no-op
+    // Update ref BEFORE writing to store so the subscriber's guard fires correctly
+    activeSessionIdRef.current = sessionId;
     setActiveSessionId(sessionId);
     sessionStore.setActiveSessionId(sessionId);
     api.activateSession(sessionId).catch(() => {});
 
     // 1. Check local cache first for instant retrieval
     const cached = sessionStore.getSessionMessages(sessionId);
-    if (cached && cached.length > 0) {
-      setMessages(cached);
-    }
+    if (cached && cached.length > 0) setMessages(cached);
 
     // 2. Fetch latest session details from backend
     try {
       const full = await api.getSession(sessionId);
-      if (full && full.recent_turns && full.recent_turns.length > 0) {
+      if (full?.recent_turns?.length) {
         const mapped: ChatMessage[] = full.recent_turns
           .filter((t) => t.role === 'user' || t.role === 'assistant')
           .map((t) => ({
