@@ -33,11 +33,29 @@ from app.core.interfaces.rag import (
     Document,
     SearchResult,
 )
+from app.core.interfaces.telemetry import (
+    BaseTelemetryBroadcaster,
+    BaseTelemetrySink,
+    TelemetryEvent,
+    TelemetryMetric,
+    TelemetrySeverity,
+    TelemetrySpan,
+)
 from app.core.interfaces.tools import (
     BaseTool,
     BaseToolRegistry,
     ToolDefinition,
     ToolResult,
+)
+from app.core.interfaces.workflows import (
+    BaseWorkflowEngine,
+    WorkflowEdge,
+    WorkflowExecutionResult,
+    WorkflowGraph,
+    WorkflowNode,
+    WorkflowNodeStatus,
+    WorkflowNodeType,
+    WorkflowStepResult,
 )
 
 __all__ = [
@@ -70,4 +88,18 @@ __all__ = [
     "BaseAuditLogger",
     "AuditEvent",
     "AuditEventType",
+    "BaseTelemetrySink",
+    "BaseTelemetryBroadcaster",
+    "TelemetryEvent",
+    "TelemetrySpan",
+    "TelemetryMetric",
+    "TelemetrySeverity",
+    "BaseWorkflowEngine",
+    "WorkflowGraph",
+    "WorkflowNode",
+    "WorkflowEdge",
+    "WorkflowNodeType",
+    "WorkflowNodeStatus",
+    "WorkflowStepResult",
+    "WorkflowExecutionResult",
 ]

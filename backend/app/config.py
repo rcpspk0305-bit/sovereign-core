@@ -1,7 +1,7 @@
 """Application configuration settings using Pydantic Settings."""
 
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -44,6 +44,26 @@ class Settings(BaseSettings):
     # Artifact & flight-record storage
     ARTIFACTS_DIR: Path = _BACKEND_DIR / "data" / "artifacts"
     FLIGHT_RECORDS_DIR: Path = _BACKEND_DIR / "data" / "flight_records"
+
+    # Open-Source Integration Flags (all disabled by default, air-gapped local endpoints)
+    ENABLE_LITELLM: bool = False
+    LITELLM_API_BASE: str = "http://localhost:11434"
+    LITELLM_DEFAULT_MODEL: str = "ollama/gemma4:e2b"
+
+    ENABLE_QDRANT: bool = False
+    QDRANT_HOST: str = "localhost"
+    QDRANT_PORT: int = 6333
+    QDRANT_COLLECTION_NAME: str = "sovereign_knowledge"
+
+    ENABLE_OPENTELEMETRY: bool = False
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = "http://localhost:4317"
+    OTEL_SERVICE_NAME: str = "sovereign-core"
+
+    ENABLE_LANGGRAPH: bool = False
+
+    ENABLE_DIFY: bool = False
+    DIFY_API_BASE: str = "http://localhost/v1"
+    DIFY_API_KEY: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file=".env",
