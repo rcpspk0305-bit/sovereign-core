@@ -1,7 +1,7 @@
 """Comprehensive tests for Dify interoperability layer, security analyzer, and workflow engine."""
 
+import asyncio
 import pytest
-import pytest_asyncio
 from typing import Any, Dict
 
 from app.core.workflows.models import (
@@ -410,55 +410,59 @@ def test_dify_import_rejects_unsupported_dangerous_nodes():
 # 5. EXECUTION & FLIGHT RECORDER INTEGRATION TESTS
 # ============================================================================
 
-@pytest.mark.asyncio
-async def test_unapproved_imported_workflow_cannot_execute():
+def test_unapproved_imported_workflow_cannot_execute():
     """Imported workflows cannot be executed before explicit approval."""
-    runtime = SovereignWorkflowRuntime()
-    wf = Workflow(
-        id="wf_unapproved",
-        name="Unapproved Workflow",
-        state=WorkflowState.APPROVAL_REQUIRED,
-        nodes=[
-            WorkflowNode(id="s", name="Start", type=WorkflowNodeType.START),
-            WorkflowNode(id="e", name="End", type=WorkflowNodeType.END),
-        ],
-        edges=[WorkflowEdge(id="e1", source="s", target="e")],
-    )
+    async def _run():
+        runtime = SovereignWorkflowRuntime()
+        wf = Workflow(
+            id="wf_unapproved",
+            name="Unapproved Workflow",
+            state=WorkflowState.APPROVAL_REQUIRED,
+            nodes=[
+                WorkflowNode(id="s", name="Start", type=WorkflowNodeType.START),
+                WorkflowNode(id="e", name="End", type=WorkflowNodeType.END),
+            ],
+            edges=[WorkflowEdge(id="e1", source="s", target="e")],
+        )
 
-    with pytest.raises(PermissionError, match="Workflow requires human approval"):
-        await runtime.execute(wf, initial_input={})
+        with pytest.raises(PermissionError, match="Workflow requires human approval"):
+            await runtime.execute(wf, initial_input={})
+
+    asyncio.run(_run())
 
 
-@pytest.mark.asyncio
-async def test_approved_workflow_execution():
+def test_approved_workflow_execution():
     """Approved workflow executes through Sovereign-Core runtime and records steps."""
-    runtime = SovereignWorkflowRuntime()
-    wf = Workflow(
-        id="wf_exec_valid",
-        name="Safe Execution Workflow",
-        state=WorkflowState.READY,
-        approval_status="APPROVED",
-        nodes=[
-            WorkflowNode(id="s", name="Start", type=WorkflowNodeType.START),
-            WorkflowNode(
-                id="t",
-                name="System Diagnostic",
-                type=WorkflowNodeType.TOOL,
-                config={"tool_name": "system_info"},
-            ),
-            WorkflowNode(id="e", name="End", type=WorkflowNodeType.END),
-        ],
-        edges=[
-            WorkflowEdge(id="e1", source="s", target="t"),
-            WorkflowEdge(id="e2", source="t", target="e"),
-        ],
-    )
+    async def _run():
+        runtime = SovereignWorkflowRuntime()
+        wf = Workflow(
+            id="wf_exec_valid",
+            name="Safe Execution Workflow",
+            state=WorkflowState.READY,
+            approval_status="APPROVED",
+            nodes=[
+                WorkflowNode(id="s", name="Start", type=WorkflowNodeType.START),
+                WorkflowNode(
+                    id="t",
+                    name="System Diagnostic",
+                    type=WorkflowNodeType.TOOL,
+                    config={"tool_name": "system_info"},
+                ),
+                WorkflowNode(id="e", name="End", type=WorkflowNodeType.END),
+            ],
+            edges=[
+                WorkflowEdge(id="e1", source="s", target="t"),
+                WorkflowEdge(id="e2", source="t", target="e"),
+            ],
+        )
 
-    result = await runtime.execute(wf, initial_input={"query": "system check"})
-    assert result.success is True
-    assert result.workflow_id == "wf_exec_valid"
-    assert len(result.step_results) >= 2
-    assert "execution_id" in result.model_dump()
+        result = await runtime.execute(wf, initial_input={"query": "system check"})
+        assert result.success is True
+        assert result.workflow_id == "wf_exec_valid"
+        assert len(result.step_results) >= 2
+        assert "execution_id" in result.model_dump()
+
+    asyncio.run(_run())
 
 
 # ============================================================================

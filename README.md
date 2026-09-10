@@ -27,23 +27,18 @@ Sovereign-Core is an extensible, **local-first** AI workbench built for develope
 
 ## Workspaces
 
-The UI is a single-page AI operating system with eight switchable workspaces:
+The UI is a single-page AI operating system with seven switchable top-level bays and specialized sub-views:
 
-| Workspace | Description |
+| Workspace Bay | Description |
 |---|---|
-| **Overview** | Sovereign Command Center — system health, model status, telemetry at a glance |
-| **Chat** | Mission Intelligence Cockpit — streaming LLM chat with context injection |
-| **Knowledge Base** | Multi-backend semantic memory (Chroma/Qdrant) — search, stats, PDF ingestion, live backend switcher |
-| **Documents** | Deterministic Knowledge Ingestion — PDF drag-and-drop pipeline |
-| **Agent Squad** | Controlled multi-agent orchestration with step-budget enforcement |
-| **Workflows** | Node-canvas visual workflow builder |
-| **Models** | Model Control Center — live Ollama model discovery and selection |
-| **Settings** | Environment, API keys, and system configuration |
-
-The shell also includes two immersive 3D landing screens:
-
-- **Mission** — React Three Fiber cosmic hero canvas
-- **Mission Chat** — animated 3D chat canvas
+| **Overview** | Sovereign Command Center — system telemetry, model status, and mission velocity at a glance |
+| **01 Mission** | Cosmic Mission Launcher & Streaming Chat Cockpit — Three.js 3D Earth canvas, glassmorphic HUD, multi-turn session persistence |
+| **02 Knowledge** | Deterministic Knowledge Ingestion (Chroma/Qdrant PDF pipeline) & Memory Flow Bay (4-tier context engine) |
+| **03 Squad** | Autonomous Multi-Agent Command Grid & Controlled Zero-Egress Tool Execution Sandbox |
+| **04 Workflows** | Visual Node-Canvas DAG Workflow Builder & Dify Interoperability Layer |
+| **05 Flight Log** | Durable Flight Recorder Blackbox — real-time WebSocket telemetry, OpenTelemetry spans, and audit approval |
+| **06 Models** | Local Model Control Center — live Ollama discovery, quantization controls, and hardware boundaries |
+| **Settings** | Security governance, air-gap policy toggles, and system configuration |
 
 ---
 
@@ -53,6 +48,19 @@ The shell also includes two immersive 3D landing screens:
 - Async streaming via Ollama (`/api/v1/chat`, `/api/v1/models`)
 - Live model discovery, dynamic selection, and health fallback
 - Typed `LLMService` abstraction with structured exception hierarchy
+
+### Sovereign Workflow Engine & Dify Interoperability Layer
+- Deterministic DAG workflow execution engine (`START`, `RAG`, `TOOL`, `LLM`, `AGENT`, `CONDITION`, `APPROVAL`, `END`)
+- Bidirectional Dify DSL import and export adapters allowing portable workflow definitions without external dependencies
+- Static Security Analyzer: Kahn's cycle detection, AST syntax checks, tool allowlist enforcement, and step budget capping
+- Human-in-the-loop approval gate: imported and untrusted workflows require explicit operator sign-off before execution
+- Direct integration with AI Flight Recorder for step-by-step cryptographic audit logs and trace provenance
+
+### Local-First Session Persistence & State Synchronization
+- Dual-tier persistence: in-memory cache + browser `localStorage` + backend disk store (`/api/v1/sessions`)
+- Reactive event bus with recursion-safe mutual suppression guards (`activeSessionIdRef`)
+- Persistent DOM architecture using CSS display toggles, preserving active WebSockets, 3D canvases, and unfinished input across tabs
+- Standardized `'en-US'` SSR locale normalization preventing hydration mismatches
 
 ### Document Ingestion & Vector Stores (ChromaDB & Qdrant)
 - PyMuPDF page-by-page extraction with layout preservation
@@ -99,9 +107,10 @@ The shell also includes two immersive 3D landing screens:
 .
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/              # Routes: chat, models, rag, tools, agents, flight-recorder, audit
+│   │   ├── api/v1/              # Routes: chat, models, rag, tools, agents, flight-recorder, workflows, sessions, audit
 │   │   ├── core/
-│   │   │   ├── interfaces/      # Abstract contracts (llm, rag, tools, agents, audit)
+│   │   │   ├── interfaces/      # Abstract contracts (llm, rag, tools, agents, workflows, audit)
+│   │   │   ├── workflows/       # Deterministic DAG engine, runtime, models, security analyzer, store
 │   │   │   ├── llm/             # Ollama client & LLMService
 │   │   │   ├── rag/             # PyMuPDF parser, chunker, embeddings, ChromaDB store
 │   │   │   ├── tools/           # Tool registry, calculator, doc retrieval, approval note
@@ -116,10 +125,18 @@ The shell also includes two immersive 3D landing screens:
 │   │   ├── artifacts/           # Generated DOCX approval notes
 │   │   ├── audit/               # Structured JSON audit logs
 │   │   ├── chroma/              # ChromaDB persistent index
-│   │   └── flight_records/      # Mission blackbox JSON records
-│   ├── tests/                   # 102+ pytest unit & integration tests
+│   │   ├── flight_records/      # Mission blackbox JSON records
+│   │   └── sessions/            # Disk-persisted mission sessions
+│   ├── tests/                   # 125+ pytest unit & integration tests
 │   ├── Dockerfile
 │   └── pyproject.toml
+├── docs/
+│   ├── ARCHITECTURE.md          # Complete system architecture specification
+│   ├── API_REFERENCE.md         # Exhaustive endpoint reference and payloads
+│   ├── DIFY_INTEROPERABILITY.md # Safe Dify interoperability layer specification
+│   ├── FLIGHT_RECORDER_SPEC.md  # Forensic mission telemetry blackbox spec
+│   ├── SECURITY_AND_GOVERNANCE.md # Zero-egress rules, AST analyzers, approval gates
+│   └── solutions/               # Durable compounded engineering learnings repository
 ├── frontend/
 │   ├── src/
 │   │   ├── app/                 # Next.js App Router (layout.tsx, globals.css, page.tsx)
@@ -133,9 +150,10 @@ The shell also includes two immersive 3D landing screens:
 │   │   │   ├── visualizations/  # WorkflowNodeCanvas, IntelligenceCore
 │   │   │   └── workbench/       # CommandCenterOverview, KnowledgeBay, MemoryFlowBay,
 │   │   │                        #   ToolBay, FlightRecorderBay
-│   │   └── lib/                 # api-client.ts, types.ts, animations.ts
+│   │   └── lib/                 # api-client.ts, session-store.ts, types.ts, animations.ts
 │   ├── Dockerfile
 │   └── package.json
+├── CONCEPTS.md                  # Core domain glossary and entity definitions
 ├── docker-compose.yml
 ├── TECHNOLOGIES.md
 └── .env.example

@@ -173,3 +173,144 @@ Sovereign-Core automatically propagates OpenTelemetry context throughout all int
 - `span_id` (string, optional): 16-character hex OpenTelemetry Span ID (e.g., `00f067aa0ba902b7`).
 - `latency_ms` (float, optional): Step/tool execution time in milliseconds.
 - `tokens` (int, optional): Step/tool token consumption.
+
+---
+
+## 8. Workflows & Dify Interoperability Endpoints
+
+Deterministic workflow graphs, static security validation, human approval gates, and bidirectional Dify DSL import/export adapters.
+
+### `GET /workflows`
+List all registered workflows in the Sovereign-Core store.
+- **Response**: `List[Workflow]`
+
+### `GET /workflows/{workflow_id}`
+Retrieve workflow definition, topological nodes, edges, execution policies, and security analysis.
+- **Path Parameter**: `workflow_id` (string)
+- **Response**: `Workflow`
+
+### `POST /workflows`
+Save or update a workflow with automatic validation and optional semantic version bumping.
+- **Request Body**:
+  ```json
+  {
+    "workflow": { ... },
+    "bump_version": "patch | minor | major (optional)"
+  }
+  ```
+- **Response**: `Workflow`
+
+### `POST /workflows/validate`
+Perform static topological and security analysis against Sovereign-Core air-gap policies (cycle detection, required START/END nodes, tool allowlisting, step limits).
+- **Request Body**: `Workflow` (JSON object)
+- **Response**: `SecurityAnalysisReport` (`is_safe`, `state`, `risk_score`, `findings`)
+
+### `POST /workflows/{workflow_id}/approve`
+Human-in-the-loop operator approval for untrusted or imported workflows.
+- **Path Parameter**: `workflow_id` (string)
+- **Request Body**:
+  ```json
+  {
+    "operator_name": "string (default: sovereign-operator)",
+    "notes": "string (optional)"
+  }
+  ```
+- **Response**: `Workflow`
+
+### `POST /workflows/{workflow_id}/run`
+Execute a validated and approved workflow through the Sovereign-Core runtime. Emits an immutable Flight Record upon completion.
+- **Path Parameter**: `workflow_id` (string)
+- **Request Body**:
+  ```json
+  {
+    "inputs": { "key": "value" },
+    "execution_id": "string (optional)"
+  }
+  ```
+- **Response**: `WorkflowExecutionResponse` (`workflow_id`, `execution_id`, `success`, `state`, `step_results`, `final_output`, `flight_record_id`)
+
+### `POST /workflows/import`
+Import an external workflow definition (auto-detects Sovereign format or Dify DSL). Untrusted workflows are assigned `APPROVAL_REQUIRED` status.
+- **Request Body**:
+  ```json
+  {
+    "content": { ... },
+    "format": "auto | sovereign | dify (default: auto)"
+  }
+  ```
+- **Response**: `Workflow`
+
+### `GET /workflows/{workflow_id}/export`
+Export a workflow in canonical Sovereign format or Dify DSL format.
+- **Path Parameter**: `workflow_id` (string)
+- **Query Parameter**: `format` (`sovereign` or `dify`, default: `sovereign`)
+- **Response**: JSON representation of the exported workflow definition
+
+---
+
+## 9. Sessions & Memory Persistence Endpoints
+
+Local-first session lifecycle management, multi-turn conversation memory, and disk-backed persistence.
+
+### `GET /sessions`
+List all active and stored sessions with timestamp and memory breakdown metadata.
+- **Response**: `List[SessionSummary]`
+
+### `GET /sessions/current`
+Get details of the currently active session. If none exists, an initialized session is returned.
+- **Response**: `SessionDetails`
+
+### `POST /sessions`
+Create a new mission session.
+- **Request Body**:
+  ```json
+  {
+    "title": "string (optional)",
+    "model": "string (optional)"
+  }
+  ```
+- **Response**: `SessionDetails`
+
+### `GET /sessions/{session_id}`
+Retrieve a specific session including all turns and memory token statistics.
+- **Path Parameter**: `session_id` (string)
+- **Response**: `SessionDetails`
+
+### `POST /sessions/{session_id}/turns`
+Append a conversational turn to a session.
+- **Path Parameter**: `session_id` (string)
+- **Request Body**:
+  ```json
+  {
+    "role": "user | assistant | system",
+    "type": "user_input | direct_response | internal_chatter | tool_execution | system_alert",
+    "content": "string",
+    "tokens": 0,
+    "model": "string (optional)",
+    "metadata": {}
+  }
+  ```
+- **Response**: `SessionDetails`
+
+### `POST /sessions/{session_id}/activate`
+Set a session as the globally active session.
+- **Path Parameter**: `session_id` (string)
+- **Response**: `SessionDetails`
+
+### `PUT /sessions/{session_id}`
+Update session title, status, or configuration.
+- **Path Parameter**: `session_id` (string)
+- **Request Body**:
+  ```json
+  {
+    "title": "string (optional)",
+    "status": "active | archived | completed (optional)"
+  }
+  ```
+- **Response**: `SessionDetails`
+
+### `DELETE /sessions/{session_id}`
+Permanently delete a session and remove its persisted file from local storage.
+- **Path Parameter**: `session_id` (string)
+- **Response**: `{"status": "deleted", "session_id": "..."}`
+

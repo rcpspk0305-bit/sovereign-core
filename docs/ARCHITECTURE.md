@@ -181,3 +181,75 @@ OpenTelemetry Instruments exported:
 1. **Local Exporters Only**: Telemetry default is `OTEL_ENABLED=false` or local `in_memory`/`console`. OTLP endpoints are validated via `validate_local_endpoint()` to reject non-localhost destinations.
 2. **Automated Attribute Redaction**: Passwords, API keys, credentials, Bearer tokens, and sensitive headers are masked (`[REDACTED_CREDENTIAL]`). Full prompts and document text are truncated to 120 characters with explicit preview metadata (`[CONTENT_TRUNCATED]`).
 3. **Flight Recorder Bridge**: The telemetry bridge attaches active `trace_id` and `span_id` to Flight Events, Step Records, and persisted Flight Records without altering Flight Recorder schemas.
+
+---
+
+## 7. Sovereign Workflow Engine & Dify Interoperability Layer
+
+Sovereign-Core provides a deterministic, directed acyclic graph (DAG) workflow runtime governed by strict static security analysis and zero-egress enforcement. To support workflow portability across enterprise teams, it includes a bidirectional **Dify Interoperability Layer** that safely translates between Dify DSL definitions and Sovereign internal primitives.
+
+```text
+External Dify DSL (Untrusted YAML/JSON)
+                 ↓
+      Security Static Analyzer
+    (AST Checks, Tool Allowlist,
+     Cycle Detection, Step Capping)
+                 ↓
+      State: APPROVAL_REQUIRED
+                 ↓
+      Human Operator Sign-Off
+                 ↓
+         State: READY
+                 ↓
+   Sovereign Workflow Runtime (DAG)
+(START → RAG → TOOL → LLM → APPROVAL → END)
+                 ↓
+    Flight Recorder Blackbox Sink
+```
+
+### 7.1 Internal Workflow Model
+
+Sovereign-Core remains the authoritative system of record. External formats are normalized into typed internal Pydantic models:
+
+- **`Workflow`**: Holds `id`, `name`, `version`, `state`, `nodes`, `edges`, `inputs`, `outputs`, and `policy`.
+- **Node Types**:
+  - `START`: Directive intake and context initialization.
+  - `RAG`: Air-gapped dense vector retrieval from local ChromaDB.
+  - `TOOL`: Sandboxed tool invocation via the `ControlledToolRegistry`.
+  - `LLM`: Local inference synthesis via Ollama (`gemma4:e2b`).
+  - `AGENT`: Autonomous multi-step LangGraph reasoning subsystem.
+  - `CONDITION`: Deterministic branch evaluator.
+  - `APPROVAL`: Mandatory operator review checkpoint.
+  - `END`: Cryptographically sealed mission completion and provenance signature.
+- **`WorkflowPolicy`**: Inherited execution bounds specifying `no_egress=True`, `max_steps` budget, tool allowlist, and memory/time constraints.
+
+### 7.2 Static Security Analysis & Human-in-the-Loop Governance
+
+Imported workflows are treated as untrusted input. The `WorkflowSecurityAnalyzer` applies multi-stage defense-in-depth:
+1. **Topology Validation**: Detects illegal cycles via Kahn's algorithm; verifies at least one `START` and `END` node; flags disconnected nodes.
+2. **Tool Sandboxing**: Rejects unallowlisted tools, shell commands, and raw network requests.
+3. **AST Safety Filter**: Blocks dangerous imports (`os`, `sys`, `socket`, `subprocess`, `urllib`, `requests`) in code or expression configs.
+4. **Credential Exfiltration Detection**: Scans for embedded API keys, tokens, or exfiltration paths.
+5. **Human Gate**: Untrusted workflows import in `APPROVAL_REQUIRED` state and cannot execute until approved via `/api/v1/workflows/{id}/approve`.
+
+---
+
+## 8. Local-First Session Lifecycle & Dual-Tier State Persistence
+
+To provide instant UI responsiveness without remote dependency or state loss, Sovereign-Core implements a dual-tier persistence model:
+
+```text
+Browser Client (Next.js 16)                     FastAPI Backend Core
+ ┌───────────────────────────┐                  ┌────────────────────────┐
+ │ SessionStore              │                  │ /api/v1/sessions       │
+ │  ├── Memory Cache         │                  │  ├── Session File Store│
+ │  ├── localStorage         │ <══ Sync API ══> │  │   (data/sessions/*. │
+ │  └── CustomEvent EventBus │                  │  │    json)            │
+ └───────────────────────────┘                  └────────────────────────┘
+```
+
+1. **Client-Side Reactive Store**: `sessionStore` maintains an in-memory cache synchronized with `localStorage` and publishes events via `CustomEvent('sovereign_session_change')`.
+2. **Event Loop Recursion Guard**: State subscriptions separate local workspace updates (`switchSessionLocalState`) from store write operations (`handleSelectSession`), using mutable reference guards (`activeSessionIdRef`) to prevent infinite recursion.
+3. **DOM Preservation Lifecycle**: Primary workbench navigation uses CSS display toggling (`display: none | block | flex`) rather than conditional component unmounting, keeping WebSockets, Three.js WebGL contexts, and unfinished prompts alive across tabs.
+4. **Backend Disk Persistence**: The backend persists multi-turn session records and token consumption metrics to `data/sessions/`, with path traversal validation preventing unauthorized file access.
+
