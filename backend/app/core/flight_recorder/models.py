@@ -30,6 +30,20 @@ class FlightEventType(str, Enum):
     ERROR_RECORDED = "error_recorded"
     TASK_COMPLETED = "task_completed"
     APPROVAL_UPDATED = "approval_updated"
+    # Agent Squad Mission Lifecycle Events
+    MISSION_CREATED = "mission.created"
+    AGENT_SELECTED = "agent.selected"
+    AGENT_STARTED = "agent.started"
+    AGENT_STEP_STARTED = "agent.step.started"
+    AGENT_STEP_COMPLETED = "agent.step.completed"
+    TOOL_STARTED = "tool.started"
+    EVIDENCE_FOUND = "evidence.found"
+    VERIFICATION_STARTED = "verification.started"
+    VERIFICATION_COMPLETED = "verification.completed"
+    APPROVAL_REQUESTED = "approval.requested"
+    AGENT_COMPLETED = "agent.completed"
+    AGENT_FAILED = "agent.failed"
+    MISSION_COMPLETED = "mission.completed"
 
 
 class RetrievedSource(BaseModel):
@@ -73,9 +87,11 @@ class ToolExecutionRecord(BaseModel):
     span_id: Optional[str] = None
 
 
+from typing import Any, Dict, List, Optional, Union
+
 class FlightEvent(BaseModel):
     """Real-time event emitted to WebSocket clients."""
-    event_type: FlightEventType
+    event_type: Union[FlightEventType, str]
     task_id: str
     timestamp: str
     data: Dict[str, Any] = Field(default_factory=dict)

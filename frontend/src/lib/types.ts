@@ -219,7 +219,20 @@ export type FlightEventType =
   | 'connected'
   | 'pong'
   | 'subscribed'
-  | 'error';
+  | 'error'
+  | 'mission.created'
+  | 'agent.selected'
+  | 'agent.started'
+  | 'agent.step.started'
+  | 'agent.step.completed'
+  | 'tool.started'
+  | 'evidence.found'
+  | 'verification.started'
+  | 'verification.completed'
+  | 'approval.requested'
+  | 'agent.completed'
+  | 'agent.failed'
+  | 'mission.completed';
 
 export interface RetrievedSource {
   document_name: string;
@@ -259,7 +272,7 @@ export interface ToolExecutionRecord {
 }
 
 export interface FlightEvent {
-  event_type: FlightEventType;
+  event_type: FlightEventType | string;
   task_id: string;
   timestamp: string;
   data: Record<string, any>;
@@ -493,5 +506,88 @@ export interface CanonicalWorkflowExecutionResponse {
   flight_record_id?: string;
 }
 
+// Sovereign-Core Agent Squad Contracts
+export type AgentSquadStatus =
+  | 'IDLE'
+  | 'QUEUED'
+  | 'PLANNING'
+  | 'RUNNING'
+  | 'WAITING_FOR_TOOL'
+  | 'VERIFYING'
+  | 'WAITING_FOR_APPROVAL'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'POLICY_BLOCKED';
 
+export interface AgentDefinition {
+  id: string;
+  name: string;
+  description: string;
+  purpose: string;
+  capabilities: string[];
+  allowed_tools: string[];
+  input_schema: Record<string, any>;
+  output_schema: Record<string, any>;
+  system_instructions: string;
+  max_steps: number;
+  evidence_requirements: string[];
+  failure_policy: string;
+  approval_policy: 'AUTOMATIC' | 'HUMAN_REQUIRED';
+}
 
+export interface TaskClassificationResult {
+  category: string;
+  target_agent_id: string;
+  confidence: number;
+  reasoning: string;
+  suggested_pipeline: string[];
+  requires_clarification: boolean;
+}
+
+export interface MissionStep {
+  step_number: number;
+  thought?: string;
+  tool_name?: string;
+  tool_arguments?: Record<string, any>;
+  observation?: string;
+  timestamp?: string;
+  status?: string;
+}
+
+export interface MissionState {
+  mission_id: string;
+  task: string;
+  agent_id: string;
+  agent_name: string;
+  model: string;
+  status: AgentSquadStatus | string;
+  pipeline: string[];
+  current_step: number;
+  max_steps: number;
+  steps: MissionStep[];
+  tools_called: Array<Record<string, any>>;
+  evidence: Array<Record<string, any>>;
+  citations: string[];
+  verification_status: string;
+  approval_status: string;
+  requires_approval: boolean;
+  errors: string[];
+  final_output: string | null;
+  started_at: string;
+  completed_at?: string | null;
+  approval_notes?: string | null;
+}
+
+export interface ComplianceCheck {
+  rule: string;
+  status: 'COMPLIANT' | 'NON_COMPLIANT' | 'INSUFFICIENT_EVIDENCE';
+  evidence: string[];
+  reason: string;
+}
+
+export interface ComplianceReport {
+  status: 'COMPLIANT' | 'NON_COMPLIANT' | 'INSUFFICIENT_EVIDENCE';
+  checks: ComplianceCheck[];
+  overall_confidence: number;
+}

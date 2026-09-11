@@ -29,6 +29,9 @@ import {
   CanonicalWorkflow,
   SecurityAnalysisReport,
   CanonicalWorkflowExecutionResponse,
+  AgentDefinition,
+  TaskClassificationResult,
+  MissionState,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -643,6 +646,99 @@ class ApiClient {
       `${this.base}/api/v1/workflows/${encodeURIComponent(workflowId)}/export?format=${format}`
     );
     if (!res.ok) throw new Error(`Failed to export workflow as ${format}`);
+    return res.json();
+  }
+
+  // --- Agent Squad & Missions API ---
+
+  async listAgents(): Promise<AgentDefinition[]> {
+    const res = await fetch(`${this.base}/api/v1/agents`);
+    if (!res.ok) throw new Error(`Failed to list registered agents: ${res.statusText}`);
+    return res.json();
+  }
+
+  async getAgent(agentId: string): Promise<AgentDefinition> {
+    const res = await fetch(`${this.base}/api/v1/agents/${encodeURIComponent(agentId)}`);
+    if (!res.ok) throw new Error(`Failed to retrieve agent '${agentId}': ${res.statusText}`);
+    return res.json();
+  }
+
+  async classifyTask(prompt: string): Promise<TaskClassificationResult> {
+    const res = await fetch(`${this.base}/api/v1/agents/classify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
+    });
+    if (!res.ok) throw new Error(`Failed to classify task: ${res.statusText}`);
+    return res.json();
+  }
+
+  async createMission(req: {
+    prompt: string;
+    agent_id?: string;
+    mission_id?: string;
+    model?: string;
+    max_steps?: number;
+    document_context?: string;
+    rules?: string[];
+  }): Promise<MissionState> {
+    const res = await fetch(`${this.base}/api/v1/missions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to create and run mission: ${res.statusText}`);
+    }
+    return res.json();
+  }
+
+  async getMission(missionId: string): Promise<MissionState> {
+    const res = await fetch(`${this.base}/api/v1/missions/${encodeURIComponent(missionId)}`);
+    if (!res.ok) throw new Error(`Failed to retrieve mission '${missionId}': ${res.statusText}`);
+    return res.json();
+  }
+
+  async approveMission(
+    missionId: string,
+    notes?: string
+  ): Promise<{ mission_id: string; approval_status: string; status: string; notes?: string }> {
+    const res = await fetch(`${this.base}/api/v1/missions/${encodeURIComponent(missionId)}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to approve mission '${missionId}'`);
+    }
+    return res.json();
+  }
+
+  async rejectMission(
+    missionId: string,
+    notes?: string
+  ): Promise<{ mission_id: string; approval_status: string; status: string; notes?: string }> {
+    const res = await fetch(`${this.base}/api/v1/missions/${encodeURIComponent(missionId)}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Failed to reject mission '${missionId}'`);
+    }
+    return res.json();
+  }
+
+  async cancelMission(
+    missionId: string
+  ): Promise<{ mission_id: string; cancelled: boolean; status: string }> {
+    const res = await fetch(`${this.base}/api/v1/missions/${encodeURIComponent(missionId)}/cancel`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error(`Failed to cancel mission '${missionId}'`);
     return res.json();
   }
 }

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from app.api.v1.chat import get_audit_logger
 from app.api.v1.rag import get_retriever
 from app.config import settings
+from app.core.agents.definitions import AgentDefinition
 from app.core.agents.inspection_agent import InspectionAnalysisAgent
 from app.core.interfaces.agents import AgentResult, BaseAgent
 from app.core.interfaces.audit import BaseAuditLogger
@@ -98,6 +99,25 @@ def get_langgraph_orchestrator(
     return _langgraph_orchestrator
 
 
+@router.get("", response_model=List[AgentDefinition])
+async def list_registered_agents() -> List[AgentDefinition]:
+    """List all registered agents, their permissions, allowed tools, and capabilities."""
+    from app.core.agents.registry import agent_registry
+    return agent_registry.list_definitions()
+
+
+class ClassifyTaskRequest(BaseModel):
+    prompt: str = Field(..., min_length=1)
+
+
+@router.post("/classify")
+async def classify_task(request: ClassifyTaskRequest) -> Dict[str, Any]:
+    """Deterministically classify a task into a specialist agent or mission orchestrator."""
+    from app.core.agents.classifier import task_classifier
+    res = task_classifier.classify(request.prompt)
+    return res.model_dump()
+
+
 @router.get("/tools", response_model=List[ToolDefinition])
 async def list_agent_tools(
     tool_registry: ControlledToolRegistry = Depends(get_controlled_tool_registry),
@@ -111,9 +131,27 @@ async def run_agent(
     request: AgentRunRequest,
     default_agent: BaseAgent = Depends(get_agent),
     langgraph_orchestrator: LangGraphAgentOrchestrator = Depends(get_langgraph_orchestrator),
+    llm_client: BaseLLMClient = Depends(get_llm_provider),
+    tool_registry: ControlledToolRegistry = Depends(get_controlled_tool_registry),
+    audit_logger: BaseAuditLogger = Depends(get_audit_logger),
 ) -> AgentResult:
     """Execute a controlled agent reasoning loop with explicitly registered inspection tools."""
     session_id = request.session_id or str(uuid.uuid4())
+    from app.core.agents.registry import agent_registry
+
+    # Check if a specialist agent from the squad was requested
+    if request.agent_type and request.agent_type in [d.id for d in agent_registry.list_definitions()]:
+        specialist = agent_registry.create_agent(
+            agent_id=request.agent_type,
+            llm_client=llm_client,
+            tool_registry=tool_registry,
+            audit_logger=audit_logger,
+        )
+        return await specialist.run(
+            prompt=request.prompt,
+            session_id=session_id,
+            max_steps=request.max_steps,
+        )
 
     # Dispatch to LangGraph if explicitly requested or globally enabled
     use_langgraph = (
@@ -132,15 +170,24 @@ async def run_agent(
     return result
 
 
-@router.get("/{mission_id}", response_model=Dict[str, Any])
-async def get_mission_status(
-    mission_id: str,
+@router.get("/{identifier}", response_model=Dict[str, Any])
+async def get_agent_or_mission(
+    identifier: str,
     orchestrator: LangGraphAgentOrchestrator = Depends(get_langgraph_orchestrator),
 ) -> Dict[str, Any]:
-    """Retrieve fine-grained graph execution state and provenance for a mission."""
-    state = orchestrator.get_mission_state(mission_id)
+    """Retrieve agent definition (if agent ID) or fine-grained mission state (if mission ID)."""
+    from app.core.agents.registry import agent_registry
+    agent_def = agent_registry.get_definition(identifier)
+    if agent_def:
+        return agent_def.model_dump()
+
+    from app.api.v1.missions import _active_missions
+    if identifier in _active_missions:
+        return _active_missions[identifier]
+
+    state = orchestrator.get_mission_state(identifier)
     if not state:
-        raise HTTPException(status_code=404, detail=f"Mission '\''{mission_id}'\'' not found.")
+        raise HTTPException(status_code=404, detail=f"Agent or Mission '{identifier}' not found.")
     return {
         "mission_id": state.get("mission_id"),
         "task": state.get("task"),
