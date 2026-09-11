@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from app.api.v1.chat import get_audit_logger
+from app.config import settings
 from app.core.interfaces.audit import AuditEvent, AuditEventType, BaseAuditLogger
 from app.core.interfaces.rag import (
     BaseRetriever,
@@ -16,7 +17,6 @@ from app.core.interfaces.rag import (
     SearchResult,
     VectorStoreHealth,
 )
-from app.config import settings
 from app.core.rag.chroma import ChromaStore
 from app.core.rag.chunker import TextChunker
 from app.core.rag.migration import MigrationResult, migrate_chroma_to_qdrant

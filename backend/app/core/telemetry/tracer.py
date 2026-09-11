@@ -2,12 +2,11 @@
 
 import contextlib
 import time
-from typing import Any, AsyncIterator, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional
 
 from app.config import settings
 from app.core.telemetry.otel import get_tracer, is_telemetry_enabled
 from app.core.telemetry.redaction import sanitize_attributes
-
 
 
 class SpanContextWrapper:

@@ -1,6 +1,6 @@
 """Strongly typed internal state schema for LangGraph agent orchestration."""
 
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, TypedDict
 
 
 class GraphAgentState(TypedDict, total=False):

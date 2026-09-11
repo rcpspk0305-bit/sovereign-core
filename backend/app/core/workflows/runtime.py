@@ -1,10 +1,10 @@
 """Sovereign-Core Workflow Runtime executing workflows through LangGraph and local engines."""
 
-from collections import defaultdict, deque
 import datetime
 import logging
 import time
 import uuid
+from collections import defaultdict, deque
 from typing import Any, Dict, List, Optional
 
 from app.core.flight_recorder.manager import (

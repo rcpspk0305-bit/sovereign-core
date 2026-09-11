@@ -7,7 +7,7 @@ from app.core.telemetry.otel import is_telemetry_enabled
 from app.core.telemetry.redaction import sanitize_attributes
 
 if TYPE_CHECKING:
-    from app.core.flight_recorder.models import FlightEvent, FlightEventType
+    from app.core.flight_recorder.models import FlightEvent
 
 
 def get_active_trace_context() -> Dict[str, Optional[str]]:

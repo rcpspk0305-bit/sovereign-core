@@ -163,6 +163,8 @@ class OllamaClient(BaseLLMClient):
 
         message = data.get("message", {})
         content = message.get("content", "")
+        if not content and message.get("thinking"):
+            content = message.get("thinking", "")
         prompt_tokens = data.get("prompt_eval_count", 0)
         completion_tokens = data.get("eval_count", 0)
         usage = LLMUsage(
@@ -227,6 +229,8 @@ class OllamaClient(BaseLLMClient):
                             continue
 
                         content = chunk_data.get("message", {}).get("content", "")
+                        if not content and chunk_data.get("message", {}).get("thinking"):
+                            content = chunk_data.get("message", {}).get("thinking", "")
                         done = chunk_data.get("done", False)
                         yield StreamChunk(
                             content=content,

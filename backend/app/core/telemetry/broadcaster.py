@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 from typing import Any, Callable, Dict, List
+
 from app.core.interfaces.telemetry import BaseTelemetryBroadcaster
 
 

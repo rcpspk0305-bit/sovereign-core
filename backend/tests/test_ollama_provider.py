@@ -178,3 +178,65 @@ async def test_ollama_health_check_unreachable():
         assert status.is_alive is False
         assert status.default_model_available is False
         assert status.error is not None
+
+
+@pytest.mark.asyncio
+async def test_ollama_thinking_model_fallback_complete():
+    """Verify that reasoning models emitting 'thinking' without 'content' retain their output."""
+    client = OllamaClient(base_url="http://mock-ollama:11434", default_model="gemma4:e2b")
+
+    mock_response_data = {
+        "model": "gemma4:e2b",
+        "message": {
+            "role": "assistant",
+            "content": "",
+            "thinking": "Step 1: Analyze question. Step 2: Formulate answer.",
+        },
+        "done": True,
+        "done_reason": "length",
+        "prompt_eval_count": 10,
+        "eval_count": 25,
+    }
+
+    req = httpx.Request("POST", "http://mock-ollama:11434/api/chat")
+    mock_resp = httpx.Response(200, json=mock_response_data, request=req)
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        mock_post.return_value = mock_resp
+        messages = [ChatMessage(role=ChatRole.USER, content="Explain")]
+        res = await client.complete(messages=messages)
+
+        assert res.content == "Step 1: Analyze question. Step 2: Formulate answer."
+        assert res.finish_reason == "length"
+
+
+@pytest.mark.asyncio
+async def test_ollama_thinking_model_fallback_stream():
+    """Verify that streaming chunks from reasoning models yield thinking output when content is empty."""
+    client = OllamaClient(base_url="http://mock-ollama:11434", default_model="gemma4:e2b")
+
+    lines = [
+        json.dumps({"message": {"content": "", "thinking": "Thinking... "}, "done": False}),
+        json.dumps({"message": {"content": "Final answer."}, "done": True, "done_reason": "stop"}),
+    ]
+
+    async def mock_aiter_lines():
+        for line in lines:
+            yield line
+
+    mock_stream_response = AsyncMock()
+    mock_stream_response.raise_for_status = lambda: None
+    mock_stream_response.aiter_lines = mock_aiter_lines
+
+    mock_stream_context = AsyncMock()
+    mock_stream_context.__aenter__.return_value = mock_stream_response
+    mock_stream_context.__aexit__.return_value = None
+
+    with patch("httpx.AsyncClient.stream", return_value=mock_stream_context):
+        messages = [ChatMessage(role=ChatRole.USER, content="Hello")]
+        chunks = []
+        async for chunk in client.stream(messages=messages):
+            chunks.append(chunk)
+
+        assert len(chunks) == 2
+        assert chunks[0].content == "Thinking... "
+        assert chunks[1].content == "Final answer."

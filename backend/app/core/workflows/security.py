@@ -1,7 +1,7 @@
 """Deterministic static security analyzer and policy enforcer for workflows."""
 
-from collections import defaultdict, deque
 import re
+from collections import defaultdict, deque
 from typing import Any, Dict, List, Set
 
 from app.core.workflows.models import (

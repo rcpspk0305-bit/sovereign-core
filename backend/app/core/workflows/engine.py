@@ -1,15 +1,13 @@
 """Deterministic Local Workflow Engine implementing BaseWorkflowEngine."""
 
-import asyncio
 import inspect
 import time
 import uuid
-from typing import Any, Callable, Dict, List, Optional, Set
 from collections import defaultdict, deque
+from typing import Any, Callable, Dict, List, Set
 
 from app.core.interfaces.workflows import (
     BaseWorkflowEngine,
-    WorkflowEdge,
     WorkflowExecutionResult,
     WorkflowGraph,
     WorkflowNode,
@@ -17,7 +15,7 @@ from app.core.interfaces.workflows import (
     WorkflowNodeType,
     WorkflowStepResult,
 )
-from app.core.telemetry import trace_workflow, record_workflow_execution
+from app.core.telemetry import record_workflow_execution, trace_workflow
 
 
 class WorkflowExecutionError(Exception):

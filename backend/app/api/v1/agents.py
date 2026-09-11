@@ -20,6 +20,7 @@ from app.core.tools.approval_note import ApprovalNoteGeneratorTool
 from app.core.tools.document_generation import DocumentGenerationTool
 from app.core.tools.document_retrieval import DocumentRetrievalTool
 from app.core.tools.registry import CalculatorTool, ControlledToolRegistry
+
 try:
     from app.integrations.langgraph.orchestrator import LangGraphAgentOrchestrator
 except ModuleNotFoundError as exc:  # pragma: no cover - optional integration dependency
@@ -37,7 +38,7 @@ router = APIRouter(prefix="/agents", tags=["Agents"])
 
 
 class AgentRunRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(..., min_length=1, description="Prompt or task instruction for the agent.")
     session_id: Optional[str] = None
     max_steps: int = Field(default=5, ge=1, le=10)
     model: Optional[str] = None

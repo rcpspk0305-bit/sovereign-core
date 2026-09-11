@@ -20,13 +20,12 @@ from app.core.interfaces.rag import (
     VectorStoreHealth,
 )
 from app.core.rag.embeddings import OllamaEmbeddingProvider
+from app.core.telemetry.metrics import record_rag_query
 from app.core.telemetry.tracer import (
-    trace_rag,
     trace_embedding,
+    trace_rag,
     trace_vector_search,
 )
-from app.core.telemetry.metrics import record_rag_query
-
 
 logger = logging.getLogger("sovereign.rag.chroma")
 
@@ -248,7 +247,7 @@ class ChromaVectorStore(BaseRetriever):
                 rag_span.set_attribute("rag.backend", "chroma")
                 rag_span.set_attribute("rag.document_ids", [r.document.id for r in search_results])
                 return search_results
-            except Exception as e:
+            except Exception:
                 dur = time.perf_counter() - start_time
                 record_rag_query(collection=target_collection_name, latency_seconds=dur, success=False)
                 raise

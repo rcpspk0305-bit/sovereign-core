@@ -45,7 +45,7 @@ class LangGraphWorkflowAdapter(BaseWorkflowEngine, BaseIntegrationAdapter):
         start_time = time.perf_counter()
         execution_id = f"langgraph_exec_{uuid.uuid4().hex[:12]}"
 
-        from langgraph.graph import StateGraph, END  # type: ignore
+        from langgraph.graph import END, StateGraph  # type: ignore
 
         # Construct a simple state graph matching the workflow nodes
         workflow = StateGraph(dict)

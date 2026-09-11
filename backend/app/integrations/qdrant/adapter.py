@@ -261,7 +261,11 @@ class QdrantRetrieverAdapter(BaseRetriever, BaseIntegrationAdapter):
                 # Construct Qdrant filter
                 qdrant_filter = None
                 if filters:
-                    from qdrant_client.models import FieldCondition, Filter, MatchValue  # type: ignore
+                    from qdrant_client.models import (  # type: ignore
+                        FieldCondition,
+                        Filter,
+                        MatchValue,
+                    )
 
                     conditions = [
                         FieldCondition(key=k, match=MatchValue(value=v))
@@ -316,7 +320,7 @@ class QdrantRetrieverAdapter(BaseRetriever, BaseIntegrationAdapter):
                 rag_span.set_attribute("rag.backend", "qdrant")
                 rag_span.set_attribute("rag.document_ids", [r.document.id for r in search_results])
                 return search_results
-            except Exception as e:
+            except Exception:
                 dur = time.perf_counter() - start_time
                 record_rag_query(collection=target_collection, latency_seconds=dur, success=False)
                 raise

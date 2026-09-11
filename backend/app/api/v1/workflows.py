@@ -2,6 +2,7 @@
 
 import json
 from typing import Any, Dict, List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
@@ -9,7 +10,6 @@ from app.core.workflows.models import (
     SecurityAnalysisReport,
     Workflow,
     WorkflowExecutionResponse,
-    WorkflowState,
 )
 from app.core.workflows.runtime import SovereignWorkflowRuntime
 from app.core.workflows.security import (

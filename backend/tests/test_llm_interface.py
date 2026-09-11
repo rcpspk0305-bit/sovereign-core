@@ -135,3 +135,18 @@ def test_chat_api_model_not_found_error(test_client: TestClient):
     assert res.status_code == 404
     data = res.json()
     assert data["error"] == "LLMModelNotFoundError"
+
+
+@pytest.mark.asyncio
+async def test_llm_service_explicit_model_not_found_raises():
+    class SelectiveFailClient(MockLLMClient):
+        async def complete(self, messages, model=None, **kwargs):
+            if model == "missing:model":
+                raise LLMModelNotFoundError("Missing model", provider="ollama", model="missing:model")
+            return LLMResponse(content="fallback ok", model=model or "default")
+
+    svc = LLMService(SelectiveFailClient())
+    # Explicit model request should raise directly without fallback
+    with pytest.raises(LLMModelNotFoundError):
+        await svc.complete(messages=[ChatMessage(role=ChatRole.USER, content="hi")], model="missing:model")
+

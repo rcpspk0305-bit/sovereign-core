@@ -1,9 +1,7 @@
 """Base contracts and security enforcement for third-party integration adapters."""
 
 import ipaddress
-import re
 from abc import ABC, abstractmethod
-from typing import Optional
 from urllib.parse import urlparse
 
 

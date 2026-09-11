@@ -184,3 +184,24 @@ async def test_agent_invokes_approval_note_generator():
     assert len(art_events) == 1
     assert art_events[0]["artifact"]["artifact_type"] == "approval_note"
     assert art_events[0]["artifact"]["docx_file_path"] is not None
+
+
+@pytest.mark.asyncio
+async def test_unsupported_attached_unit_claim_rejection(approval_tool):
+    """Regression test: numbers attached directly to unit letters (e.g. 4500C) must be validated."""
+    result = await approval_tool.execute(
+        title="Test Attached Unit Rejection",
+        decision="REJECTED",
+        summary="Evaluation of attached unit numbers.",
+        findings=[
+            {"statement": "Reactor core temperature is 4500C.", "citation": None},
+        ],
+        citations=["spec.pdf (Page 1): Nominal operation at 87%."],
+        retrieved_evidence="The Sovereign-Core test system has a reactor efficiency of 87%.",
+    )
+
+    assert result.success is True
+    out = result.output
+    assert out["unsupported_claims_count"] == 1
+    assert out["verified_claims_count"] == 0
+    assert "Reactor core temperature is 4500C." in out["unsupported_claims"]

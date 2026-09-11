@@ -79,3 +79,30 @@ def test_tools_api_endpoints(test_client: TestClient):
     data = exec_res.json()
     assert data["success"] is True
     assert data["output"]["result"] == 42.0
+
+
+@pytest.mark.asyncio
+async def test_calculator_expression_evaluation_and_malicious_rejection():
+    """Test safe math expressions and ensure code injection attempts are blocked."""
+    tool = CalculatorTool()
+
+    # Valid expressions
+    for expr, expected in [("2 + 2", 4.0), ("100 / 4", 25.0), ("sqrt(144)", 12.0), ("17 * 29", 493.0)]:
+        res = await tool.execute(expression=expr)
+        assert res.success is True, f"Expression '{expr}' failed: {res.error}"
+        assert res.output["result"] == expected
+
+    # Malicious injection attempts must all be rejected
+    malicious = [
+        "__import__('os').system('ls')",
+        "open('/etc/passwd').read()",
+        "exec('print(1)')",
+        "eval('2+2')",
+        "globals()",
+        "locals()",
+        "__builtins__",
+    ]
+    for bad_expr in malicious:
+        res = await tool.execute(expression=bad_expr)
+        assert res.success is False
+        assert "security violation" in res.error.lower() or "invalid or unsafe" in res.error.lower()

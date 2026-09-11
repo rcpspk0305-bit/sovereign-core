@@ -15,22 +15,19 @@ from app.core.interfaces.llm import (
     BaseLLMClient,
     ChatMessage,
     LLMConnectionError,
-    LLMError,
     LLMHealthStatus,
     LLMModelNotFoundError,
     LLMResponse,
-    LLMSecurityError,
     LLMValidationError,
     ModelInfo,
     StreamChunk,
 )
 from app.core.llm.adapters import create_llm_provider
-from app.core.llm.ollama import OllamaClient
-from app.core.llm.security import is_remote_model_or_provider
+from app.core.llm.security import is_remote_model_or_provider, validate_llm_request_security
 from app.core.telemetry import (
-    trace_llm,
-    trace_embedding,
     record_llm_request,
+    trace_embedding,
+    trace_llm,
 )
 
 logger = logging.getLogger("sovereign.llm.service")
@@ -60,6 +57,7 @@ class LLMService:
 
         target_model = model or getattr(settings, "LLM_MODEL", settings.DEFAULT_MODEL)
         provider_name = getattr(self._provider, "name", "unknown")
+        validate_llm_request_security(model=target_model, provider=provider_name)
         is_local = not is_remote_model_or_provider(target_model, provider_name)
 
         logger.debug(
@@ -91,6 +89,9 @@ class LLMService:
                     span.set_attribute("llm.completion_tokens", res.usage.completion_tokens)
                 return res
             except (LLMConnectionError, LLMModelNotFoundError) as exc:
+                if isinstance(exc, LLMModelNotFoundError) and model is not None:
+                    # Explicit model was requested but not found; do not silently substitute
+                    raise exc
                 # Safe Local Fallback: never fall back to cloud, only to local DEFAULT_MODEL
                 fallback_model = settings.DEFAULT_MODEL
                 if target_model != fallback_model:
@@ -133,6 +134,7 @@ class LLMService:
 
         target_model = model or getattr(settings, "LLM_MODEL", settings.DEFAULT_MODEL)
         provider_name = getattr(self._provider, "name", "unknown")
+        validate_llm_request_security(model=target_model, provider=provider_name)
         is_local = not is_remote_model_or_provider(target_model, provider_name)
 
         logger.debug(
@@ -157,6 +159,9 @@ class LLMService:
                 ):
                     yield chunk
             except (LLMConnectionError, LLMModelNotFoundError) as exc:
+                if isinstance(exc, LLMModelNotFoundError) and model is not None:
+                    # Explicit model was requested but not found; do not silently substitute
+                    raise exc
                 fallback_model = settings.DEFAULT_MODEL
                 if target_model != fallback_model:
                     logger.warning(

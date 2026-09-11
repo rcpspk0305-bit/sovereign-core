@@ -43,8 +43,9 @@ class OpenTelemetrySinkAdapter(BaseTelemetrySink, BaseIntegrationAdapter):
 
     async def emit_event(self, event: TelemetryEvent) -> None:
         self.check_ready()
-        from app.core.telemetry.redaction import sanitize_attributes
         from opentelemetry import trace  # type: ignore
+
+        from app.core.telemetry.redaction import sanitize_attributes
         tracer = trace.get_tracer(self.service_name)
         sanitized = sanitize_attributes(event.attributes)
         with tracer.start_as_current_span(f"event.{event.name}") as span:
@@ -56,8 +57,9 @@ class OpenTelemetrySinkAdapter(BaseTelemetrySink, BaseIntegrationAdapter):
 
     async def record_span(self, span: TelemetrySpan) -> None:
         self.check_ready()
-        from app.core.telemetry.redaction import sanitize_attributes
         from opentelemetry import trace  # type: ignore
+
+        from app.core.telemetry.redaction import sanitize_attributes
         tracer = trace.get_tracer(self.service_name)
         sanitized = sanitize_attributes(span.attributes)
         with tracer.start_as_current_span(span.name) as otel_span:
@@ -76,5 +78,4 @@ class OpenTelemetrySinkAdapter(BaseTelemetrySink, BaseIntegrationAdapter):
 
     async def flush(self) -> None:
         if self.is_enabled() and self.is_available():
-            from app.core.telemetry.otel import shutdown_telemetry
             pass

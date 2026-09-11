@@ -49,7 +49,7 @@ async def list_available_models(
             if r_model.id not in existing_ids:
                 models.append(r_model)
         return models
-    except (LLMConnectionError, LLMError, Exception) as exc:
+    except (LLMConnectionError, LLMError, Exception):
         # Local daemon is offline / fallback default model
         fallback_local = ModelInfo(
             id=settings.DEFAULT_MODEL,

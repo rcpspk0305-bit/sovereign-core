@@ -2,6 +2,7 @@
 
 import asyncio
 from typing import List, Optional
+
 from app.core.interfaces.telemetry import (
     BaseTelemetrySink,
     TelemetryEvent,

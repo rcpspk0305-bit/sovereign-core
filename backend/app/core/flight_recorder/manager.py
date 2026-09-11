@@ -27,11 +27,10 @@ from app.core.flight_recorder.models import (
     ToolExecutionRecord,
 )
 from app.core.interfaces.agents import BaseAgent
-
 from app.core.telemetry import (
-    trace_mission,
     get_active_trace_context,
     record_agent_mission,
+    trace_mission,
 )
 
 logger = logging.getLogger("sovereign.flight_recorder")
@@ -214,7 +213,7 @@ class FlightRecorderManager:
         tid = task_id or f"task_{uuid.uuid4().hex[:8]}"
         resolved_model = model or settings.DEFAULT_MODEL
 
-        with trace_mission(mission_id=tid, prompt=prompt, model=resolved_model) as mission_span:
+        with trace_mission(mission_id=tid, prompt=prompt, model=resolved_model):
             trace_ctx = get_active_trace_context()
 
             # Initialize flight record

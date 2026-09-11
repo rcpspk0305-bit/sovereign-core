@@ -1,21 +1,19 @@
 """Two-way interoperability converter between Sovereign-Core workflows and Dify DSL."""
 
 import datetime
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
 from app.core.workflows.models import (
     Workflow,
     WorkflowEdge,
     WorkflowNode,
     WorkflowNodeType,
-    WorkflowPolicy,
     WorkflowState,
 )
 from app.core.workflows.security import (
     SecurityValidationError,
     WorkflowSecurityAnalyzer,
 )
-
 
 DIFY_TO_SOVEREIGN_TYPE_MAP: Dict[str, WorkflowNodeType] = {
     "start": WorkflowNodeType.START,

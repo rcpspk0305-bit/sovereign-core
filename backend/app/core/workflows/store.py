@@ -2,7 +2,7 @@
 
 import datetime
 import threading
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from app.core.workflows.models import (
     Workflow,

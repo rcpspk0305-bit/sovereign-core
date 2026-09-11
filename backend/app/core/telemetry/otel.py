@@ -47,17 +47,17 @@ def init_telemetry(
         return
 
     try:
-        from opentelemetry import trace, metrics
+        from opentelemetry import metrics, trace
+        from opentelemetry.sdk.metrics import MeterProvider
+        from opentelemetry.sdk.metrics.export import InMemoryMetricReader
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import (
             BatchSpanProcessor,
-            SimpleSpanProcessor,
             ConsoleSpanExporter,
+            SimpleSpanProcessor,
         )
         from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-        from opentelemetry.sdk.metrics import MeterProvider
-        from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
         svc_name = service_name or getattr(settings, "OTEL_SERVICE_NAME", "sovereign-core")
         resource = Resource.create({"service.name": svc_name})

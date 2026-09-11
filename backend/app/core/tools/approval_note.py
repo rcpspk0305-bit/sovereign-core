@@ -129,10 +129,10 @@ class ApprovalNoteGeneratorTool(BaseTool):
         evidence_corpus = (retrieved_evidence + " " + " ".join(citations_list)).lower()
 
         # Extract meaningful tokens (numbers, uppercase words, significant keywords)
-        numbers = re.findall(r"\b\d+(?:\.\d+)?\b", trimmed)
+        numbers = re.findall(r"\d+(?:\.\d+)?", trimmed)
         alphanumeric_terms = [w.lower() for w in re.findall(r"\b[a-zA-Z]{4,}\b", trimmed)]
 
-        # If numbers are claimed (e.g. 75, 82, 7), they must exist in the evidence corpus
+        # If numbers are claimed (e.g. 75, 82, 7, 4500), they must exist in the evidence corpus
         if numbers:
             unmatched_numbers = [num for num in numbers if num not in evidence_corpus]
             if unmatched_numbers and not has_direct_citation:
@@ -149,7 +149,7 @@ class ApprovalNoteGeneratorTool(BaseTool):
         if alphanumeric_terms:
             matched_terms = [term for term in alphanumeric_terms if term in evidence_corpus]
             overlap_ratio = len(matched_terms) / len(alphanumeric_terms)
-            if overlap_ratio >= 0.35:
+            if overlap_ratio >= 0.60:
                 return True, "Verified via semantic overlap with retrieved evidence chunks."
 
         return (

@@ -2,10 +2,8 @@
 
 import datetime
 import inspect
-import json
 import logging
 import re
-import time
 from typing import Any, Callable, Dict, List, Optional
 
 from langgraph.graph import END, StateGraph
@@ -302,7 +300,6 @@ class ControlledStateGraph:
 
         task = state.get("task", "")
         evidence = state.get("evidence", [])
-        citations = state.get("citations", [])
         errors = state.get("errors", [])
         v_status = state.get("verification_status", "VERIFIED")
 
@@ -342,7 +339,7 @@ class ControlledStateGraph:
                 )
                 final_output = llm_res.content
                 await self._emit("llm_completed", state, tokens=llm_res.usage.total_tokens if llm_res.usage else 0)
-            except Exception as ex:
+            except Exception:
                 final_output = f"Completed directive '{task}' with air-gapped sovereign execution."
 
             await self._emit("mission_completed", state, final_output=final_output)
