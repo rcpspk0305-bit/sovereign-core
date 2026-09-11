@@ -118,6 +118,16 @@ class InMemoryVectorStore(BaseRetriever):
 
         added_ids: List[str] = []
         for doc in documents:
+            doc_name = doc.metadata.get("document_name", "unknown")
+            if doc.id in self.documents:
+                old_doc = self.documents[doc.id]
+                old_name = old_doc.metadata.get("document_name", "unknown")
+                if old_name != doc_name and old_name in self._doc_name_to_ids:
+                    self._doc_name_to_ids[old_name].discard(doc.id)
+                    if not self._doc_name_to_ids[old_name]:
+                        self._doc_name_to_ids.pop(old_name, None)
+                        self._doc_name_to_pages.pop(old_name, None)
+
             self.documents[doc.id] = doc
             added_ids.append(doc.id)
 
@@ -127,7 +137,6 @@ class InMemoryVectorStore(BaseRetriever):
                 self._doc_norms[doc.id] = norm_val if norm_val > 0.0 else 1.0
 
             # Update inverted index
-            doc_name = doc.metadata.get("document_name", "unknown")
             if doc_name not in self._doc_name_to_ids:
                 self._doc_name_to_ids[doc_name] = set()
                 self._doc_name_to_pages[doc_name] = set()
