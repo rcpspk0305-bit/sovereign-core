@@ -1,0 +1,53 @@
+name: in-memory-vector-store-optimization
+description: "Accelerate InMemoryVectorStore search latency, QPS, document listing, and deletion without sacrificing mathematical ranking fidelity"
+
+metric:
+  primary:
+    type: hard
+    name: search_latency_mean_ms
+    direction: minimize
+    baseline: 99.086
+    target: 5.0
+  degenerate_gates:
+    - name: retrieval_accuracy
+      check: ">= 0.99"
+      description: "Top-k retrieval ranking must match exact mathematical cosine ground truth"
+    - name: test_suite_passed
+      check: "== 1"
+      description: "All unit and integration tests in tests/test_rag_interface.py must pass"
+  objectives:
+    - name: search_qps
+      direction: maximize
+      role: required
+      target: 200.0
+    - name: document_listing_ms
+      direction: minimize
+      role: secondary
+    - name: document_deletion_ms
+      direction: minimize
+      role: secondary
+
+measurement:
+  command: ".\\.venv\\Scripts\\python benchmarks/benchmark_in_memory_vector_store.py"
+  working_directory: "backend"
+  stability:
+    mode: stable
+
+scope:
+  mutable:
+    - "backend/app/core/rag/in_memory.py"
+  immutable:
+    - "backend/app/core/interfaces/rag.py"
+    - "backend/benchmarks/benchmark_in_memory_vector_store.py"
+    - "backend/tests/test_rag_interface.py"
+    - "backend/tests/test_real_life_use_cases.py"
+
+execution:
+  mode: serial
+  backend: worktree
+  max_concurrent: 1
+
+stopping:
+  max_iterations: 4
+  max_hours: 1
+  target_reached: true

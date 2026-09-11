@@ -1,0 +1,63 @@
+spec: in-memory-vector-store-optimization
+run_id: "20260911-202200-opt"
+started_at: "2026-09-11T20:22:00Z"
+
+baseline:
+  timestamp: "2026-09-11T20:21:50Z"
+  gates:
+    retrieval_accuracy: 1.0
+    test_suite_passed: 1
+  metrics:
+    search_latency_mean_ms: 99.086
+    search_latency_p50_ms: 95.719
+    search_latency_p95_ms: 120.349
+    search_latency_p99_ms: 218.132
+    search_qps: 10.1
+    add_documents_ms: 114.27
+    document_listing_ms: 2.909
+    document_deletion_ms: 0.594
+
+best:
+  experiment_id: exp-1
+  search_latency_mean_ms: 0.717
+  search_latency_p95_ms: 1.854
+  search_qps: 1394.2
+  document_listing_ms: 0.072
+  document_deletion_ms: 0.189
+  retrieval_accuracy: 1.0
+
+hypothesis_backlog:
+  - id: H1
+    title: "Vectorized Cosine Similarity & Query Norm Hoisting via NumPy"
+    status: completed
+  - id: H2
+    title: "Heap-based Top-K Selection (O(N log k))"
+    status: completed
+  - id: H3
+    title: "Inverted Index for Document Names & Chunks"
+    status: completed
+
+experiments:
+  - id: exp-1
+    title: "Vectorized SIMD Dot Product, Inverted Index & Heap Top-K"
+    hypotheses: [H1, H2, H3]
+    timestamp: "2026-09-11T20:25:00Z"
+    outcome: kept
+    gates:
+      retrieval_accuracy: 1.0
+      test_suite_passed: 1
+    metrics:
+      search_latency_mean_ms: 0.717
+      search_latency_p50_ms: 0.553
+      search_latency_p95_ms: 1.854
+      search_latency_p99_ms: 3.712
+      search_qps: 1394.2
+      add_documents_ms: 147.58
+      document_listing_ms: 0.072
+      document_deletion_ms: 0.189
+    comparison_vs_baseline:
+      latency_speedup: "138.2x (99.28% latency reduction)"
+      qps_increase: "138.0x throughput improvement"
+      listing_speedup: "40.4x faster"
+      deletion_speedup: "3.1x faster"
+      accuracy: "100% mathematical fidelity preserved"
