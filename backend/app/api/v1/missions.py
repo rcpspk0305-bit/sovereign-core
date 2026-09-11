@@ -326,11 +326,28 @@ async def approve_mission(
 ) -> Dict[str, Any]:
     """Record human approval for a pending mission."""
     notes = body.notes if body else None
+
+    rec = flight_recorder.get_record(mission_id)
+    if mission_id not in _active_missions and not rec:
+        raise HTTPException(status_code=404, detail=f"Mission '{mission_id}' not found.")
+
     if mission_id in _active_missions:
-        _active_missions[mission_id]["approval_status"] = "APPROVED"
-        _active_missions[mission_id]["status"] = AgentStatus.COMPLETED.value
+        current_state = _active_missions[mission_id]
+        if current_state.get("approval_status") == ApprovalStatus.REJECTED.value:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot approve mission '{mission_id}' because it has already been rejected.",
+            )
+        current_state["approval_status"] = ApprovalStatus.APPROVED.value
+        current_state["status"] = AgentStatus.COMPLETED.value
         if notes:
-            _active_missions[mission_id]["approval_notes"] = notes
+            current_state["approval_notes"] = notes
+    elif rec:
+        if rec.approval_status == ApprovalStatus.REJECTED:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot approve mission '{mission_id}' because it has already been rejected.",
+            )
 
     await flight_recorder.update_approval(mission_id, ApprovalStatus.APPROVED, notes=notes)
     return {
@@ -347,19 +364,36 @@ async def reject_mission(
     body: Optional[MissionDecisionRequest] = None,
     flight_recorder: FlightRecorderManager = Depends(get_flight_recorder_manager),
 ) -> Dict[str, Any]:
-    """Record human rejection of a mission."""
+    """Record operator rejection for a pending mission."""
     notes = body.notes if body else None
+
+    rec = flight_recorder.get_record(mission_id)
+    if mission_id not in _active_missions and not rec:
+        raise HTTPException(status_code=404, detail=f"Mission '{mission_id}' not found.")
+
     if mission_id in _active_missions:
-        _active_missions[mission_id]["approval_status"] = "REJECTED"
-        _active_missions[mission_id]["status"] = AgentStatus.COMPLETED.value
+        current_state = _active_missions[mission_id]
+        if current_state.get("approval_status") == ApprovalStatus.APPROVED.value:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot reject mission '{mission_id}' because it has already been approved.",
+            )
+        current_state["approval_status"] = ApprovalStatus.REJECTED.value
+        current_state["status"] = AgentStatus.FAILED.value
         if notes:
-            _active_missions[mission_id]["approval_notes"] = notes
+            current_state["rejection_notes"] = notes
+    elif rec:
+        if rec.approval_status == ApprovalStatus.APPROVED:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot reject mission '{mission_id}' because it has already been approved.",
+            )
 
     await flight_recorder.update_approval(mission_id, ApprovalStatus.REJECTED, notes=notes)
     return {
         "mission_id": mission_id,
         "approval_status": "REJECTED",
-        "status": "COMPLETED",
+        "status": "FAILED",
         "notes": notes,
     }
 

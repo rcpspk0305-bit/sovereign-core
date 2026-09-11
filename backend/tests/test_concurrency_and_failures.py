@@ -6,8 +6,25 @@ import json
 import time
 import urllib.request
 import urllib.error
+import pytest
 
 BASE_URL = "http://127.0.0.1:8000"
+
+
+def is_live_server_active() -> bool:
+    try:
+        req = urllib.request.Request(f"{BASE_URL}/api/v1/health", headers={"User-Agent": "Sovereign-Bench/1.0"})
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            data = json.loads(resp.read().decode())
+            return data.get("status") == "healthy" and data.get("ollama_connected") is True
+    except Exception:
+        return False
+
+
+pytestmark = pytest.mark.skipif(
+    not is_live_server_active(),
+    reason="Live backend server not running or Ollama disconnected; skipping live concurrency benchmarks.",
+)
 
 def timed_get(path: str) -> tuple[int, float, dict]:
     url = f"{BASE_URL}{path}"

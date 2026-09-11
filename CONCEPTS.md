@@ -33,6 +33,9 @@ The pre-execution inspection of a workflow definition that validates graph topol
 ### Human-in-the-Loop Approval Gate
 The mandatory pause in execution requiring explicit operator review and authorization before high-risk actions, unvetted workflows, or external document exports are executed.
 
+### Autonomous Fallback Engine
+The deterministic fallback mechanism invoked by specialist agents when local LLM daemons become unavailable or disconnect, using regex patterns, AST evaluation, and local rule verifiers to produce structured outputs without unhandled process failures.
+
 ## Flagged Ambiguities
 
 - "Mission" vs "Session": A Session is a conversational interaction container that may span multiple turns and inspect data over time; a Mission is an atomic execution run dispatched with bounded step budgets and forensic blackbox recording.

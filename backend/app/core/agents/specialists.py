@@ -1182,7 +1182,7 @@ class ComplianceAgent(SpecialistAgentBase):
                 else:
                     all_compliant = False
             elif "signatory" in r_lower:
-                if "authorized signatory" in lower_text or "present" in lower_text or "signature" in lower_text:
+                if any(kw in lower_text for kw in ("authorized signatory", "signatory", "signature", "signed", "present")):
                     status = "COMPLIANT"
                     evidence = ["Authorized signatory: Present"]
                     reason = "Authorized signatory confirmed present."

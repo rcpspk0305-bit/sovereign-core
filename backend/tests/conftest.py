@@ -137,11 +137,14 @@ def tool_registry() -> ToolRegistry:
 def test_client(
     mock_llm_client: MockLLMClient,
     in_memory_audit_logger: FileAndMemoryAuditLogger,
+    in_memory_vector_store: InMemoryVectorStore,
 ) -> TestClient:
     app = create_application()
     from app.api.v1.chat import get_audit_logger
+    from app.api.v1.rag import get_retriever
 
     app.dependency_overrides[get_llm_provider] = lambda: mock_llm_client
     app.dependency_overrides[get_llm_service] = lambda: LLMService(mock_llm_client)
     app.dependency_overrides[get_audit_logger] = lambda: in_memory_audit_logger
+    app.dependency_overrides[get_retriever] = lambda: in_memory_vector_store
     return TestClient(app)

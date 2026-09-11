@@ -25,6 +25,22 @@ import pymupdf as fitz
 BASE_URL = "http://127.0.0.1:8000"
 WS_URL = "ws://127.0.0.1:8000/api/v1/flight-recorder/ws"
 
+
+def is_live_server_active() -> bool:
+    try:
+        req = urllib.request.Request(f"{BASE_URL}/api/v1/health", headers={"User-Agent": "Sovereign-Audit/1.0"})
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            data = json.loads(resp.read().decode())
+            return data.get("status") == "healthy" and data.get("ollama_connected") is True
+    except Exception:
+        return False
+
+
+pytestmark = pytest.mark.skipif(
+    not is_live_server_active(),
+    reason="Live backend server not running or Ollama disconnected; skipping live E2E audit suite.",
+)
+
 def api_get(path: str) -> dict:
     url = f"{BASE_URL}{path}"
     req = urllib.request.Request(url, headers={"User-Agent": "Sovereign-Audit/1.0"})

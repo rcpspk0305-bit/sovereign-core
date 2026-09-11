@@ -53,6 +53,8 @@ class SimpleEmbeddingProvider(BaseEmbeddingProvider):
 class InMemoryVectorStore(BaseRetriever):
     """Clean, high-performance in-memory vector store for local RAG retrieval."""
 
+    backend_name: str = "in_memory"
+
     def __init__(
         self,
         embedding_provider: Optional[BaseEmbeddingProvider] = None,
@@ -89,6 +91,9 @@ class InMemoryVectorStore(BaseRetriever):
         query: str,
         top_k: int = 4,
         score_threshold: Optional[float] = None,
+        filters: Optional[Dict[str, Any]] = None,
+        collection: Optional[str] = None,
+        **kwargs: Any,
     ) -> List[SearchResult]:
         """Retrieve top-k most relevant documents via cosine similarity."""
         if not self.documents:
@@ -100,6 +105,14 @@ class InMemoryVectorStore(BaseRetriever):
         for doc in self.documents.values():
             if not doc.embedding:
                 continue
+            if filters:
+                matches = True
+                for k, v in filters.items():
+                    if doc.metadata.get(k) != v:
+                        matches = False
+                        break
+                if not matches:
+                    continue
             score = cosine_similarity(query_embedding, doc.embedding)
             if score_threshold is not None and score < score_threshold:
                 continue
@@ -107,6 +120,39 @@ class InMemoryVectorStore(BaseRetriever):
 
         scored_results.sort(key=lambda x: x.score, reverse=True)
         return scored_results[:top_k]
+
+    async def list_documents(self) -> List[Dict[str, Any]]:
+        """List distinct documents and aggregated chunks."""
+        docs_map: Dict[str, Dict[str, Any]] = {}
+        for doc in self.documents.values():
+            name = doc.metadata.get("document_name", "unknown")
+            if name not in docs_map:
+                docs_map[name] = {
+                    "filename": name,
+                    "total_chunks": 0,
+                    "pages": set(),
+                }
+            docs_map[name]["total_chunks"] += 1
+            if "page_number" in doc.metadata:
+                docs_map[name]["pages"].add(doc.metadata["page_number"])
+
+        return [
+            {
+                "filename": k,
+                "total_chunks": v["total_chunks"],
+                "pages": len(v["pages"]) if v["pages"] else 1,
+            }
+            for k, v in docs_map.items()
+        ]
+
+    async def delete_document(self, filename: str) -> Dict[str, Any]:
+        """Delete all chunks for a document filename."""
+        ids_to_del = [
+            d_id for d_id, doc in self.documents.items()
+            if doc.metadata.get("document_name") == filename
+        ]
+        await self.delete(ids_to_del)
+        return {"status": "deleted", "filename": filename, "chunks_deleted": len(ids_to_del)}
 
     async def delete(self, document_ids: List[str]) -> bool:
         """Delete documents by their IDs."""
