@@ -1152,9 +1152,9 @@ class ComplianceAgent(SpecialistAgentBase):
                 "arguments": {"query": "company name approval date signatory security classification retention period", "top_k": 5},
             })
 
-        # Evaluate rules against combined text
-        all_text = prompt + " " + " ".join(m.content for m in messages)
-        lower_text = all_text.lower()
+        # Evaluate rules strictly against retrieved document observations (never system prompt or prompt metadata)
+        retrieved_text = " ".join(m.content for m in messages if "Observation from '" in m.content)
+        lower_text = retrieved_text.lower()
 
         checks = []
         all_compliant = True
@@ -1170,7 +1170,7 @@ class ComplianceAgent(SpecialistAgentBase):
                 if "sovereign technologies" in lower_text or "sovereign" in lower_text:
                     status = "COMPLIANT"
                     evidence = ["Required company name: Sovereign Technologies"]
-                    reason = "Company name 'Sovereign Technologies' verified on Page 2."
+                    reason = "Company name verified in retrieved document."
                 else:
                     all_compliant = False
             elif "date" in r_lower:

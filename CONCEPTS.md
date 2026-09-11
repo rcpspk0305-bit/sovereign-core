@@ -36,6 +36,9 @@ The mandatory pause in execution requiring explicit operator review and authoriz
 ### Autonomous Fallback Engine
 The deterministic fallback mechanism invoked by specialist agents when local LLM daemons become unavailable or disconnect, using regex patterns, AST evaluation, and local rule verifiers to produce structured outputs without unhandled process failures.
 
+### Anti-False-Result Verification
+The governance and evaluation protocol enforcing that task completions, agent outputs, and test assertions are confirmed exclusively through independent observable evidence (vector database state, AST evaluations, network socket inspection, and filesystem artifacts), strictly rejecting self-reported status strings, HTTP 200 codes, or unverified progress claims.
+
 ## Flagged Ambiguities
 
 - "Mission" vs "Session": A Session is a conversational interaction container that may span multiple turns and inspect data over time; a Mission is an atomic execution run dispatched with bounded step budgets and forensic blackbox recording.
