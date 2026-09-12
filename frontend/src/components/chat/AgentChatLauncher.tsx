@@ -82,9 +82,9 @@ const SUGGESTIONS = [
   {
     id: '2',
     tag: 'SECURITY AUDIT',
-    text: 'Verify zero cloud egress and run air-gapped system diagnostics',
+    text: 'Check the local calculator and review its execution trace',
     prompt:
-      'Run an air-gapped system check, test local tool isolation, and verify that 0 bytes of egress traffic have escaped.',
+      'Use the calculator tool to multiply 17 by 23. Report the result and any tool errors. This checks tool execution only; do not claim OS isolation or zero network traffic.',
   },
   {
     id: '3',
@@ -153,6 +153,9 @@ export default function AgentChatLauncher({
   const [isAgentExecuting, setIsAgentExecuting] = useState(false);
   const [hasLaunched, setHasLaunched] = useState(false);
   const [agentSteps, setAgentSteps] = useState<string[]>([]);
+  const [missionRecord, setMissionRecord] = useState<FlightRecord | null>(null);
+  const [missionError, setMissionError] = useState<string | null>(null);
+  const launchInFlight = useRef(false);
   const [agentAnswer, setAgentAnswer] = useState<string | null>(null);
   const [lastMissionPrompt, setLastMissionPrompt] = useState<string | null>(null);
   const [lastMissionAttachments, setLastMissionAttachments] = useState<MediaAttachment[]>([]);
@@ -168,6 +171,10 @@ export default function AgentChatLauncher({
   const docInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+  }, []);
 
   useEffect(() => {
     setSelectedModel(currentModel);
@@ -291,7 +298,12 @@ export default function AgentChatLauncher({
 
   // Dispatch Mission Instantly
   const handleLaunchMission = async () => {
-    if (!prompt.trim() && attachments.length === 0) return;
+    if (launchInFlight.current || (!prompt.trim() && attachments.length === 0)) return;
+    launchInFlight.current = true;
+    setMissionRecord(null);
+    setMissionError(null);
+    setAgentAnswer(null);
+    setElapsedMs(0);
 
     const userPrompt = prompt.trim() || 'Execute inspection mission based on attached payload.';
     setLastMissionPrompt(userPrompt);
@@ -309,45 +321,33 @@ export default function AgentChatLauncher({
       setElapsedMs(Date.now() - startTime);
     }, 50);
 
-    // Progressive step simulation
-    setAgentSteps(['[SECURE ENCLAVE] Initiating zero-egress sandbox boundary...']);
-
-    setTimeout(() => {
-      setAgentSteps((prev) => [
-        ...prev,
-        '[VECTOR MEMORY] Querying ChromaDB HNSW embeddings for grounded context...',
-      ]);
-    }, 400);
-
-    setTimeout(() => {
-      setAgentSteps((prev) => [
-        ...prev,
-        '[CONTROL BAY] Dispatching verified schema to local tool executor...',
-      ]);
-    }, 900);
-
-    setTimeout(() => {
-      setAgentSteps((prev) => [
-        ...prev,
-        `[NEURAL CORE] Streaming local tokens from ${selectedModel} via Ollama...`,
-      ]);
-    }, 1500);
+    setAgentSteps(['Request submitted. Waiting for recorded backend execution.']);
 
     try {
-      const result = await api.runAgent(userPrompt, selectedModel, 5);
-      if (timerRef.current) clearInterval(timerRef.current);
-      setIsAgentExecuting(false);
-      setAgentAnswer(result.final_response);
+      const result = await api.runFlightMission(userPrompt, selectedModel, 'NO_EGRESS', undefined, 5);
+      setMissionRecord(result);
+      setAgentAnswer(result.final_response || 'No final response was recorded. Inspect the flight log.');
+      if (result.status === 'failed') {
+        setMissionError(result.errors.map((error) => error.error_message).join('; ') || 'Backend reported mission failure.');
+      }
+      onMissionCompleted?.(result);
     } catch (err) {
+      const error = normalizeError(err);
+      setMissionError(error.message);
+      onError?.(error);
+    } finally {
       if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+      setElapsedMs(Date.now() - startTime);
       setIsAgentExecuting(false);
-      setAgentAnswer(
-        `### Sovereign Air-Gapped Mission Analysis\n\n**Directive:** ${userPrompt}\n\n**Execution Summary:** Verified Complete with 100% Deterministic Provenance\n- **Cloud Egress:** 0.00% (Strict hardware air-gap maintained)\n- **Vector Memory:** 3 source chunks retrieved from ChromaDB HNSW space\n- **Inference Node:** ${selectedModel} running locally on host workstation\n- **Cryptographic Hash:** SHA-256 signature appended to mission ledger.\n\n*All tools executed within local sandbox step limits (4 steps). Telemetry logged to Flight Recorder.*`,
-      );
+      launchInFlight.current = false;
     }
   };
 
   const handleResetMission = () => {
+    if (launchInFlight.current) return;
+    setMissionRecord(null);
+    setMissionError(null);
     setHasLaunched(false);
     setIsAgentExecuting(false);
     setAgentSteps([]);
@@ -484,7 +484,7 @@ export default function AgentChatLauncher({
               <span className="airgap-switch-knob" />
             </span>
             <span className="airgap-switch-label">
-              {isAirGapped ? 'AIR-GAPPED // NO EGRESS' : 'EGRESS PERMISSIVE'}
+              {'LOCAL EXECUTION // EGRESS UNMEASURED'}
             </span>
           </button>
 
@@ -602,7 +602,7 @@ export default function AgentChatLauncher({
             <div className="launcher-telemetry-strip">
               <div className="telemetry-item">
                 <ShieldCheck size={13} className="text-emerald" />
-                <span>EGRESS: <strong>0.00% BLOCKED</strong></span>
+                <span>EGRESS: <strong>UNMEASURED</strong></span>
               </div>
               <span className="telemetry-dot">•</span>
               <div className="telemetry-item">
@@ -800,12 +800,12 @@ export default function AgentChatLauncher({
             <div className="thread-header">
               <div className="thread-badge">
                 <span className="pulse-cyan-dot" />
-                <span>MISSION EXECUTING // LOCAL AIR-GAP</span>
+                <span>{isAgentExecuting ? 'MISSION EXECUTING' : missionError ? 'MISSION FAILED' : missionRecord?.status === 'completed' ? 'EXECUTION FINISHED // REVIEW RESULT' : 'MISSION STATUS UNKNOWN'}</span>
               </div>
               <div className="thread-timer">
                 <Terminal size={14} className="text-cyan" />
                 <span>LATENCY: {(elapsedMs / 1000).toFixed(2)}s</span>
-                <span className="network-tag">0.00% EGRESS</span>
+                <span className="network-tag" title="No host network traffic measurement is available.">EGRESS UNMEASURED</span>
               </div>
             </div>
 
@@ -833,12 +833,12 @@ export default function AgentChatLauncher({
               <div className="thread-thinking-panel">
                 <div className="thinking-indicator">
                   <Loader2 size={16} className="spinner text-cyan" />
-                  <span>Sovereign Local Reasoner Dispatching Steps...</span>
+                  <span>Awaiting backend mission result...</span>
                 </div>
                 <div className="thinking-step-list">
                   {agentSteps.map((step, idx) => (
                     <div key={idx} className="thinking-step-item">
-                      <CheckCircle2 size={13} className="text-emerald" />
+                      <Clock size={13} />
                       <span>{step}</span>
                     </div>
                   ))}
@@ -846,13 +846,21 @@ export default function AgentChatLauncher({
               </div>
             )}
 
+            {missionError && <div className="thread-response-bubble" role="alert">Mission failed: {missionError}</div>}
+            {missionRecord && (
+              <div className="thread-thinking-panel">
+                <p>Record: {missionRecord.task_id} · Backend status: {missionRecord.status}</p>
+                <p>Recorded tool calls: {missionRecord.tools_called.length} · Retrieved sources: {missionRecord.retrieved_sources.length}</p>
+                <p>Execution status does not verify the answer or host network isolation.</p>
+              </div>
+            )}
             {/* Final Agent Answer */}
             {agentAnswer && (
               <div className="thread-response-bubble">
                 <div className="response-header">
                   <div className="response-title-cluster">
                     <Bot size={17} className="text-cyan" />
-                    <span>SOVEREIGN AGENT MISSION REPORT ({selectedModel})</span>
+                    <span>SOVEREIGN AGENT MISSION REPORT ({missionRecord?.model || selectedModel})</span>
                   </div>
                   <div className="response-actions-cluster">
                     <button
@@ -863,7 +871,7 @@ export default function AgentChatLauncher({
                       {isCopied ? <Check size={13} className="text-emerald" /> : <Copy size={13} />}
                       <span>{isCopied ? 'Copied' : 'Copy'}</span>
                     </button>
-                    <span className="verified-seal">SHA-256 VERIFIED</span>
+                    <span className="verified-seal">OUTPUT UNVERIFIED</span>
                   </div>
                 </div>
 
@@ -894,6 +902,7 @@ export default function AgentChatLauncher({
             <div className="thread-actions-footer">
               <button
                 onClick={handleResetMission}
+                disabled={isAgentExecuting}
                 className="reset-mission-btn"
                 aria-label="Launch a new directive"
               >
@@ -903,6 +912,7 @@ export default function AgentChatLauncher({
 
               <button
                 onClick={() => handleSwitchBay('recorder')}
+                disabled={!missionRecord}
                 className="recorder-inspect-btn"
                 aria-label="Inspect in Flight Recorder"
               >
@@ -1062,7 +1072,7 @@ export default function AgentChatLauncher({
       >
         <FlightRecorderBay
           onError={(err) => (onError ? onError(err) : console.error(err))}
-          selectedTaskId={lastCompletedTask}
+          selectedTaskId={missionRecord?.task_id || lastCompletedTask}
         />
       </div>
 
